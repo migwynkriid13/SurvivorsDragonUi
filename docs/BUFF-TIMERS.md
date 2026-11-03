@@ -87,6 +87,14 @@ private cooldown deadline or wall-clock countdown is calculated. Clear, reset,
 hidden/world/zone retirement and fresh Show invalidate presentation reuse. Both
 Performance Mode states share these gates.
 
+Owned hover samples reuse unchanged normalized icon paths and static tooltip
+lines for kind, full wait and language. Remaining time still comes from each
+native sample and formats to one decimal place through the original tooltip
+rebuild. Changed metadata or language refreshes the relevant captions; failed
+native icon assignment stays retryable. Clear/hide/invalid/world retirement
+releases these prepared values with the existing pooled slot. This changes no
+timer cadence, artwork, layout, tooltip ownership or native aura behavior.
+
 New zones and world leave/logout/reload clear the pooled display and retire
 both the timer and run cache identities. Old packets cannot repopulate the view
 until new timer/run snapshots arrive. An unavailable phase, getter, clock or

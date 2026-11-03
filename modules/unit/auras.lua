@@ -173,15 +173,32 @@ DFRL:NewMod("Player Auras", 2, function()
     end
     local function Tooltip(entry)
         if editing or not inWorld or not entry.name or not entry.button:IsVisible() or not GameTooltip then return end
+        local cache = entry.tooltipCache or {}
+        entry.tooltipCache = cache
+        local language = DFRL.locale.code
+        if cache.language ~= language then
+            cache.kindText, cache.waitText, cache.readyText, cache.remainingFormat = nil, nil, nil, nil
+            cache.language = language
+        end
+        if cache.kind ~= entry.kind or not cache.kindText then
+            cache.kindText = DFRL.locale.Text(entry.kind == "summon" and "Next summon" or "Cooldown")
+            cache.kind = entry.kind
+        end
+        if cache.wait ~= entry.wait or not cache.waitText then
+            cache.waitText = string.format(DFRL.locale.Text("Full wait: %.1f sec"), entry.wait)
+            cache.wait = entry.wait
+        end
         GameTooltip:SetOwner(entry.button, "ANCHOR_NONE")
         GameTooltip:ClearLines()
         GameTooltip:SetText(entry.name, 1, 0.82, 0)
-        GameTooltip:AddLine(DFRL.locale.Text(entry.kind == "summon" and "Next summon" or "Cooldown"), 1, 1, 1)
-        GameTooltip:AddLine(string.format(DFRL.locale.Text("Full wait: %.1f sec"), entry.wait), 1, 1, 1)
+        GameTooltip:AddLine(cache.kindText, 1, 1, 1)
+        GameTooltip:AddLine(cache.waitText, 1, 1, 1)
         if entry.ready then
-            GameTooltip:AddLine(DFRL.locale.Text("Ready"), 0.3, 1, 0.3)
+            if not cache.readyText then cache.readyText = DFRL.locale.Text("Ready") end
+            GameTooltip:AddLine(cache.readyText, 0.3, 1, 0.3)
         else
-            GameTooltip:AddLine(string.format(DFRL.locale.Text("Remaining: %.1f sec"), entry.remaining), 1, 1, 1)
+            if not cache.remainingFormat then cache.remainingFormat = DFRL.locale.Text("Remaining: %.1f sec") end
+            GameTooltip:AddLine(string.format(cache.remainingFormat, entry.remaining), 1, 1, 1)
         end
         GameTooltip:Show()
     end
@@ -219,6 +236,7 @@ DFRL:NewMod("Player Auras", 2, function()
         entry.button:Hide()
         entry.icon:SetTexture(nil)
         entry.name, entry.kind, entry.wait, entry.remaining, entry.ready, entry.texture = nil, nil, nil, nil, nil, nil
+        entry.iconSource, entry.tooltipCache = nil, nil
     end
     local function ClearTimers()
         publication.packet, publication.stamp, publication.received = nil, nil, nil
@@ -313,11 +331,14 @@ DFRL:NewMod("Player Auras", 2, function()
         -- Preserve every received effect, including distinct rows with one name.
         for index, timer in ipairs(list) do
             local entry = Timer(index)
-            local texture = Icon(timer.icon)
+            local source = type(timer.icon) == "string" and timer.icon or nil
+            local texture = entry.texture
+            if not texture or entry.iconSource ~= source then texture = Icon(source) end
             if entry.texture ~= texture then
                 entry.icon:SetTexture(texture)
                 entry.texture = texture
             end
+            entry.iconSource = source
             entry.name, entry.kind, entry.wait = timer.name, timer.kind, timer.duration
             entry.remaining, entry.ready = timer.remaining, timer.ready
             if not entry.button:IsShown() then entry.button:Show() end

@@ -466,11 +466,14 @@ DFRL:NewMod("RunTimers", 5, function()
         text:SetPoint("BOTTOM", frame, "TOP", 0, 2)
         text:SetTextColor(1, 1, 1)
         frame.paintedWidth = BAR_WIDTH
-        function frame.RefreshWidth()
-            local outerWidth = frame:GetWidth()
+        function frame.RefreshWidth(outerWidth)
+            outerWidth = outerWidth or frame:GetWidth()
             local inset = math.min(8, outerWidth / 4)
             local width = outerWidth - inset * 2
-            if T.NearlyEqual(frame.paintedWidth, width) then return end
+            if T.NearlyEqual(frame.paintedWidth, width) then
+                frame.paintedOuterWidth = outerWidth
+                return
+            end
             -- Stretch the original background sample; StatusBar owns fill UVs.
             local capWidth = math.min(35, outerWidth * 0.49)
             left:SetWidth(capWidth)
@@ -481,7 +484,7 @@ DFRL:NewMod("RunTimers", 5, function()
             bar:ClearAllPoints()
             bar:SetPoint("LEFT", frame, "LEFT", inset, 0)
             bar:SetPoint("RIGHT", frame, "RIGHT", -inset, 0)
-            frame.paintedWidth = width
+            frame.paintedWidth, frame.paintedOuterWidth = width, outerWidth
         end
         frame:Hide()
         return frame, bar, text, overlay
@@ -3858,10 +3861,10 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ClearDebuffs(row)
-        for _, icon in ipairs(row.debuffs) do
-            HideDebuff(icon)
+        for index = 1, row.debuffCount or 0 do
+            HideDebuff(row.debuffs[index])
         end
-        row.debuffHeight = 0
+        row.debuffCount, row.debuffHeight = 0, 0
     end
     HookScript(bossGroup, "OnHide", function()
         render.bossLoss:ClearAll(activeRows)
@@ -4376,11 +4379,13 @@ DFRL:NewMod("RunTimers", 5, function()
                     then
                         return false
                     end
-                    local key = kind .. ":" .. tostring(entry.id)
+                    local copy = entries[used + 1]
+                    local key = copy and copy.id == entry.id and copy.kind == kind and copy.key
+                    if not key then key = kind .. ":" .. tostring(entry.id) end
                     if seen[key] then return false end
                     seen[key] = true
                     used = used + 1
-                    local copy = entries[used] or {}
+                    copy = copy or {}
                     copy.key, copy.id, copy.kind = key, entry.id, kind
                     copy.name, copy.hp, copy.maximum = entry.name, entry.hp, entry.hpm
                     entries[used] = copy
@@ -4552,6 +4557,9 @@ DFRL:NewMod("RunTimers", 5, function()
                         count = count + 1
                         if paint then
                             local icon = DebuffIcon(row, count)
+                            -- Include partial painting in lifecycle cleanup if
+                            -- a later native operation fails before this pass ends.
+                            row.debuffCount = math.max(row.debuffCount or 0, count)
                             icon.effect = effect
                             if icon.iconPath ~= effect.icon then
                                 local loaded = icon.texture:SetTexture(effect.icon)
@@ -4581,9 +4589,10 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         if paint then
-            for index = count + 1, table.getn(row.debuffs) do
+            for index = count + 1, row.debuffCount or 0 do
                 HideDebuff(row.debuffs[index])
             end
+            row.debuffCount = count
         end
         return math.ceil(count / row.columns) * (DEBUFF_SIZE + DEBUFF_GAP)
     end
@@ -4694,22 +4703,36 @@ DFRL:NewMod("RunTimers", 5, function()
         local showMaximum = DFRL.display.Get("bossShowMaximumHealth")
         local showPercentage = DFRL.display.Get("bossShowHealthPercentage")
         local shortenHealth = DFRL.display.Get("bossShortHealth")
-        local visible = render.visibleBosses or {}
-        render.visibleBosses = visible
-        for key in pairs(visible) do
-            visible[key] = nil
+        local viewportChanged = not render.visibleBosses or bossGroup.visibleRows ~= table.getn(rowOrder)
+        if not viewportChanged then
+            for sourceIndex = first, last do
+                local row = rowOrder[sourceIndex - first + 1]
+                if not row or row.key ~= entries[sourceIndex].key then
+                    viewportChanged = true
+                    break
+                end
+            end
         end
-        for index = first, last do
-            visible[entries[index].key] = true
-        end
-        for key, row in pairs(activeRows) do
-            if not visible[key] then
-                Retire(row)
-                activeRows[key] = nil
+        if viewportChanged then
+            local visible = render.visibleBosses or {}
+            render.visibleBosses = visible
+            for key in pairs(visible) do
+                visible[key] = nil
+            end
+            for index = first, last do
+                visible[entries[index].key] = true
+            end
+            for key, row in pairs(activeRows) do
+                if not visible[key] then
+                    Retire(row)
+                    activeRows[key] = nil
+                end
             end
         end
         local reflow = bossGroup.visibleRows ~= table.getn(rowOrder)
         local width = bossGroup:GetWidth() / (combined and math.max(1, bossGroup.visibleRows) or 1)
+        local textWidth = width - 2 * math.min(8, width / 4)
+        local columns = math.max(1, math.floor((width - 16 + DEBUFF_GAP) / (DEBUFF_SIZE + DEBUFF_GAP)))
         for sourceIndex = first, last do
             local entry = entries[sourceIndex]
             local index = sourceIndex - first + 1
@@ -4722,16 +4745,16 @@ DFRL:NewMod("RunTimers", 5, function()
             row.key = entry.key
             row.id = entry.id
             if paint then
-                if not T.NearlyEqual(row.frame:GetWidth(), width) then
+                local rowWidth = row.frame:GetWidth()
+                if not T.NearlyEqual(rowWidth, width) then
                     row.frame:SetWidth(width)
+                    rowWidth = row.frame:GetWidth()
                     reflow = true
                 end
-                row.frame.RefreshWidth()
-                local textWidth = width - 2 * math.min(8, width / 4)
+                if row.frame.paintedOuterWidth ~= rowWidth then row.frame.RefreshWidth(rowWidth) end
                 row.debuffsFit = textWidth >= DEBUFF_SIZE
                 if not T.NearlyEqual(row.name:GetWidth(), textWidth) then row.name:SetWidth(textWidth) end
                 if not T.NearlyEqual(row.health:GetWidth(), textWidth) then row.health:SetWidth(textWidth) end
-                local columns = math.max(1, math.floor((width - 16 + DEBUFF_GAP) / (DEBUFF_SIZE + DEBUFF_GAP)))
                 if row.columns ~= columns then
                     row.columns, reflow = columns, true
                 end

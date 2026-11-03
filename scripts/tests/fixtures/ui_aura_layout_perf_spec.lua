@@ -578,6 +578,86 @@ for _, performance in ipairs({ false, true }) do
     current:Call(button, "OnEnter")
     assert(HasLine(native.GameTooltip, "Remaining: 1.2 sec") and current.controller:GetScript("OnUpdate"))
 end
+for _, performance in ipairs({ false, true }) do
+    local current, state, native = AuraOwner(performance)
+    current:Tick()
+    local buttons = {}
+    for _, object in ipairs(current.objects) do
+        if state.registered[object] and not object:GetName() and object:GetParent() == current.root then
+            table.insert(buttons, object)
+        end
+    end
+    local allocated, finds, waits, remaining, translations = #current.objects, 0, 0, 0, 0
+    native.string = {}
+    for key, value in pairs(string) do
+        native.string[key] = value
+    end
+    native.string.find = function(...)
+        finds = finds + 1
+        return string.find(...)
+    end
+    native.string.format = function(template, ...)
+        if string.find(template, "Full wait:", 1, true) then waits = waits + 1 end
+        if string.find(template, "Remaining:", 1, true) then remaining = remaining + 1 end
+        return string.format(template, ...)
+    end
+    native.DFRL.locale.code = "en"
+    native.DFRL.locale.Text = function(value)
+        translations = translations + 1
+        return native.DFRL.locale.code == "en" and value or ("XX " .. value)
+    end
+    current:Call(buttons[2], "OnEnter")
+    assert(waits == 1 and remaining == 1 and finds == 0, "hover repeated prepared icons or omitted static text")
+    finds, waits, remaining, translations = 0, 0, 0, 0
+    local reads = state.timerReads
+    for index = 1, 10 do
+        state.timers[2].remaining = 5 - index / 20
+        current:Tick()
+    end
+    assert(state.timerReads == reads + 10 and remaining == 10, "tooltip timing slowed or used cached native seconds")
+    assert(finds == 0 and waits == 0 and translations == 0 and #current.objects == allocated)
+    assert(HasLine(native.GameTooltip, "Remaining: 4.5 sec") and HasLine(native.GameTooltip, "Full wait: 20.0 sec"))
+    local timer = state.timers[2]
+    timer.name, timer.kind, timer.duration, timer.icon =
+        "Fresh native name", "summon", 21, "Interface\\Icons\\ChangedTimer"
+    current:Tick()
+    assert(finds == 1 and waits == 1 and TimerIcon(current, buttons[2]):GetTexture() == timer.icon)
+    assert(native.GameTooltip:GetText() == timer.name and HasLine(native.GameTooltip, "Next summon"))
+    assert(HasLine(native.GameTooltip, "Full wait: 21.0 sec"), "changed native wait retained an old caption")
+    native.DFRL.locale.code = "xx"
+    current:NotifyLocale()
+    assert(HasLine(native.GameTooltip, "XX Full wait: 21.0 sec") and HasLine(native.GameTooltip, "XX Next summon"))
+    local formats = remaining
+    timer.remaining, timer.ready = 0, true
+    current:Tick()
+    assert(HasLine(native.GameTooltip, "XX Ready") and remaining == formats, "ready transition retained a countdown")
+    local icon = TimerIcon(current, buttons[2])
+    local setTexture, failed = icon.SetTexture, false
+    timer.icon = "Interface\\Icons\\RetryTimer"
+    function icon:SetTexture(value)
+        if value == timer.icon and not failed then
+            failed = true
+            error("injected native timer-art failure")
+        end
+        return setTexture(self, value)
+    end
+    local ok = pcall(function() current:Tick() end)
+    assert(not ok, "native assignment failure was not injected")
+    current:Tick()
+    assert(icon:GetTexture() == timer.icon, "failed native art accepted an old normalized path")
+    timer.icon = {}
+    current:Tick()
+    assert(TimerIcon(current, buttons[2]):GetTexture() == "Interface\\Icons\\INV_Misc_QuestionMark")
+    timer.duration = -1
+    current:Tick()
+    assert(not buttons[2]:IsShown() and not native.GameTooltip:IsShown(), "invalid metadata survived cache retirement")
+    timer.duration, timer.icon = 21, "Interface\\Icons\\ChangedTimer"
+    current:Event(current.controller, "CHAT_MSG_ADDON", "AZSTIMERS")
+    current:Tick()
+    current:Call(buttons[2], "OnEnter")
+    assert(HasLine(native.GameTooltip, "XX Full wait: 21.0 sec") and HasLine(native.GameTooltip, "XX Ready"))
+    assert(#current.objects == allocated, "tooltip recovery allocated another presentation pool")
+end
 print("PASS timer publication reuse preserves fresh owned hover, strict validation, retirement and native recovery")
 print(
     "PASS API timer icons stay bright without text, retain received order and tooltips, and reuse their hidden pool in both modes"

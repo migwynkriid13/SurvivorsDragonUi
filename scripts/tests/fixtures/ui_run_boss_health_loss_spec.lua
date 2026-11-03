@@ -500,8 +500,10 @@ for _, performance in ipairs({ false, true }) do
         if row then return row end
         row = context:Row()
         row.name, row.health, row.debuffs = row.frame:CreateFontString(), row.frame:CreateFontString(), {}
-        row.frame.RefreshWidth = function()
-            local width = row.frame:GetWidth()
+        row.frame.RefreshWidth = function(outerWidth)
+            context.reads.artGeometry = (context.reads.artGeometry or 0) + 1
+            local width = outerWidth or row.frame:GetWidth()
+            row.frame.paintedOuterWidth = width
             width = width - 2 * math.min(8, width / 4)
             if row.bar.width ~= width then row.bar:SetWidth(width) end
         end
@@ -550,8 +552,20 @@ for _, performance in ipairs({ false, true }) do
     end
     local poolSize = #context.objects
     local original = env.activeRows["boss:1"]
+    local pairs = env.pairs
+    env.pairs = function(list)
+        if list == env.render.visibleBosses then context.reads.viewport = (context.reads.viewport or 0) + 1 end
+        return pairs(list)
+    end
+    context:ResetCounts()
+    for _ = 1, 10 do
+        context.source.Rows("playing")
+    end
+    context:NoPresentationWrites()
+    assert(not context.reads.artGeometry and not context.reads.viewport, "settled rows repeated static preparation")
     entries[1], entries[3] = entries[3], entries[1]
     context.source.Rows("playing")
+    assert(context.reads.viewport == 1, "same-count native reorder missed viewport invalidation")
     assert(env.rowOrder[1].id == 3 and env.rowOrder[3] == original, "same-count native reorder changed row identity")
     Near(original.frame.point[4], 37, "same-count native reorder retained the old segment position")
     entries[1], entries[3] = entries[3], entries[1]
@@ -567,15 +581,24 @@ for _, performance in ipairs({ false, true }) do
     assert(first.bar.value == 0.8 and env.activeRows["boss:2"].bar.value == 1, "combined mode merged boss health")
     local started = first.lossStart
     assert(performance or (controller.count == 1 and first.lossTexture:IsShown()))
+    context:ResetCounts()
     env.bossGroup:SetWidth(600)
     context.source.Rows("playing")
     Check(4, 600)
+    assert(context.reads.artGeometry == 4, "group resize skipped affected artwork preparation")
     controller:Update()
     assert(first.lossStart == started, "resizing restarted an independent loss trail")
     assert(not performance or not first.lossTexture, "combined Performance Mode prepared loss artwork")
     context:ResetCounts()
     context.source.Rows("playing")
     context:NoPresentationWrites()
+    first.frame:SetWidth(1)
+    first.name:SetWidth(1)
+    first.health:SetWidth(1)
+    context:ResetCounts()
+    context.source.Rows("playing")
+    Check(4, 600)
+    assert(not context.reads.artGeometry, "native width repair repeated already prepared artwork")
     env.bossGroup:Hide()
     context:ResetCounts()
     context.source.Rows("playing")
@@ -611,6 +634,11 @@ do
         return object
     end
     local frame, bar, name, overlay = context.source.Pill("CombinedPill", "FillWhite")
+    local getWidth = frame.GetWidth
+    function frame:GetWidth()
+        context.reads.pillWidth = (context.reads.pillWidth or 0) + 1
+        return getWidth(self)
+    end
     local allocated = #context.objects
     local caps = {}
     for _, object in ipairs(context.objects) do
@@ -622,11 +650,62 @@ do
         frame.RefreshWidth()
         assert(caps[1]:GetWidth() + caps[2]:GetWidth() < width, "narrow pill caps overlap")
         assert(frame.paintedWidth > 0 and bar.fillTexture == "timer\\FillWhite.blp")
+        assert(frame.paintedOuterWidth == width, "successful artwork preparation did not retain its native width")
         context:ResetCounts()
-        frame.RefreshWidth()
+        frame.RefreshWidth(frame:GetWidth())
         context:NoPresentationWrites()
+        assert(context.reads.pillWidth == 1, "prepared artwork resampled the caller's native width")
     end
     assert(#context.objects == allocated, "resizing pills allocated artwork")
+end
+
+for _, performance in ipairs({ false, true }) do
+    local context, env = New(performance)
+    env.render = { unitSequence = 1, unitBarrier = 0 }
+    env.AZS_UNITS_UPDATED = 0
+    context.settings.guardiansInBossBar = true
+    local bosses = {
+        { id = 71, name = "First boss", hp = 1000, hpm = 1000 },
+        { id = 72, name = "Second boss", hp = 500, hpm = 1000 },
+    }
+    local guardians = { { id = 73, name = "Guardian", awake = true, hp = 800, hpm = 1000 }, { awake = false } }
+    env.Read = function(name)
+        context.reads[name] = (context.reads[name] or 0) + 1
+        return name == "AZS_GetBosses" and bosses or guardians
+    end
+    env.tostring = function(value)
+        context.reads.keys = (context.reads.keys or 0) + 1
+        return tostring(value)
+    end
+    local entries = assert(context.source.Encounters("playing"))
+    assert(#entries == 3 and context.reads.keys == 3 and entries[1] ~= bosses[1])
+    context:ResetCounts()
+    for index = 1, 10 do
+        bosses[1].hp = 1000 - index
+        entries = assert(context.source.Encounters("playing"))
+        assert(entries[1].hp == bosses[1].hp, "cached identity held native health")
+    end
+    assert(not context.reads.keys and context.reads.AZS_GetBosses == 10 and context.reads.AZS_GetGuardians == 10)
+    bosses[1], bosses[2] = bosses[2], bosses[1]
+    entries = assert(context.source.Encounters("playing"))
+    assert(entries[1].key == "boss:72" and entries[2].key == "boss:71" and context.reads.keys == 2)
+    local second = bosses[2]
+    bosses[2] = bosses[1]
+    assert(not context.source.Encounters("playing"), "cached keys accepted duplicate native identities")
+    bosses[2] = second
+    assert(context.source.Encounters("playing"), "duplicate rejection poisoned later valid rows")
+    second.hp = -1
+    assert(not context.source.Encounters("playing"), "cached identity skipped native value validation")
+    second.hp, second.name = 200, "Fresh native name"
+    entries = assert(context.source.Encounters("playing"))
+    assert(entries[2].hp == 200 and entries[2].name == second.name)
+    context.settings.guardiansInBossBar = false
+    context:ResetCounts()
+    assert(#context.source.Encounters("playing") == 2 and not context.reads.AZS_GetGuardians)
+    context:ResetCounts()
+    assert(not context.source.Encounters("dead") and not next(context.reads), "retired phase read native encounters")
+    env.AZS_UNITS_UPDATED = nil
+    assert(not context.source.Encounters("playing") and not next(context.reads), "unready publication reused rows")
 end
 
 print(

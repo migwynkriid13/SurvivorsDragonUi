@@ -54,8 +54,8 @@ and blocks later Show attempts. This adds no polling or drawing resources.
 `/sdui` → **Minimap** → **Show clock** is on by default, with the zone name on
 the left and local time on the right. Turning it off centers the zone name in
 the existing top panel and stops the clock's update callback and local-time
-reads. The existing worker checks the date every five
-seconds only while the clock is enabled and visible on older builds. With
+reads. The existing worker checks the date once every 60 seconds in both
+Performance Mode states, only while the clock is enabled and visible on older builds. With
 `AZS_GetLocalTime()` available, that same worker reads the native snapshot
 instead. Our label and tooltip use its hour/minute fields in **24-hour `HH:MM`**
 format, including when the native English caption uses AM/PM. Unchanged native

@@ -1,6 +1,7 @@
 DFRL:NewMod("Map", 1, function()
     local texpath = DFRL:GetInfoOrCons("tex") .. "minimap\\"
     local function WatchClock(frame, label, zoneButton, zoneText, panel)
+        local CLOCK_INTERVAL = 60
         local native = T.NewHudOwner("localClock", "hudLocalClock")
         local elapsed, enabled = 0, nil
         local inWorld = UnitExists("player") and true or false
@@ -186,7 +187,7 @@ DFRL:NewMod("Map", 1, function()
         end
         local function Tick()
             elapsed = elapsed + math.max(0, tonumber(arg1) or 0)
-            if elapsed < 5 then return end
+            if elapsed < CLOCK_INTERVAL then return end
             elapsed = 0
             Refresh()
         end

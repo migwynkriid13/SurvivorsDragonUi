@@ -132,7 +132,7 @@ part is recognized; the existing shared HUD owner handles external preferences
 and cleanup. Older builds keep the date fallback without unknown visibility
 writes. This integration adds no Game mode or format setting.
 
-The existing visible five-second worker handles reads and retries; off and
+The existing visible sixty-second worker handles reads and retries; off and
 hidden clocks detach it. Missing/invalid native readings or failed handoffs
 hide custom text and release the native preference. Reappearing clocks sample
 fresh time. CI-only cases cover these contracts, but were not run locally and

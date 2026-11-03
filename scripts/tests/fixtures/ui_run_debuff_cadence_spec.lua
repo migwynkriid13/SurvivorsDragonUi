@@ -39,7 +39,10 @@ env.AZS_GetDebuffs = function(id)
     return context.effects
 end
 env.GameTooltip = {
-    IsOwned = function(_, icon) return context.owner == icon end,
+    IsOwned = function(_, icon)
+        context.reads.ownership = (context.reads.ownership or 0) + 1
+        return context.owner == icon
+    end,
     SetOwner = function(_, icon)
         context.owner = icon
         context.reads.opened = (context.reads.opened or 0) + 1
@@ -117,6 +120,17 @@ context:ResetCounts()
 context:Call(icon, "OnEnter")
 assert(context.reads.debuffs == 1 and not context.reads.opened, "expired hover opened stale native effects")
 assert(not icon:IsShown() and not icon.effect and row.debuffHeight == 0)
+for _, performance in ipairs({ false, true }) do
+    context.settings.performanceMode = performance
+    context:ResetCounts()
+    for _ = 1, 10 do
+        Refresh()
+    end
+    context:NoPresentationWrites()
+    assert(context.reads.debuffs == 10 and not context.reads.ownership, "retired icons repeated cleanup or held reads")
+    api.Clear(row)
+    assert(row.debuffCount == 0 and not context.reads.ownership, "empty explicit cleanup walked the retained pool")
+end
 context.effects = { { icon = "SpellIcon", name = "Permanent", permanent = true } }
 Refresh()
 assert(row.debuffs[1] == icon and icon.time:GetText() == "" and icon.count:GetText() == "")
@@ -150,6 +164,15 @@ assert(not context.reads.debuffs and not icon:IsShown(), "narrow combined cell p
 row.debuffsFit = true
 Refresh()
 assert(icon:IsShown() and context.reads.debuffs == 1, "widened combined cell did not recover current debuffs")
+context.effects = { { icon = "SpellIcon", stacks = 2 }, { icon = "SecondIcon", stacks = 3 } }
+context.failText = "3"
+local ok = pcall(Refresh)
+assert(not ok and row.debuffCount == 2, "partial native painting escaped active-pool tracking")
+api.Clear(row)
+assert(row.debuffCount == 0 and row.debuffHeight == 0)
+for _, pooled in ipairs(row.debuffs) do
+    assert(not pooled:IsShown() and not pooled.effect and not pooled.iconPath, "partial paint survived cleanup")
+end
 env.inWorld = false
 context:ResetCounts()
 api.Update()

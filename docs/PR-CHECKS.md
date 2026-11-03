@@ -693,7 +693,7 @@ The assertions cover:
 
 - Native local-clock cases in `ui_idle_clock_spec.lua` reuse the production
   clock and shared HUD owner. They cover 24-hour conversion from native numeric
-  fields, midnight/noon, changed and backwards device readings, five-second and
+  fields, midnight/noon, changed and backwards device readings, sixty-second and
   hidden/off sampling, shared tooltip content and foreign owners, preview/Cancel,
   world/logout/reload restoration, synchronous CVar callbacks and later external
   preferences. Malformed/unavailable snapshots and missing fonts/failed text
@@ -762,6 +762,18 @@ The assertions cover:
   arguments while skipping unchanged conversions, including invalid-to-valid and
   localization-bound recovery. These are authored CI-only contracts, not local
   execution or native appearance/FPS evidence. Loot timing is unchanged.
+- Fourth-pass cases extend the encounter/debuff and aura fixtures in both modes.
+  Native encounter reads retain fresh health/name/maximum validation and exact
+  duplicate rejection while unchanged keys skip formatting. Row cases cover
+  settled viewport/artwork preparation, same-count native reordering,
+  combined/stacked changes, width/label repair, native-width sharing and pool
+  reuse. Debuff cases keep ten-Hz native reads while empty retained pools skip
+  cleanup, and injected partial native painting remains fully clearable. Owned
+  timer hovers retain ten-Hz decimal updates without repeated icon normalization,
+  full-wait formatting or static translation. Cases include changed kind/name/
+  duration/artwork, language, Ready, malformed metadata and failed native art
+  assignment. They remain CI-only and were not run locally; no live appearance
+  or FPS result is inferred. Loot timing is unchanged.
 - API-timer presentation cases in `ui_aura_layout_perf_spec.lua` exercise
   the production owner with explicit native boundaries. They cover bright,
   text-free, borderless talent/jewelry timer icons filling their existing buttons
