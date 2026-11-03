@@ -254,10 +254,10 @@ DFRL:NewMod("Player", 1, function()
         indicator:SetWidth(24)
         indicator:SetHeight(24)
         local texture = indicator:CreateTexture(nil, "OVERLAY")
-        texture:SetTexture(tex .. "UIUnitFrameRestingFlipbook")
+        texture:SetTexture(tex .. "Resting.blp")
         texture:SetAllPoints(indicator)
-        -- Reuse the former Performance Mode still image in both modes.
-        texture:SetTexCoord(0, 60 / 512, 0, 60 / 512)
+        -- The original static tile keeps its pixels on a compact canvas.
+        texture:SetTexCoord(0, 60 / 64, 0, 60 / 64)
         local function UpdateResting()
             if IsResting() and not DFRL.display.Get("hidePortraits") then
                 if not indicator:IsShown() then indicator:Show() end

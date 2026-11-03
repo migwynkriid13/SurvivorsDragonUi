@@ -152,6 +152,15 @@ The normalized `keepDefeatedGuardianIcons` boolean belongs to the existing displ
 
 ## Data and geometry
 
+Both Performance Mode states reuse two owned snapshot buffers per cache/lair
+stream. Only the spare buffer is filled during validation; accepted data keeps
+its list identity until a complete replacement is ready. Alternating buffers
+preserve navigation's projection invalidation, including same-table/same-stamp
+receipts. Point/lair records grow with the largest visited publication, and
+rejected candidates or retirement clear their fields and list sizes. Empty
+tables remain reusable. Native arrays, selection/respawn rules, hidden recovery,
+arrows and minimap update rates are unchanged.
+
 Each guide defaults to `HUD_WIDTH = 190` and `HUD_HEIGHT = 46`. Default appearance metadata supplies the anchors: action artwork top is `55 + native action-button height + 14`; XP border bottom is `49 - (6 + 12) / 2 = 40`. Cache and guardian guides use that combined artwork span's vertical midpoint. Their left/right horizontal center offsets from the default bar center are `bar width / 2 + side inset 6 + gap 8 + HUD_WIDTH / 2`. The ally guide sits above the action bar, with its bottom eight units above the greater of `topInset` and the shared `jewelryTopInset` (`buttonWidth * 40 / 36`). Registration waits for this static metadata and lets shared layout convert the defaults to independent UIParent positions. Moving or resizing live action-bar or XP groups does not change the guides' dimensions or default anchor calculations; confirmed custom waypoint geometry and unrelated layout remain in use.
 
 The renderer copies each cache's official run-local `id`, world `x`/`y` and map `mx`/`my` without mutating or sorting the native lists. It reads phase before retained tables and hides guidance while ready/between runs or dead. A numeric `AZS_CHESTS_UPDATED` identifies a received snapshot; an initially empty placeholder is not treated as confirmed data. On initial loading after `/reload`, the stream's own stamped data can restore guidance before zone data arrives. A received empty list removes all cache pins. Cache and zone last-change timestamps are independent: no ordering across packet prefixes is used to accept or reject a snapshot. Paused and unchanged data remains valid indefinitely, without a stale-feed timeout.

@@ -40,7 +40,12 @@ local function Revive()
         assert(part == "revive")
         return {
             Acquire = function() context.nativeOwned = true end,
-            Release = function() context.nativeOwned = false end,
+            Release = function()
+                context.reads.release = (context.reads.release or 0) + 1
+                if context.failRelease then return false end
+                context.nativeOwned = false
+                return true
+            end,
         }
     end
     env.T.GetLocalSize = function(frame) return frame:GetWidth(), frame:GetHeight() end
@@ -86,8 +91,14 @@ local function Revive()
         context.pulses = (context.pulses or 0) + 1
         return math.sin(...)
     end
-    env.AZS_GetPhase = function() return context.phase or "playing" end
-    env.AZS_GetRevive = function() return env.AZS_REVIVE end
+    env.AZS_GetPhase = function()
+        context.reads.phase = (context.reads.phase or 0) + 1
+        return context.phase or "playing"
+    end
+    env.AZS_GetRevive = function()
+        context.reads.revive = (context.reads.revive or 0) + 1
+        return env.AZS_REVIVE
+    end
     env.geterrorhandler = function()
         return function(message) context.lastError = message end
     end
@@ -317,3 +328,66 @@ do
     )
 end
 print("PASS Revive clears caption metadata after a failed initial write before the view becomes active")
+
+for _, performance in ipairs({ false, true }) do
+    local context = Revive()
+    context:SetSetting("performanceMode", performance)
+    for _, idle in ipairs({ {}, { down = 0, reviving = "", rshare = 0 } }) do
+        context:Publish(idle)
+        context:ResetPerf()
+        for _ = 1, 10 do
+            context:Tick(0.1)
+        end
+        context:NoPresentationWrites()
+        assert(
+            context.reads.phase == 10 and context.reads.release == 10 and not context.reads.revive,
+            "idle cache stopped phase/release checks or reread state"
+        )
+        assert(not context.root:IsShown() and not context.nativeOwned)
+    end
+    local packet = context.env.AZS_REVIVE
+    packet.down, packet.reviving, packet.rshare = 0, "Bob", 0.25
+    context:ResetPerf()
+    context:Event(context.controller, "CHAT_MSG_ADDON", "AZSREVIVE")
+    context:Tick(0)
+    assert(
+        context.reads.revive == 1 and context.caption:GetText() == "Reviving Bob!",
+        "same-stamp receipt missed activation"
+    )
+    context.failRelease = true
+    context:Publish({ down = 0, reviving = "" })
+    context:ResetPerf()
+    context:Tick(0.1)
+    assert(
+        context.nativeOwned and context.reads.release == 1 and not context.reads.revive,
+        "idle release stopped retrying"
+    )
+    context.failRelease = false
+    context:Tick(0.1)
+    assert(not context.nativeOwned and not context.reads.revive, "idle HUD release did not recover")
+    context:Publish({ down = 0 }) -- Missing fields are not an explicit idle state.
+    context:ResetPerf()
+    for _ = 1, 3 do
+        context:Tick(0.1)
+    end
+    assert(context.reads.revive == 3, "malformed idle data stopped retrying")
+    local getter = context.env.AZS_GetRevive
+    context.env.AZS_GetRevive = function()
+        context.reads.revive = (context.reads.revive or 0) + 1
+        error("native revive unavailable")
+    end
+    context:Tick(0.1)
+    context.env.AZS_GetRevive = getter
+    context.env.AZS_REVIVE.down, context.env.AZS_REVIVE.reviving, context.env.AZS_REVIVE.rshare = 0, "Carol", 0.5
+    context:Tick(0.1)
+    assert(context.caption:GetText() == "Reviving Carol!", "failed-read retry adopted an idle cache")
+    context:Publish({})
+    context.phase = "ready"
+    context:Tick(0.1)
+    context.phase = "playing"
+    context:Tick(0.1)
+    assert(not context.root:IsShown(), "phase retirement replayed the cached publication")
+    context:Publish({ down = 1, by = "Alice", share = 0.2 })
+    assert(context.root:IsShown() and context.caption:GetText() == "Alice is reviving you!")
+end
+print("PASS idle Revive reuse keeps phase checks, fresh receipts, malformed/error retries and retirement in both modes")

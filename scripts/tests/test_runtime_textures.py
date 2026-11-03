@@ -16,6 +16,31 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class RuntimeTextureTests(unittest.TestCase):
+    def test_static_resting_icon_keeps_original_pixels_without_the_animation_sheet(self):
+        directory = ROOT / "media/tex/unitframes"
+        runtime = (directory / "Resting.blp").read_bytes()
+        width, height, levels = blp_bgra_levels(runtime)
+        self.assertEqual((width, height, len(levels)), (64, 64, 1))
+        self.assertLess(len(runtime), 16 * 1024, "static resting icon regained a large canvas")
+        # Pinned from the former sheet before removal: retain the exact visible
+        # 60-pixel tile and its original neighbouring filter pixels, without scaling.
+        self.assertEqual(
+            hashlib.sha256(levels[0]).hexdigest(),
+            "4e7fe88b7b8f61aa875762a5a9f6fc896d760d7bd6c5bb405e4f52626293d903",
+        )
+        tile = b"".join(levels[0][row * width * 4:row * width * 4 + 60 * 4] for row in range(60))
+        self.assertEqual(
+            hashlib.sha256(tile).hexdigest(),
+            "a1704812e2ac22ac71693815e36e99c54e89f060e0c588b85d88b6137cf92227",
+        )
+        prepared, _ = blp_from_tga((directory / "Resting.tga").read_bytes())
+        self.assertEqual(blp_bgra_levels(prepared), (width, height, levels))
+        manifest = json.loads((ROOT / "packaging/runtime-files.json").read_text())
+        self.assertIn("media/tex/unitframes/Resting.blp", manifest["files"])
+        self.assertNotIn("media/tex/unitframes/UIUnitFrameRestingFlipbook.blp", manifest["files"])
+        for suffix in (".blp", ".tga"):
+            self.assertFalse((directory / ("UIUnitFrameRestingFlipbook" + suffix)).exists())
+
     def test_shared_jewelry_housing_retains_original_pixels_without_the_bright_variant(self):
         source = (ROOT / "media/tex/jewelry/Runecarver.tga").read_bytes()
         self.assertEqual(

@@ -48,12 +48,14 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
         entry.width, entry.height, entry.viewportReady = width, height, true
     end
 
+    local PreparePortrait
     local function Bind(entry)
-        if entry.binding or not entry.supported then return end
+        if entry.binding then return end
         if not portraits3D or not inWorld or not entry.owner:IsVisible() or not UnitExists(entry.unit) then
             Release(entry)
             return
         end
+        if not PreparePortrait(entry) then return end
         entry.binding = true
         entry.bound = false
         entry.copyCleared = false
@@ -82,22 +84,18 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
         end
     end
 
-    local function CreatePortrait(owner, portrait, unit)
-        if not owner or not portrait then return end
-        local entry = {
-            owner = owner,
-            portrait = portrait,
-            unit = unit,
-            stillAlpha = portrait:GetAlpha(),
-        }
-        table.insert(entries, entry)
-        RestoreStill(entry)
+    PreparePortrait = function(entry)
+        if entry.supported ~= nil then return entry.supported end
+        -- Keep disabled, hidden and absent-unit portraits as metadata only.
+        -- Failed native preparation also stays settled instead of allocating again.
+        entry.supported = false
+        local owner, portrait, unit = entry.owner, entry.portrait, entry.unit
         local success, model = pcall(CreateFrame, "PlayerModel", nil, owner)
-        if not success or not model then return end
+        if not success or not model then return false end
         entry.model = model
         if type(model.SetUnit) ~= "function" or type(model.ClearModel) ~= "function" then
             model:Hide()
-            return
+            return false
         end
 
         -- The native viewport is rectangular. Contain it inside the portrait
@@ -151,12 +149,9 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
         end)
         if not success then
             Release(entry)
-            return
+            return false
         end
         entry.supported = true
-        HookScript(owner, "OnShow", function()
-            if not model:IsShown() then Bind(entry) end
-        end)
         -- A late player-border initialization can raise the still after this
         -- copy was created. The border may align its level without rebinding it.
         owner.sduiPortraitModel = model
@@ -170,6 +165,22 @@ DFRL:NewMod("AnimatedPortraits", 2, function()
             foreground:EnableMouse(false)
             PlayerFrameTexture:SetParent(foreground)
         end
+        return true
+    end
+
+    local function CreatePortrait(owner, portrait, unit)
+        if not owner or not portrait then return end
+        local entry = {
+            owner = owner,
+            portrait = portrait,
+            unit = unit,
+            stillAlpha = portrait:GetAlpha(),
+        }
+        table.insert(entries, entry)
+        RestoreStill(entry)
+        HookScript(owner, "OnShow", function()
+            if not entry.model or not entry.model:IsShown() then Bind(entry) end
+        end)
         Bind(entry)
     end
 

@@ -99,14 +99,70 @@ DFRL:NewMod("Frame stack", 2, function()
         highlight:SetBackdropBorderColor(1, 0.85, 0.15, 1)
         highlight:Hide()
     end
+    local function Place(frame, anchor, relative, relativePoint, x, y)
+        local point, owner, ownerPoint, currentX, currentY = Read(frame, "GetPoint", 1)
+        if
+            Read(frame, "GetNumPoints") ~= 1
+            or point ~= anchor
+            or owner ~= relative
+            or ownerPoint ~= relativePoint
+            or not T.NearlyEqual(currentX, x)
+            or not T.NearlyEqual(currentY, y)
+        then
+            frame:ClearAllPoints()
+            frame:SetPoint(anchor, relative, relativePoint, x, y)
+        end
+    end
+    local function LineHeight(label, text, width)
+        local metrics = label.fstackMetrics or {}
+        label.fstackMetrics = metrics
+        local face, size, flags = Read(label, "GetFont")
+        flags = flags or ""
+        local scale = Read(label, "GetEffectiveScale") or Read(panel, "GetEffectiveScale")
+        local height = Read(label, "GetHeight")
+        if
+            metrics.lineHeight
+            and metrics.text == text
+            and metrics.width == width
+            and metrics.face == face
+            and metrics.size == size
+            and metrics.flags == flags
+            and metrics.scale == scale
+            and (metrics.limited or metrics.drawnHeight == height)
+        then
+            return metrics.lineHeight
+        end
+        T.SetTextIfChanged(label, text)
+        -- Measure the full line even when its final display is a clipping notice.
+        local measuredWidth = Read(label, "GetStringWidth")
+        local measured = Read(label, "GetHeight")
+        local lineHeight = Number(measured) and math.max(14, measured + 2) or 14
+        if
+            type(face) == "string"
+            and face ~= ""
+            and Number(size)
+            and size > 0
+            and Number(scale)
+            and scale > 0
+            and Number(measuredWidth)
+            and (measuredWidth > 0 or text == "")
+            and Number(measured)
+            and measured > 0
+        then
+            metrics.text, metrics.width, metrics.face, metrics.size = text, width, face, size
+            metrics.flags, metrics.scale, metrics.lineHeight = flags, scale, lineHeight
+        else
+            metrics.lineHeight = nil
+        end
+        return lineHeight
+    end
     local function Display(lines, cursorX, width, height)
         local panelWidth = math.max(100, math.min(620, width - 24))
         local maximumHeight = math.max(14, height - 44)
         local count, contentHeight = 0, 0
-        panel:SetWidth(panelWidth)
-        panel:ClearAllPoints()
+        if not T.NearlyEqual(panel:GetWidth(), panelWidth) then panel:SetWidth(panelWidth) end
         local side = cursorX > width / 2 and "TOPLEFT" or "TOPRIGHT"
-        panel:SetPoint(side, UIParent, side, side == "TOPLEFT" and 12 or -12, -12)
+        Place(panel, side, UIParent, side, side == "TOPLEFT" and 12 or -12, -12)
         for i = 1, table.getn(lines) do
             local label = labels[i]
             if not label then
@@ -117,32 +173,44 @@ DFRL:NewMod("Frame stack", 2, function()
                 T.SetChatShadow(label)
                 table.insert(labels, label)
             end
-            label:SetWidth(panelWidth - 20)
-            label:SetText(lines[i])
-            -- The native 1.12 width getter measures the wrapped text; GetHeight
-            -- then exposes its height without a later-client GetStringHeight API.
-            Read(label, "GetStringWidth")
-            local measured = Read(label, "GetHeight")
-            local lineHeight = Number(measured) and math.max(14, measured + 2) or 14
+            local labelWidth = label:GetWidth()
+            if not T.NearlyEqual(labelWidth, panelWidth - 20) then
+                label:SetWidth(panelWidth - 20)
+                labelWidth = label:GetWidth()
+            end
+            local lineHeight = LineHeight(label, lines[i], labelWidth)
             local remaining = i < table.getn(lines) and 14 or 0
             local limited = contentHeight + lineHeight + remaining > maximumHeight
             if limited then
-                label:SetText(DFRL.locale.Text("... screen limit reached; /fstack off to close."))
+                T.SetTextIfChanged(label, DFRL.locale.Text("... screen limit reached; /fstack off to close."))
                 lineHeight = 14
+            else
+                T.SetTextIfChanged(label, lines[i])
             end
-            label:ClearAllPoints()
-            label:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -10 - contentHeight)
-            label:SetTextColor(1, i == 1 and 0.82 or 1, i == 1 and 0.35 or 1)
-            label:Show()
+            Place(label, "TOPLEFT", panel, "TOPLEFT", 10, -10 - contentHeight)
+            local green, blue = i == 1 and 0.82 or 1, i == 1 and 0.35 or 1
+            local r, g, b, a = Read(label, "GetTextColor")
+            if
+                not T.NearlyEqual(r, 1)
+                or not T.NearlyEqual(g, green)
+                or not T.NearlyEqual(b, blue)
+                or (a and not T.NearlyEqual(a, 1))
+            then
+                label:SetTextColor(1, green, blue)
+            end
+            if not label:IsShown() then label:Show() end
+            label.fstackMetrics.limited = limited
+            label.fstackMetrics.drawnHeight = Read(label, "GetHeight")
             count, contentHeight = i, contentHeight + lineHeight
             if limited then break end
         end
         for i = count + 1, table.getn(labels) do
-            labels[i]:SetText("")
-            labels[i]:Hide()
+            T.SetTextIfChanged(labels[i], "")
+            if labels[i]:IsShown() then labels[i]:Hide() end
+            labels[i].fstackMetrics = nil
         end
-        panel:SetHeight(contentHeight + 20)
-        panel:Show()
+        if not T.NearlyEqual(panel:GetHeight(), contentHeight + 20) then panel:SetHeight(contentHeight + 20) end
+        if not panel:IsShown() then panel:Show() end
     end
     local function Refresh()
         snapshot = {}
@@ -155,14 +223,18 @@ DFRL:NewMod("Frame stack", 2, function()
             return
         end
         local lines = { DFRL.locale.Text("SurvivorsDragonUi frame stack - /fstack to close") }
-        highlight:Hide()
         if type(_G.GetCursorPosition) ~= "function" or not Number(uiScale) or uiScale <= 0 then
+            if highlight:IsShown() then highlight:Hide() end
             table.insert(lines, DFRL.locale.Text("Native cursor/scale data is unavailable."))
             Display(lines, 0, width, height)
             return
         end
         local cursorX, cursorY = _G.GetCursorPosition()
-        if not Number(cursorX) or not Number(cursorY) then return end
+        if not Number(cursorX) or not Number(cursorY) then
+            if highlight:IsShown() then highlight:Hide() end
+            return
+        end
+        local highlightWanted = false
         cursorX, cursorY = cursorX / uiScale - uiLeft, cursorY / uiScale - uiBottom
         local focus
         if type(_G.GetMouseFocus) == "function" then
@@ -356,11 +428,15 @@ DFRL:NewMod("Frame stack", 2, function()
                     )
                 )
                 if inspected ~= UIParent and inspected ~= WorldFrame then
-                    highlight:ClearAllPoints()
-                    highlight:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", bounds.left, bounds.top)
-                    highlight:SetWidth(bounds.right - bounds.left)
-                    highlight:SetHeight(bounds.top - bounds.bottom)
-                    highlight:Show()
+                    Place(highlight, "TOPLEFT", UIParent, "BOTTOMLEFT", bounds.left, bounds.top)
+                    if not T.NearlyEqual(highlight:GetWidth(), bounds.right - bounds.left) then
+                        highlight:SetWidth(bounds.right - bounds.left)
+                    end
+                    if not T.NearlyEqual(highlight:GetHeight(), bounds.top - bounds.bottom) then
+                        highlight:SetHeight(bounds.top - bounds.bottom)
+                    end
+                    if not highlight:IsShown() then highlight:Show() end
+                    highlightWanted = true
                 end
             end
             local points = Read(inspected, "GetNumPoints")
@@ -386,6 +462,7 @@ DFRL:NewMod("Frame stack", 2, function()
         end
         table.insert(lines, DFRL.locale.Text("/fstack next|prev cycles all overlaps; /fstack focus follows the mouse."))
         table.insert(lines, DFRL.locale.Text("Native UI API only; bounds order is not exact hit testing/draw order."))
+        if not highlightWanted and highlight:IsShown() then highlight:Hide() end
         Display(lines, cursorX, width, height)
     end
     local function SetEnabled(value)
@@ -396,7 +473,8 @@ DFRL:NewMod("Frame stack", 2, function()
             if panel then panel:Hide() end
             if highlight then highlight:Hide() end
             for _, label in ipairs(labels) do
-                label:SetText("")
+                T.SetTextIfChanged(label, "")
+                label.fstackMetrics = nil
             end
             return
         end

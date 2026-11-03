@@ -286,7 +286,14 @@ Player/target limits leave at least 64 units of original health content; party l
 ## Artwork
 
 **3D Portrait** enables the existing independent player, target and
-target-of-target models. Their native rectangular viewports are centered inside
+target-of-target models. Each model and its backing strips are created only on
+its first eligible use: 3D enabled, Performance Mode off, portraits visible,
+in-world, with a visible owner and an existing unit. Default 2D creates no model,
+backing texture or player foreground holder. The existing owner Show and native
+events recover initially hidden or absent targets without another updater.
+Turning 3D off clears and hides prepared models; later enabling reuses them.
+
+Their native rectangular viewports are centered inside
 the existing portrait circles. For portrait diameter `d`, each viewport is
 `(d - 2) / sqrt(2)` units square, keeping all four corners inside the ring.
 The 3D view is therefore smaller than the original full-width model viewport;
@@ -302,6 +309,10 @@ portrait dimensions and skips unchanged geometry; no updater is added.
 Still portraits remain the fallback until the existing model callback provides
 copy and viewport evidence. The legacy `playerPortrait3D` preference and all
 preview, Confirm, Cancel, reset and world/reload cleanup paths are retained.
+Unsupported native preparation keeps the original still and does not repeatedly
+allocate replacement models. CI-only cases cover deferred creation, model/strip
+counts, settings transactions, late callbacks, target changes, existing border
+levels, native failures and world/reload cleanup; no local tests or game execution.
 
 The shared `CreatePortraitlessBorder` helper closes both ends with mirrored
 pieces of the existing `UI-TargetingFrameDF1.blp` straight metal edge. Source
@@ -317,8 +328,10 @@ The ordinary portrait sheets are hidden while this border is active. The small
 target-of-target hides only its sheet strips, retaining its foreground health
 and dead text. The resting icon remains hidden while portraits are off. Native primary pet and summon frames are unaffected.
 
-The resting icon uses the first tile of its existing image in both Performance
-Mode states. Its original position and size remain; the existing native resting
+The resting icon uses the compact `Resting.blp` image in both Performance
+Mode states. The original 60-by-60 static tile and neighbouring filter pixels
+occupy a 64-by-64 canvas, sampled at `0..60/64` on both axes without resampling.
+Its original position and size remain; the existing native resting
 event and display listener only change visibility. No animation clock, frame
 index or OnUpdate is retained. Parent hiding and Hide portraits still hide it.
 
@@ -327,9 +340,23 @@ static round/pointed borders remain, with health, power, absorbs, native clicks
 and saved layout retaining their existing paths. Removing the two cosmetic
 owners and their round variants removes four frames and eight texture regions.
 The unused `UI-Player-Status.blp` is removed from the tree and runtime manifest;
-the existing resting image and shared static-border sheets remain in use.
+the shared static-border sheets remain in use.
 
-CI-only player-status cases cover the fixed image, native visibility events,
+The former 512-by-512 `UIUnitFrameRestingFlipbook.blp` and its full-size TGA
+authoring copy are removed. `Resting.tga` retains only the same 64-by-64 source
+crop for the existing client-texture preparation pipeline. The runtime BLP
+shrinks from 1,049,748 to 9,364 bytes (about 99.1%) through the existing lossless
+palette writer, with no added frame, texture region, event or updater. Blizzard
+artwork ownership and the existing credits are unchanged.
+
+The retired runtime source is available in Git at `064023f` under its former
+path, with SHA-256
+`6d653f2d51fbc02bf2af47078e9af4a01855970446acaafd9aa58c1a0ec7d795`.
+Its top-left `(0,0)-(64,64)` crop supplies the new authoring image; CI pins the
+decoded BGRA hash of both that canvas and the visible 60-by-60 tile. Native
+pixels, alpha and filter neighbours remain unchanged.
+
+CI-only player-status and artwork cases cover the compact fixed image, native visibility events,
 mode and portrait choices, parent hiding, reuse and absence of animation work.
 They were authored without local tests or addon/game execution; native
 appearance and FPS remain unverified.

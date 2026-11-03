@@ -627,6 +627,40 @@ DFRL:NewMod("Waypoints", 3, function()
         MakeHUD(tracker)
     end
 
+    local function WipeSnapshotTable(target)
+        if not target then return end
+        for key in pairs(target) do
+            target[key] = nil
+        end
+    end
+    local function ClearSnapshotBuffer(buffer)
+        if not buffer or buffer.cleared then return end
+        for index = 1, buffer.pointCount do
+            WipeSnapshotTable(buffer.points[index])
+        end
+        for index = 1, buffer.lairCount do
+            WipeSnapshotTable(buffer.lairRows[index])
+        end
+        WipeSnapshotTable(buffer.entries)
+        WipeSnapshotTable(buffer.seen)
+        WipeSnapshotTable(buffer.lairs)
+        WipeSnapshotTable(buffer.minimap)
+        if table.setn then
+            table.setn(buffer.entries, 0)
+            if buffer.lairs then table.setn(buffer.lairs, 0) end
+            if buffer.minimap then table.setn(buffer.minimap, 0) end
+        end
+        buffer.pointCount, buffer.lairCount, buffer.cleared = 0, 0, true
+    end
+    local function RejectSnapshot(buffer) ClearSnapshotBuffer(buffer) end
+    local function SnapshotRow(pool, index)
+        local row = pool[index]
+        if not row then
+            row = {}
+            pool[index] = row
+        end
+        return row
+    end
     local function Clear(tracker)
         if tracker.kind == "guardian" and DFRL.guardians then DFRL.guardians.Clear() end
         ClearMinimapPins(tracker.kind)
@@ -645,6 +679,8 @@ DFRL:NewMod("Waypoints", 3, function()
         tracker.selectionDeferred = nil
         tracker.selectionEntries, tracker.nextSelectionAt = nil, nil
         tracker.presentation = nil
+        ClearSnapshotBuffer(tracker.snapshotBuffer)
+        ClearSnapshotBuffer(tracker.stagingSnapshot)
         tracker.distanceValue, tracker.distanceLanguage, tracker.distanceLabel = nil, nil, nil
         if tracker.hudWanted ~= false then
             tracker.hudWanted = false
@@ -753,32 +789,37 @@ DFRL:NewMod("Waypoints", 3, function()
             return tracker.acceptedEntries
         end
         local guardian = tracker.kind == "guardian"
-        local result, seen, lairs, minimap = {}, {}, {}, {}
+        local buffer = tracker.stagingSnapshot
+        if not buffer then
+            buffer = { entries = {}, seen = {}, points = {}, pointCount = 0, lairCount = 0, cleared = true }
+            if guardian then
+                buffer.lairs, buffer.minimap, buffer.lairRows = {}, {}, {}
+            end
+            tracker.stagingSnapshot = buffer
+        end
+        ClearSnapshotBuffer(buffer)
+        buffer.cleared = false
+        local result, seen, lairs, minimap = buffer.entries, buffer.seen, buffer.lairs, buffer.minimap
+        local count = 0
         local nextRespawn, allDefeated = nil, guardian
         for _, entry in ipairs(list) do
-            if type(entry) ~= "table" then return end
+            if type(entry) ~= "table" then return RejectSnapshot(buffer) end
             -- Both occupied states mean a living guardian. Coordinates belong
             -- to its lair, not to the creature while it moves during a fight.
             local occupied = (entry.state == "asleep" or entry.state == "awake") and Integer(entry.id, 1)
             if guardian then
-                if not Integer(entry.index, 1) or seen[entry.index] then return end
+                if not Integer(entry.index, 1) or seen[entry.index] then return RejectSnapshot(buffer) end
                 seen[entry.index] = true
                 if entry.state ~= "empty" or entry.id ~= 0 then allDefeated = false end
-                table.insert(lairs, {
-                    index = entry.index,
-                    id = entry.id,
-                    name = entry.name,
-                    state = entry.state,
-                    left = entry.left,
-                    x = entry.x,
-                    y = entry.y,
-                    z = entry.z,
-                    mx = entry.mx,
-                    my = entry.my,
-                    runId = type(entry.runId) == "string" and entry.runId or nil,
-                    mapId = Number(entry.mapId) and entry.mapId or nil,
-                    spaceId = type(entry.spaceId) == "string" and entry.spaceId or nil,
-                })
+                buffer.lairCount = buffer.lairCount + 1
+                local lair = SnapshotRow(buffer.lairRows, buffer.lairCount)
+                lair.index, lair.id, lair.name, lair.state, lair.left =
+                    entry.index, entry.id, entry.name, entry.state, entry.left
+                lair.x, lair.y, lair.z, lair.mx, lair.my = entry.x, entry.y, entry.z, entry.mx, entry.my
+                lair.runId = type(entry.runId) == "string" and entry.runId or nil
+                lair.mapId = Number(entry.mapId) and entry.mapId or nil
+                lair.spaceId = type(entry.spaceId) == "string" and entry.spaceId or nil
+                lairs[buffer.lairCount] = lair
             end
             if not guardian or occupied then
                 if
@@ -787,44 +828,36 @@ DFRL:NewMod("Waypoints", 3, function()
                     or not Number(entry.y)
                     or (guardian and not Integer(entry.index, 1))
                 then
-                    return
+                    return RejectSnapshot(buffer)
                 end
                 if not guardian then
-                    if seen[entry.id] then return end
+                    if seen[entry.id] then return RejectSnapshot(buffer) end
                     seen[entry.id] = true
                 end
                 local key = guardian and (tostring(entry.index) .. ":" .. tostring(entry.id)) or tostring(entry.id)
-                local point = {
-                    key = key,
-                    id = entry.id,
-                    index = guardian and entry.index or nil,
-                    state = guardian and entry.state or nil,
-                    name = guardian and type(entry.name) == "string" and entry.name ~= "" and entry.name or nil,
-                    x = entry.x,
-                    y = entry.y,
-                    mx = entry.mx,
-                    my = entry.my,
-                    runId = type(entry.runId) == "string" and entry.runId or nil,
-                    mapId = Number(entry.mapId) and entry.mapId or nil,
-                    spaceId = type(entry.spaceId) == "string" and entry.spaceId or nil,
-                }
-                table.insert(result, point)
-                if guardian then table.insert(minimap, point) end
+                buffer.pointCount = buffer.pointCount + 1
+                local point = SnapshotRow(buffer.points, buffer.pointCount)
+                point.key, point.id = key, entry.id
+                point.index, point.state = guardian and entry.index or nil, guardian and entry.state or nil
+                point.name = guardian and type(entry.name) == "string" and entry.name ~= "" and entry.name or nil
+                point.x, point.y, point.mx, point.my = entry.x, entry.y, entry.mx, entry.my
+                point.runId = type(entry.runId) == "string" and entry.runId or nil
+                point.mapId = Number(entry.mapId) and entry.mapId or nil
+                point.spaceId = type(entry.spaceId) == "string" and entry.spaceId or nil
+                count = count + 1
+                result[count] = point
+                if guardian then minimap[buffer.pointCount] = point end
             elseif entry.state == "empty" and entry.id == 0 and Number(entry.x) and Number(entry.y) then
-                local point = {
-                    key = tostring(entry.index) .. ":0",
-                    state = entry.state,
-                    name = type(entry.name) == "string" and entry.name ~= "" and entry.name or nil,
-                    left = Number(entry.left) and entry.left >= 0 and entry.left or nil,
-                    x = entry.x,
-                    y = entry.y,
-                    mx = entry.mx,
-                    my = entry.my,
-                    runId = type(entry.runId) == "string" and entry.runId or nil,
-                    mapId = Number(entry.mapId) and entry.mapId or nil,
-                    spaceId = type(entry.spaceId) == "string" and entry.spaceId or nil,
-                }
-                table.insert(minimap, point)
+                buffer.pointCount = buffer.pointCount + 1
+                local point = SnapshotRow(buffer.points, buffer.pointCount)
+                point.key, point.state = tostring(entry.index) .. ":0", entry.state
+                point.name = type(entry.name) == "string" and entry.name ~= "" and entry.name or nil
+                point.left = Number(entry.left) and entry.left >= 0 and entry.left or nil
+                point.x, point.y, point.mx, point.my = entry.x, entry.y, entry.mx, entry.my
+                point.runId = type(entry.runId) == "string" and entry.runId or nil
+                point.mapId = Number(entry.mapId) and entry.mapId or nil
+                point.spaceId = type(entry.spaceId) == "string" and entry.spaceId or nil
+                minimap[buffer.pointCount] = point
                 if
                     point.left
                     and (
@@ -837,6 +870,16 @@ DFRL:NewMod("Waypoints", 3, function()
                 end
             end
         end
+        if table.setn then
+            table.setn(result, count)
+            if guardian then
+                table.setn(lairs, buffer.lairCount)
+                table.setn(minimap, buffer.pointCount)
+            end
+        end
+        -- The accepted list keeps its identity for the whole publication.
+        -- Only the spare buffer is writable during candidate validation.
+        tracker.snapshotBuffer, tracker.stagingSnapshot = buffer, tracker.snapshotBuffer
         tracker.acceptedSnapshot = list
         tracker.acceptedGeneration, tracker.acceptedStamp, tracker.acceptedEntries = received, stamp, result
         tracker.acceptedMinimapEntries = guardian and minimap or nil

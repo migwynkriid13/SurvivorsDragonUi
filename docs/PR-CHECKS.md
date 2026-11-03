@@ -683,13 +683,29 @@ The assertions cover:
   lazy Chat time and observed/unreported tooltip owners. These fixtures are
   authored for CI and were not run locally; no live rendering/FPS is inferred.
 
+- `ui_3d_portraits_spec.lua` loads the production portrait and display owners
+  against explicit fake native models. It requires no model/backing/foreground
+  allocation while default-off, Performance Mode, hidden, absent or out-of-world;
+  one eligible creation per unit; unchanged viewport/camera/still behavior;
+  no unrelated-setting rebinding; Confirm/Cancel/profile/reset reuse; target,
+  border-level, late-callback and world/reload recovery. Native creation,
+  unsupported-method and copy failures retain stills without repeated allocation.
+  These are authored CI-only contracts, not local execution or native rendering
+  evidence.
+
 - Player-status cases in `ui_player_status_spec.lua` extract the production
-  resting-icon and portrait-shape helpers. They require a fixed first image in
+  resting-icon and portrait-shape helpers. They require the compact static image in
   both modes, no animation callback or frame-time native polling, event-driven
   resting visibility, unchanged mode switches, Hide portraits, parent hiding
   and round-border recovery without another region. Source contracts reject the
   retired pulse construction/art binding. These replace the old pulse fixture
   and remain CI-only; no local tests or addon/game execution were run.
+
+  Artwork cases pin the compact 64-by-64 resting image and its visible
+  60-by-60 tile to the retired sheet's exact pixels, retain the authoring/runtime
+  match and a small file budget, and reject the retired full sheet in both the
+  media tree and runtime manifest. The lifecycle fixture keeps the original
+  icon geometry and event-driven visibility without an animation worker.
 
 - Native local-clock cases in `ui_idle_clock_spec.lua` reuse the production
   clock and shared HUD owner. They cover 24-hour conversion from native numeric
@@ -774,6 +790,18 @@ The assertions cover:
   duration/artwork, language, Ready, malformed metadata and failed native art
   assignment. They remain CI-only and were not run locally; no live appearance
   or FPS result is inferred. Loot timing is unchanged.
+- Fifth-pass cases add exact production snapshot-buffer and inspector-display
+  fixtures, plus idle Revive lifecycle cases in both modes. Snapshot cases check
+  alternating list identities, reused point/lair records, same-table receipts,
+  atomic duplicate rejection, shrink/grow lengths, respawn ties, raw input
+  preservation and cleared retired fields. Revive cases retain ten-Hz phase and
+  release attempts without rereading accepted idle data, including failed native
+  restoration, fresh same-stamp activation, malformed/error retries and phase
+  retirement. Inspector cases cover unchanged presentation and wrapping work,
+  actual native text/width/anchor/color repair, font/scale invalidation, clipping
+  notices, hidden row reuse and failed metric recovery. Its complete five-Hz scan
+  remains unchanged. These are authored CI-only cases, not local execution or
+  native appearance/FPS evidence. Loot timing is unchanged.
 - API-timer presentation cases in `ui_aura_layout_perf_spec.lua` exercise
   the production owner with explicit native boundaries. They cover bright,
   text-free, borderless talent/jewelry timer icons filling their existing buttons

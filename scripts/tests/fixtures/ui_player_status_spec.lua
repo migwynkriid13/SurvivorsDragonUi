@@ -7,6 +7,7 @@ local source = file:read("*a")
 file:close()
 assert(not source:find("CreatePulse", 1, true), "retired portrait pulse construction remains")
 assert(not source:find("UI-Player-Status.blp", 1, true), "retired portrait pulse artwork remains bound")
+assert(not source:find("UIUnitFrameRestingFlipbook", 1, true), "retired resting animation sheet remains bound")
 
 for _, performance in ipairs({ false, true }) do
     local context = H.New()
@@ -43,14 +44,14 @@ for _, performance in ipairs({ false, true }) do
     local controller = context:Controller("PLAYER_UPDATE_RESTING")
     local texture
     for _, object in ipairs(context.objects) do
-        if object.texture == env.tex .. "UIUnitFrameRestingFlipbook" then texture = object end
+        if object.texture == env.tex .. "Resting.blp" then texture = object end
     end
     assert(texture, "static resting icon was removed")
     local indicator, prepared = texture:GetParent(), #context.objects
     assert(not indicator:IsShown(), "inactive resting status showed its icon")
     local function Static()
         local crop = texture.crop
-        assert(crop[1] == 0 and crop[2] == 60 / 512 and crop[3] == 0 and crop[4] == 60 / 512)
+        assert(crop[1] == 0 and crop[2] == 60 / 64 and crop[3] == 0 and crop[4] == 60 / 64)
         for _, object in ipairs(context.objects) do
             assert(not object:GetScript("OnUpdate"), "player status installed an animation worker")
         end

@@ -73,6 +73,14 @@ reload and `AZSZONE` retire the visible state and block the old packet identity,
 stamp and delivery generation until a fresh delivery. World entry resumes
 refreshing. Both resets clear the view and allow current valid state to repaint.
 
+Both Performance Mode states also reuse explicitly valid idle publications:
+the documented empty out-of-party result, or `down == 0` with `reviving == ""`.
+The same packet/stamp/receipt tuple skips repeated getter calls until it changes
+or existing reset/visibility/settings/world invalidation requests a fresh read.
+Phase checks and native HUD release retries stay at ten Hz. Missing, malformed
+or failed native results remain retryable; fresh receipts still activate the
+bar on the next frame, including reused tables and timestamps.
+
 ## Layout and native replacement
 
 The custom bar defaults on, and both full resets restore that default. In

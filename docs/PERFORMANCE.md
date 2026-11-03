@@ -4,6 +4,42 @@ The performance work removes repeated presentation writes while retaining native
 data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
 or native client dependency. Display choices use the existing saved display table.
 
+## Waypoint buffers, idle Revive and inspector presentation — 2026-11-03
+
+Both Performance Mode states reuse two snapshot buffers per cache/lair stream.
+Only the spare buffer is writable during validation; a successful publication
+swaps it into use with a different list identity, retaining navigation's
+projection invalidation. Point/lair records grow lazily to each buffer's largest
+visited publication. Rejection clears partial candidates, and ordinary retirement
+clears both buffers' fields and list lengths while retaining empty reusable
+tables. Native lists, acceptance rules, destination order, respawn ties, arrows,
+minimap projection and visibility/receipt/world recovery keep their existing paths.
+Unchanged publications still return their accepted list directly.
+
+Revive accepts the documented empty out-of-party result and an explicit
+`down = 0, reviving = ""` as idle publications. Their packet/stamp/receipt tuple
+then uses the same reuse gate as active snapshots. Native phase checks and HUD
+release retries continue at ten Hz; changed receipts, reset/Show/settings/world
+invalidation retain fresh reads. Missing/malformed/error results remain retryable.
+Active progress, native ownership, animation and hidden behavior are unchanged.
+
+The opt-in `/fstack` retains its complete five-Hz native scan. Presentation
+compares actual text, widths, anchors, colors and shown state before writing.
+Each pooled line retains valid wrapping metrics for its full input text, font,
+width and effective scale, with actual height checks for ordinary lines.
+Clipping notices reuse the full line's metrics without repeatedly drawing and
+measuring that hidden full text. Invalid metrics retry; changed data/font/scale/
+screen bounds refresh the relevant work. Unused rows release prepared text;
+the highlight compares its actual geometry and hides when no valid subject remains.
+This inspector work affects debugging only.
+
+No gameplay frame, region, asset, setting, SavedVariable, event, updater or
+polling interval is added. Loot timing is unchanged. CI-only cases cover buffer
+identity/reuse/rejection/retirement, idle receipts and failed-release recovery,
+and inspector native repair, clipping, font/scale changes and metric retries in
+both modes. They were not run locally. Source review and pinned formatting do
+not establish native appearance or measured FPS gains.
+
 ## Encounter preparation and hovered buff timers — 2026-11-03
 
 Both Performance Mode states keep native encounter validation, health and debuff
@@ -1839,7 +1875,12 @@ performance.
   active dragging, including a final release sample.
 - Optional 3D portrait viewport/readiness and native model-paint handshakes remain
   frame-driven. They establish when the native model can replace its still image;
-  native model animation is not controlled by addon polling.
+  native model animation is not controlled by addon polling. Models, their
+  twenty-two backing strips each and any player foreground holder are deferred
+  until enabled, visible, in-world first use with a valid unit. Default 2D and
+  Performance Mode allocate none of these; previously prepared models clear/hide
+  and are reused on return. The original still fallback and existing event/Show
+  recovery remain, with no additional updater or asset.
 - Active health-loss/XP effects retain their equations and frame cadence.
   Loss/XP callbacks already detach on completion. Stored levels keep only their
   ten-Hz native reader and static panel. Chat keeps
@@ -1852,7 +1893,10 @@ performance.
   ten Hz, with static/paused/hidden retirement.
 - Timer flow/foam/red glints, cache affordability glow, jewelry cooldowns and
   banner fades remain capped at thirty Hz. Warning gradients remain twenty Hz only while active.
-  The resting icon stays static in both modes with event-driven visibility.
+  The resting icon stays static in both modes with event-driven visibility. Its
+  compact 64-by-64 texture preserves the original static tile and filter pixels;
+  the full animation BLP/TGA sheets are removed, reducing the runtime file from
+  1,049,748 to 9,364 bytes without another frame, region or updater.
 - Resources, pets, normal cooldowns, guardian tracker and encounter fallback reads
   remain ten Hz. Meter reads and rates use one-Hz regular updates; jewelry
   metadata, banner readiness and tooltip styling remain five Hz. Loot service

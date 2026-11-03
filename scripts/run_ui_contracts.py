@@ -63,6 +63,11 @@ def main():
             "NEAREST_INTERVAL", "nearestClock", "guideRespawns", "Number", "FrameVisible",
             "RespawnTarget", "CanSelectNearest", "Choose", "Rotate", "WrapAngle", "Blend", "UpdateGuide",
         ])
+        waypoint_buffers = extract_source("modules/map/waypoints.lua", [
+            "Number", "Integer", "WipeSnapshotTable", "ClearSnapshotBuffer", "RejectSnapshot", "SnapshotRow", "Snapshot",
+        ])
+        waypoint_buffers = waypoint_buffers.rsplit("\nreturn ", 1)[0] + "\nreturn { Read = Snapshot, Clear = ClearSnapshotBuffer }\n"
+        fstack_display = extract_source("core/fstack.lua", ["Number", "Read", "Place", "LineHeight", "Display"])
         xp_glow = extract_source("modules/xprep/xprep.lua", ["PaintGlow"])
         sct_queue = extract_source("modules/nameplates/sct.lua", [
             "DIABLO", "criticalHistory", "textStyle",
@@ -183,6 +188,8 @@ def main():
             ("run-marker-source.lua", run_markers, "ui_run_marker_perf_spec.lua"),
             ("run-debuff-cadence-source.lua", run_debuff_cadence, "ui_run_debuff_cadence_spec.lua"),
             ("run-boss-health-loss-source.lua", run_boss_health_loss, "ui_run_boss_health_loss_spec.lua"),
+            ("waypoint-buffers-source.lua", waypoint_buffers, "ui_waypoint_buffers_spec.lua"),
+            ("fstack-display-source.lua", fstack_display, "ui_fstack_display_spec.lua"),
         ):
             seam = Path(folder) / name
             seam.write_text(source, encoding="utf-8")
@@ -195,7 +202,7 @@ def main():
                     source_file.write_text(body, encoding="utf-8")
                     command.append(str(source_file))
             run_fixture(command, fixture)
-        for fixture in ("ui_menu_native_spec.lua", "ui_dropdown_compat_spec.lua", "ui_artwork_strip_spec.lua", "ui_fonts_spec.lua", "ui_retail_edit_spec.lua", "ui_retail_layout_spec.lua", "ui_default_chat_spec.lua", "ui_health_spec.lua", "ui_player_absorb_spec.lua", "ui_mini_health_spec.lua", "ui_sct_spec.lua", "ui_sct_areas_spec.lua", "ui_native_sct_api_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_native_meter_api_spec.lua", "ui_native_meter_view_spec.lua", "ui_native_portrait_circle_spec.lua", "ui_native_language_spec.lua", "ui_live_position_api_spec.lua", "ui_downed_party_api_spec.lua", "ui_world_marker_api_spec.lua", "ui_party_waypoint_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_default_action_bar_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_target_classification_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
+        for fixture in ("ui_3d_portraits_spec.lua", "ui_menu_native_spec.lua", "ui_dropdown_compat_spec.lua", "ui_artwork_strip_spec.lua", "ui_fonts_spec.lua", "ui_retail_edit_spec.lua", "ui_retail_layout_spec.lua", "ui_default_chat_spec.lua", "ui_health_spec.lua", "ui_player_absorb_spec.lua", "ui_mini_health_spec.lua", "ui_sct_spec.lua", "ui_sct_areas_spec.lua", "ui_native_sct_api_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_native_meter_api_spec.lua", "ui_native_meter_view_spec.lua", "ui_native_portrait_circle_spec.lua", "ui_native_language_spec.lua", "ui_live_position_api_spec.lua", "ui_downed_party_api_spec.lua", "ui_world_marker_api_spec.lua", "ui_party_waypoint_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_default_action_bar_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_target_classification_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
             run_fixture(["lua5.1", "scripts/tests/fixtures/" + fixture], fixture)
     if failures:
         print("Failed UI fixtures:", file=sys.stderr)

@@ -360,6 +360,13 @@ DFRL:NewMod("Revive", 4, function()
             Clear()
             return
         end
+        -- The native contract permits an empty out-of-party result. Only that
+        -- and an explicit non-reviving state are accepted as idle publications.
+        if next(state) == nil or (state.down == 0 and state.reviving == "") then
+            Clear()
+            lastPacket, lastStamp, lastReceived, dirty = packet, stamp, received, false
+            return
+        end
         local template, person, progress, subject, waiting
         if state.down == 1 then
             local helper = Name(state.by)
