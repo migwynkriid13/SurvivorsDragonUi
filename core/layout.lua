@@ -387,6 +387,7 @@ DFRL:NewMod("Layout", 0, function()
         if options.resize == "dimensions" then
             local width = Number(geometry.width)
                     and Clamp(geometry.width, options.minWidth or 120, options.maxWidth or 2400)
+                or (type(options.defaultWidth) == "function" and options.defaultWidth())
                 or entry.defaultWidth
             local height = Number(geometry.height)
                     and Clamp(geometry.height, options.minHeight or 80, options.maxHeight or 1600)

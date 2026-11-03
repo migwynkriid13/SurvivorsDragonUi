@@ -11,7 +11,9 @@ DFRL:NewMod("Chat", 1, function()
         if initialized or not ChatFrame1 then return end
         initialized = true
 
-        local WIDTH, HEIGHT = 520, 340
+        local DEFAULT_WIDTH, DEFAULT_HEIGHT, MIN_WIDTH = 400, 220, 240
+        local LEFT, BOTTOM, BAR_GAP = 20, 40, 12
+        local STRATA = "LOW"
         local FOOTER_HEIGHT = 32
         local HOLD, FADE, SLIDE = 14, 0.6, 0.35
         local states, selected = {}, nil
@@ -21,16 +23,32 @@ DFRL:NewMod("Chat", 1, function()
         local focused = false
         local performanceMode = DFRL.display.Get("performanceMode")
 
+        local function DefaultGeometry()
+            local bar = DFRL.actionBarDefaults
+            if not bar then return DEFAULT_WIDTH, BOTTOM end
+            local screenWidth = T.GetLocalSize(UIParent)
+            if not screenWidth or screenWidth <= 0 then return DEFAULT_WIDTH, BOTTOM end
+            local available = (screenWidth - bar.width) / 2 - bar.sideInset - LEFT - BAR_GAP
+            if available >= MIN_WIDTH then return math.min(DEFAULT_WIDTH, available), BOTTOM end
+            -- Leave room for both the action bar's jewelry and the chat footer.
+            return MIN_WIDTH, bar.bottom + bar.height + bar.jewelryTopInset + FOOTER_HEIGHT + BAR_GAP
+        end
+        local function AnchorDefault(frame)
+            local _, bottom = DefaultGeometry()
+            frame:ClearAllPoints()
+            frame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", LEFT, bottom)
+        end
+
+        local rootWidth, rootHeight = DefaultGeometry(), DEFAULT_HEIGHT
         local root = CreateFrame("Frame", "SurvivorsDragonUiChat", UIParent)
-        root:SetWidth(WIDTH)
-        root:SetHeight(HEIGHT)
-        -- Leave only enough bottom clearance for the input and scroll indicator.
-        root:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", 20, 40)
-        root:SetFrameStrata("LOW")
+        root:SetWidth(rootWidth)
+        root:SetHeight(rootHeight)
+        AnchorDefault(root)
+        root:SetFrameStrata(STRATA)
+        root:SetFrameLevel(1)
         root:SetAlpha(1)
         root:Show()
         chat.frame = root
-        local rootWidth, rootHeight = WIDTH, HEIGHT
         -- Include the native input and passive indicator below the message pane.
         local moveRegion = CreateFrame("Frame", nil, root)
         moveRegion:SetPoint("TOPLEFT", root, "TOPLEFT", -1, 0)
@@ -189,6 +207,9 @@ DFRL:NewMod("Chat", 1, function()
             -- them at the existing refresh points, outside the slide hot path.
             if refresh then
                 LockNativeMovement(frame)
+                -- Saved native chat levels can put the pane over SDUI's action buttons.
+                local level = root:GetFrameLevel() + 1
+                if frame:GetFrameLevel() ~= level then frame:SetFrameLevel(level) end
                 state.anchored = HasAnchor(frame, "TOPLEFT", root, "TOPLEFT", 3, y)
                 state.positionY = state.anchored and y or nil
                 state.width, state.height = frame:GetWidth(), frame:GetHeight()
@@ -218,7 +239,7 @@ DFRL:NewMod("Chat", 1, function()
         end
 
         local indicator = CreateFrame("Frame", nil, root)
-        indicator:SetWidth(WIDTH)
+        indicator:SetWidth(rootWidth)
         indicator:SetHeight(FOOTER_HEIGHT)
         indicator:SetPoint("TOPLEFT", root, "BOTTOMLEFT", 0, 0)
         indicator:SetFrameLevel(root:GetFrameLevel() + 5)
@@ -328,6 +349,7 @@ DFRL:NewMod("Chat", 1, function()
             -- Only approved message categories are formatted. Rendering still
             -- uses the actual native frame, with raw-text fallback on failure.
             native:SetParent(root)
+            native:SetFrameStrata(STRATA)
             LockNativeMovement(native)
             PositionNative(state, GetTime(), true)
             FadeSettings(state, false)
@@ -528,7 +550,7 @@ DFRL:NewMod("Chat", 1, function()
 
         if input then
             input:SetParent(UIParent)
-            input:SetFrameStrata("LOW")
+            input:SetFrameStrata(STRATA)
             input:SetFrameLevel(root:GetFrameLevel() + 6)
             for _, region in ipairs({ input:GetRegions() }) do
                 if region.GetObjectType and region:GetObjectType() == "Texture" then HideControl(region) end
@@ -657,14 +679,15 @@ DFRL:NewMod("Chat", 1, function()
             end
             UpdateIndicator()
         end)
-        DFRL.layout.Register("chat", root, nil, {
+        DFRL.layout.Register("chat", root, AnchorDefault, {
             region = moveRegion,
             resize = "dimensions",
             edgeHandles = true,
-            minWidth = 240,
+            minWidth = MIN_WIDTH,
             minHeight = 120,
             maxWidth = 2400,
             maxHeight = 1600,
+            defaultWidth = DefaultGeometry,
             onResize = function(frame)
                 rootWidth, rootHeight = frame:GetWidth(), frame:GetHeight()
                 if not T.NearlyEqual(indicator:GetWidth(), rootWidth) then indicator:SetWidth(rootWidth) end
