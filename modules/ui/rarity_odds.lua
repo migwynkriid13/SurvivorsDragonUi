@@ -1,7 +1,7 @@
 DFRL:NewMod("RarityOdds", 5, function()
     local INTERVAL, WIDTH, HEIGHT = 0.25, 420, 140
     local HEADER_HEIGHT, ROW_HEIGHT = WIDTH / 8, 16
-    local GOLD, MUTED, WHITE = { 0.87, 0.74, 0.49 }, { 0.78, 0.72, 0.61 }, { 1, 0.96, 0.87 }
+    local GOLD, WHITE = { 0.87, 0.74, 0.49 }, { 1, 0.96, 0.87 }
     local TIERS = {
         { "Rare", 0.28, 0.65, 1 },
         { "Epic", 0.76, 0.49, 1 },
@@ -110,8 +110,7 @@ DFRL:NewMod("RarityOdds", 5, function()
         rim:SetHeight(27)
         rim:SetPoint("CENTER", icon, "CENTER", 0, 0)
         labels = {
-            title = Label(panel, 15, 46, -(HEADER_HEIGHT - 20) / 2, 244, GOLD),
-            note = Label(panel, 10, 290, -(HEADER_HEIGHT - 15) / 2, WIDTH - 304, MUTED, "RIGHT"),
+            title = Label(panel, 15, 46, -(HEADER_HEIGHT - 20) / 2, WIDTH - 60, GOLD),
             tiers = {},
             rows = {},
         }
@@ -161,7 +160,6 @@ DFRL:NewMod("RarityOdds", 5, function()
         local currentLanguage = locale.code or "en"
         if language ~= currentLanguage then
             T.SetTextIfChanged(labels.title, locale.Text("Rarity odds"))
-            T.SetTextIfChanged(labels.note, locale.Text("Estimates"))
             for index, tier in ipairs(TIERS) do
                 T.SetTextIfChanged(labels.tiers[index], locale.Text(tier[1]))
             end

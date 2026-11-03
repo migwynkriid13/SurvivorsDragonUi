@@ -52,9 +52,9 @@ for _, performance in ipairs({ false, true }) do
     Tick()
     assert(panel:IsShown() and not env.SurvivorsDragonUiDisplay, "preview did not show or saved too early")
     local text = Captions()
-    assert(#text == 21 and text[2] == "Estimates" and text[6] == "Spells / cache jewelry", "compact table changed")
-    assert(text[7] == "14.0%" and text[8] == "7.3%" and text[9] == "2.4%")
-    assert(text[11] == "16.7%" and text[15] == "18.9%" and text[19] == "20.5%")
+    assert(#text == 20 and text[1] == "Rarity odds" and text[5] == "Spells / cache jewelry", "compact table changed")
+    assert(text[6] == "14.0%" and text[7] == "7.3%" and text[8] == "2.4%")
+    assert(text[10] == "16.7%" and text[14] == "18.9%" and text[18] == "20.5%")
     local art = {}
     for _, object in ipairs(context.objects) do
         if object.kind == "Texture" and object.parent == panel then table.insert(art, object:GetTexture()) end
@@ -73,12 +73,12 @@ for _, performance in ipairs({ false, true }) do
     context:NoPresentationWrites()
     env.AZS_RUN.lvl = 30
     Tick()
-    local capped = Captions()[7]
+    local capped = Captions()[6]
     env.AZS_RUN.lvl = 60
     context:ResetCounts()
     Tick()
     context:NoPresentationWrites()
-    assert(Captions()[7] == capped and capped ~= text[7], "the level bonus did not change and then cap the odds")
+    assert(Captions()[6] == capped and capped ~= text[6], "the level bonus did not change and then cap the odds")
 
     phase = "paused"
     Tick()
@@ -125,7 +125,7 @@ for _, performance in ipairs({ false, true }) do
     assert(not panel:IsShown(), "malformed Luck displayed odds")
     env.AZS_STATS = { luck = 0 }
     Tick()
-    assert(panel:IsShown() and Captions()[7] == "10.1%", "zero Luck failed to recover")
+    assert(panel:IsShown() and Captions()[6] == "10.1%", "zero Luck failed to recover")
     context:Event(reader, "PLAYER_LEAVING_WORLD")
     context:Event(reader, "PLAYER_ENTERING_WORLD")
     Tick()

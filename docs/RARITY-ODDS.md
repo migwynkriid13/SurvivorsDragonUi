@@ -34,7 +34,7 @@ game.
 ## Drawing and lifecycle
 
 The panel defaults off. The module allocates one event controller and one
-mouse-transparent Layout frame. The first usable reading adds 21 font strings
+mouse-transparent Layout frame. The first usable reading adds 20 font strings
 and four textures. The two [Quest Tracker header strips](../third_party/GuardianTracker-ARTWORK.md)
 share the guardian tracker's layout and alpha. The native amulet icon uses
 the existing loot quality rim with a warm gold tint. Four text rows sit
