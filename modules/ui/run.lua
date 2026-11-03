@@ -15,7 +15,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.9, 4.55
     local ACTIVE_GLOW_DIAGONAL_FACTOR = 1 / math.sqrt(2)
     local FLOW_WIDTH, FLOW_SPEED = 64, 32
-    local FLOW_INTERVAL = 1 / 30
+    local FLOW_INTERVAL = 1 / 20
     local FLOW_SPACING = (BAR_WIDTH + FLOW_WIDTH) / 5 / 1.7
     local FLOW_COUNT = math.ceil((BAR_WIDTH + FLOW_WIDTH) / FLOW_SPACING)
     local FLOW_SPAN = FLOW_SPACING * FLOW_COUNT
@@ -772,7 +772,7 @@ DFRL:NewMod("RunTimers", 5, function()
         runGlow:SetPoint("LEFT", bar, "LEFT", 0, 0)
         runGlow:SetVertexColor(0.65, 0.04, 0.055)
         runGlow:Hide()
-        local glowShown, glowAlpha = false, nil
+        local glowShown, glowAlpha, lastGlowWidth = false, nil, nil
         local runFlows = {}
         local flowUpdatedAt
         -- Broad, soft ripples in three staggered streams form a continuous
@@ -837,9 +837,10 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         local function DrawFoam(piece, left, y, width, height, alpha, filledWidth, halfHeight)
+            local right, lower, upper = left + width, y - height / 2, y + height / 2
             local first = math.max(0, left)
-            local last = math.min(dynamicWidth, filledWidth + 6, left + width)
-            local bottom, top = math.max(-halfHeight, y - height / 2), math.min(halfHeight, y + height / 2)
+            local last = math.min(dynamicWidth, filledWidth + 6, right)
+            local bottom, top = math.max(-halfHeight, lower), math.min(halfHeight, upper)
             if first >= last or bottom >= top then
                 if piece.shown then
                     piece.texture:Hide()
@@ -848,7 +849,10 @@ DFRL:NewMod("RunTimers", 5, function()
                 return
             end
             local texture = piece.texture
-            local drawnWidth, drawnHeight = last - first, top - bottom
+            -- Keep unclipped dimensions and UVs exact as the origin moves.
+            local fullWidth, fullHeight = first == left and last == right, bottom == lower and top == upper
+            local drawnWidth = fullWidth and width or last - first
+            local drawnHeight = fullHeight and height or top - bottom
             if piece.drawnWidth ~= drawnWidth then
                 texture:SetWidth(drawnWidth)
                 piece.drawnWidth = drawnWidth
@@ -857,14 +861,22 @@ DFRL:NewMod("RunTimers", 5, function()
                 texture:SetHeight(drawnHeight)
                 piece.drawnHeight = drawnHeight
             end
-            texture:SetPoint("LEFT", bar, "LEFT", first, (bottom + top) / 2)
-            local u1, u2 = (first - left) / width, (last - left) / width
-            local v1, v2 = (y + height / 2 - top) / height, (y + height / 2 - bottom) / height
+            local center = fullHeight and y or (bottom + top) / 2
+            if piece.x ~= first or piece.yOffset ~= center then
+                texture:SetPoint("LEFT", bar, "LEFT", first, center)
+                piece.x, piece.yOffset = first, center
+            end
+            local u1, u2 = (first - left) / width, last == right and 1 or (last - left) / width
+            local v1, v2 = (upper - top) / height, bottom == lower and 1 or (upper - bottom) / height
             if piece.u1 ~= u1 or piece.u2 ~= u2 or piece.v1 ~= v1 or piece.v2 ~= v2 then
                 texture:SetTexCoord(u1, u2, v1, v2)
                 piece.u1, piece.u2, piece.v1, piece.v2 = u1, u2, v1, v2
             end
-            texture:SetAlpha(math.min(1, math.max(0, alpha * 1.4)))
+            alpha = math.min(1, math.max(0, alpha * 1.4))
+            if piece.alpha ~= alpha then
+                texture:SetAlpha(alpha)
+                piece.alpha = alpha
+            end
             if not piece.shown then
                 texture:Show()
                 piece.shown = true
@@ -926,21 +938,15 @@ DFRL:NewMod("RunTimers", 5, function()
         local sparklesShown = false
         local function EnsureSparkles(count)
             for index = table.getn(redSparkles) + 1, count do
-                local center = (index - 0.5) * effectRight / sparkleCount
-                local left, right = math.max(0, center - 7), math.min(effectRight, center + 7)
                 local texture = bar:CreateTexture(nil, "OVERLAY")
                 texture:SetTexture("Interface\\CastingBar\\UI-CastingBar-Spark")
                 texture:SetBlendMode("ADD")
-                texture:SetWidth(math.max(0.001, right - left))
                 texture:SetHeight(9)
-                texture:SetPoint("LEFT", bar, "LEFT", left, (math.mod(index - 1, 3) - 1) * 3)
-                texture:SetTexCoord((left - center + 7) / 14, (right - center + 7) / 14, 0, 1)
-                texture:SetAlpha(0.22 * RED_SPARKLE_OPACITY)
                 texture:Hide()
                 redSparkles[index] = {
                     texture = texture,
                     phase = index * 2.39996,
-                    eligible = left < right,
+                    y = (math.mod(index - 1, 3) - 1) * 3,
                 }
             end
         end
@@ -962,19 +968,33 @@ DFRL:NewMod("RunTimers", 5, function()
                 effectRight, geometryDirty = filledWidth, true
             end
             if not geometryDirty then return end
-            runGlow:SetWidth(math.max(0.001, effectRight))
+            local glowWidth = math.max(0.001, effectRight)
+            if style.glow > 0 and lastGlowWidth ~= glowWidth then
+                runGlow:SetWidth(glowWidth)
+                lastGlowWidth = glowWidth
+            end
             for index = 1, sparkleCount do
                 local sparkle = redSparkles[index]
                 local center = (index - 0.5) * effectRight / sparkleCount
-                local left, right = math.max(0, center - 7), math.min(effectRight, center + 7)
-                sparkle.eligible = left < right
-                sparkle.texture:SetWidth(math.max(0.001, right - left))
-                sparkle.texture:ClearAllPoints()
-                sparkle.texture:SetPoint("LEFT", bar, "LEFT", left, (math.mod(index - 1, 3) - 1) * 3)
-                sparkle.texture:SetTexCoord((left - center + 7) / 14, (right - center + 7) / 14, 0, 1)
+                local left = math.max(0, center - 7)
+                local u1 = math.max(0, (7 - center) / 14)
+                local u2 = math.min(1, (effectRight - center + 7) / 14)
+                local drawnWidth = math.max(0.001, (u2 - u1) * 14)
+                sparkle.eligible = u1 < u2
+                if sparkle.drawnWidth ~= drawnWidth then
+                    sparkle.texture:SetWidth(drawnWidth)
+                    sparkle.drawnWidth = drawnWidth
+                end
+                if sparkle.left ~= left then
+                    sparkle.texture:SetPoint("LEFT", bar, "LEFT", left, sparkle.y)
+                    sparkle.left = left
+                end
+                if sparkle.u1 ~= u1 or sparkle.u2 ~= u2 then
+                    sparkle.texture:SetTexCoord(u1, u2, 0, 1)
+                    sparkle.u1, sparkle.u2 = u1, u2
+                end
             end
             geometryDirty = false
-            flowUpdatedAt = nil
         end
 
         local function HideAnimatedFlow()
@@ -1051,20 +1071,24 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
 
-        local function UpdateAnimatedFlow(seconds, maximum)
+        local function UpdateAnimatedFlow(seconds, maximum, progressAdvanced)
             if seconds == 0 and not endless then
                 HideAnimatedFlow()
                 return
             end
-            -- Width changes and native two-second progress share one geometry pass.
             local width = bar.layoutWidth or BAR_WIDTH
-            if
-                geometryDirty
-                or effectWidth ~= width
-                or effectSeconds ~= seconds
-                or effectMaximum ~= maximum
-                or effectEndless ~= endless
-            then
+            local sameBounds = effectWidth == width and effectMaximum == maximum and effectEndless == endless
+            local now = GetTime()
+            -- A growing fill can keep its previous (narrower) decoration until
+            -- the next cosmetic sample. Keep the progress-write frame clear,
+            -- even when the sample is due. Shrinks and recovery clip immediately.
+            if flowUpdatedAt and sameBounds and seconds >= effectSeconds and not geometryDirty then
+                if progressAdvanced then return end
+                if (seconds ~= maximum or seconds == effectSeconds) and now - flowUpdatedAt < FLOW_INTERVAL then
+                    return
+                end
+            end
+            if geometryDirty or not sameBounds or effectSeconds ~= seconds then
                 filledWidth = width * (endless and 1 or math.min(1, seconds / maximum))
                 ResizeEffects(filledWidth)
                 effectWidth, effectSeconds, effectMaximum, effectEndless = width, seconds, maximum, endless
@@ -1072,9 +1096,6 @@ DFRL:NewMod("RunTimers", 5, function()
             -- UI time only moves decoration; native elapsed time owns the fill.
             -- Crop each pooled streak to that fill without texture wrapping or
             -- newer clipping APIs, beneath the separate metal border and skulls.
-            local now = GetTime()
-            if flowUpdatedAt and now - flowUpdatedAt < FLOW_INTERVAL then return end
-            flowUpdatedAt = now
             local showGlow = style.glow > 0
             if glowShown ~= showGlow then
                 if showGlow then
@@ -1111,7 +1132,8 @@ DFRL:NewMod("RunTimers", 5, function()
             for _, flow in ipairs(runFlows) do
                 local width = flow.width
                 local left = math.mod(now * flow.speed + flow.offset, span) - width
-                local first, last = math.max(0, left), math.min(filledWidth, left + width)
+                local right = left + width
+                local first, last = math.max(0, left), math.min(filledWidth, right)
                 if first < last then
                     local wave = math.sin(now * flow.frequency + flow.phase)
                     local y = flow.y + 0.65 * wave
@@ -1119,13 +1141,13 @@ DFRL:NewMod("RunTimers", 5, function()
                         local pulse = 0.5 + 0.5 * wave
                         flow.texture:SetAlpha(0.2 + 0.8 * pulse * pulse * pulse)
                     end
-                    local drawnWidth = last - first
+                    local drawnWidth = first == left and last == right and width or last - first
                     if flow.drawnWidth ~= drawnWidth then
                         flow.texture:SetWidth(drawnWidth)
                         flow.drawnWidth = drawnWidth
                     end
                     flow.texture:SetPoint("LEFT", bar, "LEFT", first, y)
-                    local u1, u2 = (first - left) / width, (last - left) / width
+                    local u1, u2 = (first - left) / width, last == right and 1 or (last - left) / width
                     if flow.u1 ~= u1 or flow.u2 ~= u2 then
                         flow.texture:SetTexCoord(u1, u2, 0, 1)
                         flow.u1, flow.u2 = u1, u2
@@ -1140,6 +1162,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 end
             end
             UpdateBlueFoam(now, filledWidth)
+            flowUpdatedAt = now
         end
         return SetAnimatedAppearance, HideAnimatedFlow, UpdateAnimatedFlow
     end
@@ -1173,7 +1196,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if runEffects.Hide then runEffects.Hide() end
         runEffects.restoreAppearance = true
     end
-    local function UpdateRunFlow(seconds, maximum)
+    local function UpdateRunFlow(seconds, maximum, progressAdvanced)
         if performanceMode then return end
         if seconds == 0 and not runEffects.endless then
             if not runEffects.empty then HideRunFlow() end
@@ -1189,7 +1212,7 @@ DFRL:NewMod("RunTimers", 5, function()
             runEffects.Appearance(runEffects.tier, runEffects.endless, true)
             runEffects.restoreAppearance = nil
         end
-        runEffects.Update(seconds, maximum)
+        runEffects.Update(seconds, maximum, progressAdvanced)
     end
     local runMoveRegion = CreateFrame("Frame", nil, run)
     local fontFaces = {
@@ -5156,6 +5179,13 @@ DFRL:NewMod("RunTimers", 5, function()
                 local endless = render.runEndless
                 -- Two-second native steps avoid per-frame fill/crop rewrites.
                 local value = (endless or atLimit) and maximum or math.floor(seconds / 2) * 2
+                local previousValue = render.runValue
+                local progressAdvanced = not atLimit
+                    and not endless
+                    and render.runMaximum == maximum
+                    and previousValue
+                    and previousValue > 0
+                    and previousValue < value
                 if render.runValue ~= value then runBar:SetValue(value) end
                 render.runMaximum, render.runValue = maximum, value
                 -- Missing schedule replay affects only spawn markers, never a clock
@@ -5175,7 +5205,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     render.markerEntries, render.markerMaximum, render.markerWidth = scheduled, maximum, markerWidth
                 end
                 SetRunAppearance(render.runHeroic, endless)
-                UpdateRunFlow(value, maximum)
+                UpdateRunFlow(value, maximum, progressAdvanced)
                 UpdateMarkerStates(atLimit)
                 render.clockHidden = nil
             else

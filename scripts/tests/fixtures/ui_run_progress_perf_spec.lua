@@ -57,7 +57,9 @@ local function Clock()
         context.appearanceHeroic = heroic
         table.insert(context.appearance, endless)
     end
-    env.UpdateRunFlow = function(value, maximum) table.insert(context.flows, { value = value, maximum = maximum }) end
+    env.UpdateRunFlow = function(value, maximum, advancing)
+        table.insert(context.flows, { value = value, maximum = maximum, advancing = advancing })
+    end
     env.UpdateClockCaptions = function(seconds, maximum, accepted)
         table.insert(context.captions, { seconds = seconds, maximum = maximum, accepted = accepted })
         return accepted and context.mode or nil
@@ -127,6 +129,7 @@ do
         context.writes.value == 2 and env.runBar.value == 12,
         "the next native two-second step did not advance the fill"
     )
+    assert(context.flows[#context.flows].advancing, "ordinary fill growth did not defer cosmetic writes")
     context:ResetPerf()
     for _ = 1, 20 do
         context:Sample(12.4, "paused", false, 1 / 32)
@@ -139,6 +142,7 @@ do
         context.cleared == 1 and env.refreshRows and env.runBar.value == 8,
         "backward native time did not retire rows"
     )
+    assert(not context.flows[#context.flows].advancing, "a backward correction was classified as ordinary growth")
     env.render.clockNextAt = nil
     context:Sample(9.2)
     assert(context.cleared == 2 and env.refreshRows and env.runBar.value == 8, "same-step correction lost retirement")
@@ -155,6 +159,7 @@ do
     assert(env.runBar.value == 10 and context.flows[1].value == 10 and context.states[1] == false)
     context:Sample(10.5, nil, false, 0.25)
     assert(env.runBar.value == 10.5 and context.flows[2].value == 10.5, "fractional maximum was not filled exactly")
+    assert(not context.flows[2].advancing, "reaching the fractional limit was classified as ordinary growth")
     assert(
         context.appearance[2] == false and context.states[2] == true,
         "elapsed time inferred Endless or lost marker state"

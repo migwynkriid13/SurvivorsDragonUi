@@ -886,7 +886,10 @@ The assertions cover:
   Production clock-progress cases cover unchanged writes within a native second,
   whole-second steps, native pauses/corrections, exact fractional completion,
   maximum changes and hidden recovery. They keep raw caption/marker inputs
-  separate from the stepped flow/foam clipping boundary.
+  separate from the stepped flow/foam clipping boundary. The effect fixture
+  checks that forward steps defer an already-due paint, settled glints reuse
+  width and UVs, and shrink or completion clips immediately inside the 20 Hz
+  interval.
   Timer-caption mocks cover unchanged/disabled formatting, current-value option
   previews, language/mode changes, scale and missing-metric retries, font preview,
   retirement and repeated empty-clock idling. They use the production label

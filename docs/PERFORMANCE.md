@@ -4,6 +4,42 @@ The performance work removes repeated presentation writes while retaining native
 data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
 or native client dependency. Display choices use the existing saved display table.
 
+## Run timer progress hitches — 2026-11-03
+
+In one live session the player reported that the recurring hitch disappeared
+after switching to the game's timer. The median one-second window p95 fell from
+57.28 ms at journal seconds 364.0–389.7 to 22.09 ms at 416.1–431.4. Logged median
+main CPU time fell from 46.80 to 32.03 ms, with measured GPU time around 1.4 ms
+in both windows. The journal has no setting-change marker or per-frame callback
+times. These windows describe the observed change and cannot time the exact
+toggle or attribute the CPU cost to individual setters.
+
+The visible custom timer advances the native StatusBar in two-second steps.
+Before this change each step resized the glow, rewrote width, anchor and UV for
+every glint and invalidated the animation throttle. Heroic V could issue 113
+geometry calls and then immediately paint the streaks, foam and sparkle pulse
+on that same frame. Regular difficulty has no Heroic glints and still forced
+the streak and foam pass. The first positive step also prepares 44 reusable
+effect textures plus the selected tier's glints. That allocation happens once
+as each portion of the pool is needed.
+
+Ordinary forward progress now updates the native fill on its existing step and
+lets the decoration catch up on a later sample. Shrinking progress, a new
+maximum, layout resize, appearance changes, first paint and exact completion
+apply current clipping immediately. Glints use one fixed anchor slot and
+independent caches for width and UV. Interior glints can move with one anchor
+write. The glow resizes only while used and the flowing textures and foam use
+exact full dimensions and UVs wherever they are unclipped. Fixed foam anchors
+reuse their last position. The existing effect pass now samples at up to 20 Hz
+with the original wall-time phases and the same artwork and layer order.
+
+The native fill, caption deadlines, boss schedule and marker states keep their
+existing timing. Phase and HUD ownership checks still serve the live handoff.
+The region pool and visible layered artwork have the same upper bounds. The
+source changes reduce Lua-to-client writes and separate the fill and decoration
+work. CI-only fixtures cover the changed boundaries. The packaged client's
+frame pacing and appearance after the change still need a live comparison.
+
 ## How to review a new feature or performance change
 
 The November work covered readers, animations, frame callbacks, retries and

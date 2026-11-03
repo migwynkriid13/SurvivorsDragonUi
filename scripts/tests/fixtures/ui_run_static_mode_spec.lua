@@ -6,6 +6,16 @@ local env = context.env
 local create = context.Object
 function context:Object(...)
     local object = create(self, ...)
+    if object.kind == "Texture" then
+        object.geometryWrites = {}
+        for _, key in ipairs({ "SetWidth", "SetPoint", "SetTexCoord", "ClearAllPoints" }) do
+            local method, original = key, object[key]
+            object[method] = function(self, ...)
+                self.geometryWrites[method] = (self.geometryWrites[method] or 0) + 1
+                original(self, ...)
+            end
+        end
+    end
     function object:SetBlendMode(mode) self.blendMode = mode end
     function object:SetStatusBarTexture(texture)
         context.writes.fillTexture = (context.writes.fillTexture or 0) + 1
@@ -136,3 +146,39 @@ end
 print(
     "PASS API-driven tier palettes, lazy bounded effects, Endless width/glitter, throttle, retirement and Performance Mode"
 )
+
+env.runBar.layoutWidth = 280
+source.Appearance(5, false)
+source.Update(940, 960)
+local edge = context.objects[allocated + 45]
+local interior = context.objects[allocated + 46]
+assert(edge:GetWidth() < 14 and interior:GetWidth() == 14, "first paint lost edge clipping or full glint width")
+edge.geometryWrites, interior.geometryWrites = {}, {}
+context:ResetCounts()
+context.now = context.now + 0.1
+source.Update(942, 960, true)
+context:NoPresentationWrites()
+assert(not context.reads.pulses, "an advancing native fill forced an already-due cosmetic paint")
+context.now = context.now + 0.001
+source.Update(942, 960)
+assert(context.reads.pulses and math.abs(glow:GetWidth() - 280 * 942 / 960) < 1e-9)
+assert(edge.geometryWrites.SetWidth == 1 and edge.geometryWrites.SetTexCoord == 1 and not edge.geometryWrites.SetPoint)
+assert(
+    interior.geometryWrites.SetPoint == 1
+        and not interior.geometryWrites.SetWidth
+        and not interior.geometryWrites.SetTexCoord
+        and not context.writes.ClearAllPoints,
+    "an unclipped glint rebuilt its dimensions, crop or anchor list"
+)
+context:ResetCounts()
+context.now = context.now + 0.04
+source.Update(942, 960)
+context:NoPresentationWrites()
+assert(not context.reads.pulses, "the settled effect exceeded its 20 Hz cap")
+source.Update(920, 960)
+assert(context.reads.pulses and math.abs(glow:GetWidth() - 280 * 920 / 960) < 1e-9, "shrink missed immediate clipping")
+context:ResetCounts()
+source.Update(960, 960)
+assert(context.reads.pulses and glow:GetWidth() == 280, "completion did not immediately paint the exact limit")
+assert(#context.objects == prepared, "progress and correction rebuilt the effect pool")
+print("PASS progress growth defers cosmetic writes, clips corrections immediately and reuses settled glint geometry")
