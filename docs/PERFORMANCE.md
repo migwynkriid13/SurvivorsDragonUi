@@ -318,7 +318,7 @@ review does not prove native pixel coverage or FPS. Earlier fourteen-strip
 batching/repeat experiments remain frozen historical comparisons and do not
 measure this sixteen-band layout.
 
-## Runecarver jewelry and rarity tint — 2026-11-03
+## Runecarver jewelry and gemmed rarity artwork — 2026-11-03
 
 The old upper and side socket surround is removed in both attachment modes.
 The three attached `SocketRail` strips retain the small bottom arch joining
@@ -337,27 +337,22 @@ item, placeholder, cooldown, hover and saved-placement behavior remain.
 This removes five allocated regions and old circle pixels, without a new
 reader, event, updater or setting. No live rendering or FPS result is claimed.
 
-The original 95%-desaturated `Runecarver.tga` supplies the neutral crop at
-x=256–384 in the 512-by-128 `Frame.blp`. Empty slots and invalid metadata use
-that crop. Known equipped rarity uses the brighter x=384–512 crop with a
-60% color multiplier, raised to 95% for epic purple and legendary orange.
-The 0.65 RGB gamma curve lifts midtones and preserves the original alpha.
-Rare rank 3 uses sky-blue `66CCFF` artwork and tooltip text retains native RGB.
+The original `Runecarver.tga` supplies the neutral crop at x=256–384 in
+`Frame.blp`. `GemmedRunecarver.blp` adds four 128-square crops, each baking
+the same grey housing, crown gem, three socket stones and rarity halo.
+The former bright cell in `Frame.blp` is clear. The new atlas is 512 × 128
+and occupies 263,316 bytes in the runtime payload.
 
-Each of the five housing regions binds the neutral crop at construction.
-`UpdateRarity` defers hidden work and changes the visible crop or final color
-only when it differs. The same region supplies the static appearance in
-Normal and Performance Mode, including while editing. The existing five-Hz
-reader owns the update. A slot cleared while hidden restores its neutral
-artwork on the next visible refresh.
+The existing five-Hz reader paints one housing region per slot. It switches
+texture only between neutral and gemmed artwork and updates UVs only when
+the displayed crop changes. Settled slots skip rarity preparation. The
+reader defers hidden painting, retries failed bindings and uses the neutral
+crop while gemmed artwork is unavailable. Both Performance Mode states and
+editing share the static artwork.
 
-Both authoring paths derive the equipped crop from the original pixels.
-CI-only cases pin the original authoring SHA-256, neutral runtime pixels and
-equipped gamma curve and alpha. They cover poor/common quality, invalid
-metadata, raw tooltip RGB, changed-only writes, mode parity and hidden recovery.
-Local work is source/artwork inspection, preparation and pinned formatting;
-no local tests, standalone validation or addon/game execution were performed.
-Fewer drawing layers and unchanged reads do not establish a live FPS result.
+CI cases cover the four crops, the unchanged neutral pixels, native tooltip
+RGB, changed-only writes, failed bindings and hidden recovery. In-game
+appearance and FPS remain unverified.
 
 ## Artisan metal LEVEL UP — 2026-11-02
 

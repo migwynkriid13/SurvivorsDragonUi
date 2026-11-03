@@ -1,13 +1,10 @@
 -- Five equipped jewelry sockets, attached by default and optionally independent.
 --[[
 Selected 03 Runecarver housings use grey metal matching the action-bar surround.
-Equipped rarity tints a brighter version of the same grey carving.
-Rare artwork uses a lighter sky blue. Epic and legendary artwork use stronger tints.
-Effects-only hover text keeps the full native rarity color.
-The housing and soft halo are baked together in the existing Frame.blp atlas;
-five static regions inherit the shared overlay's visibility and scale.
-Empty and unknown-quality slots use the original neutral crop.
-Both Performance Mode states retain the same static metal and rarity tint.
+Uncommon through legendary use a crown gem, three socket stones and a static
+outer halo baked over the original grey housing. Effects-only hover text keeps
+the native rarity color. Empty slots and other qualities use the neutral crop.
+Five housing regions inherit the overlay's visibility and scale in both modes.
 SocketRail BLP strips retain the straight bar edge and small bottom arch with
 clear item openings, using pixels from the existing HDActionBar.tga. Only its
 narrow top strip switches while this jewelry row is visible. The old circle's
@@ -28,8 +25,7 @@ Empty-slot artwork: Gethe/wow-ui-textures, commit
 e80e3278cc833c89e1f3fc79557b68315d750935, PaperDoll/UI-PaperDoll-Slot-
 Finger.PNG, -Neck.PNG and -Trinket.PNG. World of Warcraft artwork remains
 copyright Blizzard Entertainment, distinct from the software license below.
-The cooldown atlas is original generated geometry. The housing keeps its
-original alpha and uses one drawing layer.
+The cooldown atlas, gems and rarity halo are original generated artwork.
 
 Applicable source notices (Blizzard artwork is distinct from MIT software):
 MIT License
@@ -102,8 +98,9 @@ DFRL:NewMod("Jewelry", 4, function()
     local carvingSize = RIM_SIZE * 128 / 108
     local socketBounds = math.max(socketSize, carvingSize)
     local ANIMATION_INTERVAL = 1 / 30
-    local RARITY_TINT_STRENGTH = 0.60
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
+    local NEUTRAL_CARVING = texturePath .. "Frame.blp"
+    local GEMMED_CARVING = texturePath .. "GemmedRunecarver.blp"
     local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
     local EMPTY_TEXTURES = {
         "EmptyRing.blp",
@@ -572,41 +569,45 @@ DFRL:NewMod("Jewelry", 4, function()
     overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
     overlay:EnableMouse(false)
     for _, slot in ipairs(slots) do
-        -- The soft halo is already baked, with no alpha animation or recurring writes.
         local carving = overlay:CreateTexture(nil, "BORDER")
-        carving:SetTexture(texturePath .. "Frame.blp")
         carving:SetWidth(carvingSize)
         carving:SetHeight(carvingSize)
         carving:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
-        carving:SetTexCoord(256 / 512, 384 / 512, 0, 1)
-        slot.carving, slot.carvingBright = carving, false
+        carving:Hide()
+        slot.carving, slot.carvingPending = carving, true
+    end
+    local function PaintCarving(slot, quality)
+        local previous = slot.carvingQuality
+        if previous == quality then return true end
+        local carving = slot.carving
+        if previous == nil or (previous == 0) ~= (quality == 0) then
+            local path = quality == 0 and NEUTRAL_CARVING or GEMMED_CARVING
+            local loaded = carving:SetTexture(path)
+            if not T.TextureAssigned(loaded, carving:GetTexture(), path) then
+                slot.carvingQuality = nil
+                return false
+            end
+        end
+        local left = quality == 0 and 256 or (quality - 2) * 128
+        carving:SetTexCoord(left / 512, (left + 128) / 512, 0, 1)
+        slot.carvingQuality = quality
+        return true
     end
     local function UpdateRarity(slot)
-        if not hud:IsVisible() then return end
-        local known = slot.texture ~= nil and slot.qualityR ~= nil
-        if slot.carvingBright ~= known then
-            local left = known and 384 or 256
-            slot.carving:SetTexCoord(left / 512, (left + 128) / 512, 0, 1)
-            slot.carvingBright = known
+        if not hud:IsVisible() then
+            slot.carvingPending = true
+            return
         end
-        local rarityR, rarityG, rarityB = slot.qualityR, slot.qualityG, slot.qualityB
-        -- Use sky blue for rare artwork and keep the received RGB for effect text.
-        if known and slot.quality == 3 then
-            rarityR, rarityG, rarityB = 0.4, 0.8, 1
+        local quality = slot.texture and slot.qualityR and slot.quality or 0
+        if quality < 2 or quality > 5 then quality = 0 end
+        local ready = PaintCarving(slot, quality)
+        local shown = ready or (quality ~= 0 and PaintCarving(slot, 0))
+        if shown and not slot.carving:IsShown() then
+            slot.carving:Show()
+        elseif not shown and slot.carving:IsShown() then
+            slot.carving:Hide()
         end
-        local red, green, blue = 1, 1, 1
-        if known then
-            -- Keep epic purple and legendary orange close to their native colors.
-            local strength = (slot.quality == 4 or slot.quality == 5) and 0.95 or RARITY_TINT_STRENGTH
-            local neutral = 1 - strength
-            red = neutral + strength * rarityR
-            green = neutral + strength * rarityG
-            blue = neutral + strength * rarityB
-        end
-        if slot.carvingR ~= red or slot.carvingG ~= green or slot.carvingB ~= blue then
-            slot.carving:SetVertexColor(red, green, blue, 1)
-            slot.carvingR, slot.carvingG, slot.carvingB = red, green, blue
-        end
+        slot.carvingPending = not ready
     end
     local function SetQuality(slot, quality, red, green, blue)
         local changed = slot.quality ~= quality
@@ -671,7 +672,7 @@ DFRL:NewMod("Jewelry", 4, function()
             and slot.placeholderShown == (placeholderShown and true or false)
         then
             -- A hidden clear can retire equipment before repainting the housing.
-            if slot.carvingBright then UpdateRarity(slot) end
+            if slot.carvingPending then UpdateRarity(slot) end
             return
         end
         slot.effectLink, slot.effectLanguage, slot.effectDescription = nil, nil, nil
@@ -813,9 +814,7 @@ DFRL:NewMod("Jewelry", 4, function()
                 if slot.placeholderShown ~= false then SetPlaceholderShown(slot, false) end
                 if slot.texture ~= texture then SetIcon(slot, texture) end
                 local qualityChanged = UpdateQuality(slot)
-                if qualityChanged or slot.carvingR == nil or slot.carvingBright ~= (slot.qualityR ~= nil) then
-                    UpdateRarity(slot)
-                end
+                if qualityChanged or slot.carvingPending then UpdateRarity(slot) end
                 UpdateCooldown(slot)
                 if hoveredSlot == slot then ShowTooltip(slot) end
             else

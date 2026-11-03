@@ -2,34 +2,40 @@
 assert(_VERSION == "Lua 5.1", "jewelry rarity fixtures require CI Lua 5.1")
 local env = setmetatable({}, { __index = _G })
 env._G = env
-local visible = true
-local writes = { color = 0, uv = 0 }
+env.NEUTRAL_CARVING, env.GEMMED_CARVING = "Frame.blp", "GemmedRunecarver.blp"
+local visible, unavailable = true, nil
+local writes = { texture = 0, uv = 0, visibility = 0 }
 local methods = {}
-function methods:SetVertexColor(...)
-    writes.color = writes.color + 1
-    self.color = { ... }
+function methods:SetTexture(path)
+    writes.texture = writes.texture + 1
+    if path == unavailable then return false end
+    self.texture = path
 end
+function methods:GetTexture() return self.texture end
 function methods:SetTexCoord(...)
     writes.uv = writes.uv + 1
     self.uv = { ... }
 end
-local function Region() return setmetatable({ uv = { 256 / 512, 384 / 512, 0, 1 } }, { __index = methods }) end
-env.hud = { IsVisible = function() return visible end }
-env.overlay = { CreateTexture = function() error("rarity must not allocate a drawing layer") end }
-env.HideTooltip = function() end
-env.performanceMode, env.editing = false, false
-env.slots = {}
-for index = 1, 5 do
-    env.slots[index] = {
-        id = index,
-        carving = Region(),
-        carvingBright = false,
-        placeholderShown = false,
-    }
+function methods:Show()
+    writes.visibility = writes.visibility + 1
+    self.shown = true
 end
-local quality, red, green, blue = 2, 0.12, 1, 0
+function methods:Hide()
+    writes.visibility = writes.visibility + 1
+    self.shown = false
+end
+function methods:IsShown() return self.shown end
+local function Region() return setmetatable({}, { __index = methods }) end
+env.T = {
+    TextureAssigned = function(loaded, assigned, wanted) return loaded ~= false and assigned == wanted end,
+}
+env.hud = { IsVisible = function() return visible end }
+env.HideTooltip = function() end
+env.overlay = { CreateTexture = function() error("rarity must reuse the housing region") end }
+local slot = { id = 1, carving = Region(), carvingPending = true, placeholderShown = false }
+local quality, red, green, blue = nil, 0.12, 1, 0
 env.GetInventoryItemQuality = function(unit, id)
-    assert(unit == "player" and id >= 1 and id <= 5)
+    assert(unit == "player" and id == 1)
     return quality
 end
 env.GetItemQualityColor = function(value)
@@ -39,108 +45,80 @@ end
 local chunk = assert(loadfile(arg[1]))
 setfenv(chunk, env)
 local api = chunk()
-local slot = env.slots[1]
-local function Color(region, r, g, b)
-    assert(math.abs(region.color[1] - r) < 0.000001)
-    assert(math.abs(region.color[2] - g) < 0.000001)
-    assert(math.abs(region.color[3] - b) < 0.000001 and region.color[4] == 1)
-end
-local function Housing(region, left)
+
+local function Housing(path, left)
+    local region = slot.carving
+    assert(region.shown and region.texture == path)
     assert(region.uv[1] == left / 512 and region.uv[2] == (left + 128) / 512)
     assert(region.uv[3] == 0 and region.uv[4] == 1)
 end
-api.Update(slot)
-Color(slot.carving, 1, 1, 1)
-Housing(slot.carving, 256)
-slot.texture = "native:item"
-api.Quality(slot)
-api.Update(slot)
-Color(slot.carving, 0.472, 1, 0.4)
-Housing(slot.carving, 384)
-local colors = writes.color
-local crops = writes.uv
-assert(crops == 1)
-for _ = 1, 10 do
-    api.Update(slot)
-end
-assert(writes.color == colors and writes.uv == crops, "settled rarity repeated color or crop writes")
-for _, state in ipairs({ "performanceMode", "editing" }) do
-    env[state] = true
-    api.Update(slot)
-    Color(slot.carving, 0.472, 1, 0.4)
-    env[state] = false
-    api.Update(slot)
-end
-assert(writes.color == colors and writes.uv == crops, "mode changes altered the static rarity treatment")
--- Hidden recoloring waits for Show and reuses the equipped crop.
-visible = false
-quality, red, green, blue = 4, 0.64, 0.21, 0.93
-api.Quality(slot)
-api.Update(slot)
-assert(writes.color == colors and writes.uv == crops, "hidden rarity painted early")
-visible = true
-api.Update(slot)
-Color(slot.carving, 0.658, 0.2495, 0.9335)
-assert(slot.qualityR == red and slot.qualityG == green and slot.qualityB == blue)
-assert(writes.uv == crops, "color-only change rebound the equipped crop")
-for _, rank in ipairs({ 0, 1 }) do
-    quality, red, green, blue = rank, 0.62 + rank * 0.38, 0.62 + rank * 0.38, 0.62 + rank * 0.38
+api.Clear(slot)
+Housing(env.NEUTRAL_CARVING, 256)
+slot.texture, slot.empty = "native:item", nil
+for _, rank in ipairs({ 0, 1, 6 }) do
+    quality = rank
     api.Quality(slot)
     api.Update(slot)
-    local value = rank == 0 and 0.772 or 1
-    Color(slot.carving, value, value, value)
-    Housing(slot.carving, 384)
+    Housing(env.NEUTRAL_CARVING, 256)
+    assert(slot.quality == rank and slot.qualityR == red, "neutral artwork lost native tooltip metadata")
 end
-quality = nil
+local bindings, crops = writes.texture, writes.uv
+for rank = 2, 5 do
+    quality = rank
+    api.Quality(slot)
+    api.Update(slot)
+    Housing(env.GEMMED_CARVING, (rank - 2) * 128)
+    assert(slot.qualityR == red and slot.qualityG == green and slot.qualityB == blue)
+end
+assert(writes.texture == bindings + 1 and writes.uv == crops + 4, "gemmed qualities did not reuse one atlas")
+bindings, crops = writes.texture, writes.uv
+for _, mode in ipairs({ "performanceMode", "editing" }) do
+    env[mode] = true
+    api.Update(slot)
+    Housing(env.GEMMED_CARVING, 384)
+    env[mode] = false
+    api.Update(slot)
+end
+assert(writes.texture == bindings and writes.uv == crops, "settled slots repeated bindings or crops")
+
+quality, red = 4, 2
 api.Quality(slot)
 api.Update(slot)
 assert(not slot.qualityR)
-Color(slot.carving, 1, 1, 1)
-Housing(slot.carving, 256)
-quality, red = 5, 2
+Housing(env.NEUTRAL_CARVING, 256)
+
+quality, red, unavailable = 4, 0.64, env.GEMMED_CARVING
 api.Quality(slot)
 api.Update(slot)
-assert(not slot.qualityR, "invalid RGB retained previous rarity")
-Color(slot.carving, 1, 1, 1)
-Housing(slot.carving, 256)
--- Preserve the selected rare-blue accent without changing raw tooltip RGB.
-quality, red, green, blue = 3, 0, 0.44, 0.87
-for _, entry in ipairs(env.slots) do
-    entry.texture = "native:item"
-    api.Quality(entry)
-    api.Update(entry)
-    Color(entry.carving, 0.64, 0.88, 1)
-    Housing(entry.carving, 384)
-    assert(entry.qualityR == red and entry.qualityG == green and entry.qualityB == blue)
-end
--- Legendary orange uses more of the native color on the same equipped crop.
-quality, red, green, blue = 5, 1, 0.5, 0
-crops = writes.uv
-api.Quality(slot)
+assert(slot.carvingPending, "failed gemmed artwork must retry")
+Housing(env.NEUTRAL_CARVING, 256)
+unavailable = nil
 api.Update(slot)
-Color(slot.carving, 1, 0.525, 0.05)
-assert(slot.qualityR == red and slot.qualityG == green and slot.qualityB == blue)
-assert(writes.uv == crops, "legendary tint rebound the equipped crop")
-api.Clear(slot)
-Color(slot.carving, 1, 1, 1)
-Housing(slot.carving, 256)
-colors, crops = writes.color, writes.uv
-api.Clear(slot)
-assert(writes.color == colors and writes.uv == crops, "settled empty slot repainted its housing")
-slot.texture = "native:return"
-slot.empty = false
-quality, red, green, blue = 3, 0, 0.44, 0.87
-api.Quality(slot)
-api.Update(slot)
-Color(slot.carving, 0.64, 0.88, 1)
+assert(not slot.carvingPending)
+Housing(env.GEMMED_CARVING, 256)
+
 visible = false
-colors, crops = writes.color, writes.uv
+bindings, crops = writes.texture, writes.uv
+local visibility = writes.visibility
 api.Clear(slot)
-assert(writes.color == colors and writes.uv == crops, "hidden empty transition painted early")
+assert(slot.carvingPending and not slot.qualityR and not slot.texture)
+assert(writes.texture == bindings and writes.uv == crops and writes.visibility == visibility)
 visible = true
 api.Clear(slot)
-Color(slot.carving, 1, 1, 1)
-Housing(slot.carving, 256)
-assert(writes.uv == crops + 1, "shown empty slot did not restore its neutral crop once")
-print("PASS original jewelry housing retains neutral empty slots and brighter equipped rarity tint")
-print("PASS rarity keeps raw native RGB, changed-only writes, hidden recovery and identical mode appearance")
+Housing(env.NEUTRAL_CARVING, 256)
+bindings, crops = writes.texture, writes.uv
+api.Clear(slot)
+assert(writes.texture == bindings and writes.uv == crops, "settled empty slot repeated artwork writes")
+
+slot.texture, slot.empty = "native:return", nil
+api.Quality(slot)
+api.Update(slot)
+Housing(env.GEMMED_CARVING, 256)
+unavailable = env.NEUTRAL_CARVING
+api.Clear(slot)
+assert(not slot.carving.shown and slot.carvingPending, "failed neutral return showed stale gemmed artwork")
+unavailable = nil
+api.Clear(slot)
+Housing(env.NEUTRAL_CARVING, 256)
+print("PASS Runecarver quality selects the approved gem and halo artwork through one reused housing region")
+print("PASS rarity keeps native tooltip RGB, changed-only writes, neutral fallback and hidden recovery")

@@ -41,31 +41,49 @@ class RuntimeTextureTests(unittest.TestCase):
         for suffix in (".blp", ".tga"):
             self.assertFalse((directory / ("UIUnitFrameRestingFlipbook" + suffix)).exists())
 
-    def test_jewelry_housing_lifts_equipped_midtones_without_changing_neutral_pixels_or_alpha(self):
-        source = (ROOT / "media/tex/jewelry/Runecarver.tga").read_bytes()
+    def test_jewelry_housing_preserves_neutral_pixels_and_bakes_ranked_gems_and_halo(self):
+        directory = ROOT / "media/tex/jewelry"
+        source = (directory / "Runecarver.tga").read_bytes()
         self.assertEqual(
             hashlib.sha256(source).hexdigest(),
             "b53931149f049507f2ac5a983340ffbf3c886cd691e083bee8d8c0690acc6b17",
         )
         converted, _ = blp_from_tga(source)
         source_width, source_height, source_levels = blp_bgra_levels(converted)
-        width, height, levels = blp_bgra_levels((ROOT / "media/tex/jewelry/Frame.blp").read_bytes())
+        width, height, levels = blp_bgra_levels((directory / "Frame.blp").read_bytes())
         self.assertEqual((source_width, source_height), (128, 128))
         self.assertEqual((width, height), (512, 128))
-        empty, equipped = bytearray(), bytearray()
+        empty, retired = bytearray(), bytearray()
         for row in range(128):
             left = (row * width + 256) * 4
             empty.extend(levels[0][left:left + 128 * 4])
             left = (row * width + 384) * 4
-            equipped.extend(levels[0][left:left + 128 * 4])
+            retired.extend(levels[0][left:left + 128 * 4])
         self.assertEqual(empty, source_levels[0], "empty slots received equipped brightness or another crop")
-        self.assertEqual(equipped[3::4], empty[3::4], "equipped housing changed the silhouette or halo alpha")
-        self.assertNotEqual(equipped, empty, "equipped housing has no brightness lift")
-        for channel in range(3):
-            self.assertEqual(
-                equipped[channel::4],
-                bytes(round(255 * (value / 255) ** 0.65) for value in empty[channel::4]),
-            )
+        self.assertFalse(any(retired), "retired full-housing brightness cell still contains pixels")
+
+        width, height, gemmed = blp_bgra_levels((directory / "GemmedRunecarver.blp").read_bytes())
+        self.assertEqual((width, height, len(gemmed)), (512, 128, 1))
+
+        def pixel(cell, x, y):
+            offset = (y * width + cell * 128 + x) * 4
+            blue, green, red, alpha = gemmed[0][offset:offset + 4]
+            return red, green, blue, alpha
+
+        for cell, dominant_channel in enumerate((1, 2, 2, 0)):
+            with self.subTest(cell=cell):
+                for x, y in ((64, 17), (21, 64), (95, 34), (95, 94), (64, 6)):
+                    rgb = pixel(cell, x, y)
+                    self.assertGreater(rgb[3], 0)
+                    self.assertEqual(rgb[dominant_channel], max(rgb[:3]))
+                self.assertEqual(pixel(cell, 64, 64)[3], empty[(64 * 128 + 64) * 4 + 3])
+                self.assertEqual(pixel(cell, 0, 64)[3], empty[(64 * 128) * 4 + 3])
+                # The selected metal sample is solid and outside every gem.
+                offset = (64 * 128 + 110) * 4
+                blue, green, red, alpha = empty[offset:offset + 4]
+                self.assertEqual(alpha, 255)
+                self.assertEqual(pixel(cell, 110, 64), (red, green, blue, alpha))
+        self.assertNotEqual(pixel(1, 64, 6), pixel(2, 64, 6), "blue and purple share the same halo")
 
     def test_every_shipped_texture_fits_the_native_device_size_gate(self):
         manifest = json.loads((ROOT / "packaging/runtime-files.json").read_text())

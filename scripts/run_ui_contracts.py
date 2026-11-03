@@ -35,7 +35,7 @@ def main():
         ])
         jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons, PrepareIconParts = PrepareIconParts, Clear = Clear, Cooldowns = PaintCooldowns, Refresh = Refresh }\n"
         jewelry_rarity = extract_source("modules/ui/jewelry.lua", [
-            "RARITY_TINT_STRENGTH", "Number", "UpdateRarity", "SetQuality", "UpdateQuality",
+            "Number", "PaintCarving", "UpdateRarity", "SetQuality", "UpdateQuality",
             "SetPlaceholderShown", "ClearSlot",
         ])
         jewelry_rarity = jewelry_rarity.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateRarity, Quality = UpdateQuality, Clear = ClearSlot }\n"

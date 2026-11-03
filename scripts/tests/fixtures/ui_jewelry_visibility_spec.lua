@@ -31,6 +31,7 @@ local function Run(performanceMode)
             placeholder = Region(),
             placeholderShown = false,
             cooldown = Region(),
+            carvingPending = true,
         }
     end
     env.inWorld, env.attached, env.shownWanted, env.wantedDocked, env.cleared = true, true, true, true, false
@@ -70,7 +71,7 @@ local function Run(performanceMode)
     env.SetQuality = function() retirements = retirements + 1 end
     env.UpdateRarity = function(slot)
         rarityUpdates = rarityUpdates + 1
-        slot.carvingR = 1
+        slot.carvingPending = false
     end
     env.HideTooltip = function() end
     -- Icon geometry, actual rarity and tooltip rendering have separate production fixtures.

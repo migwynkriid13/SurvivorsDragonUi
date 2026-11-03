@@ -228,12 +228,6 @@ def tally_canvas(path):
     return canvas
 
 
-def brightened_jewelry_housing(housing):
-    """Lift the equipped metal's midtones while preserving alpha and black."""
-    curve = [round(255 * (value / 255) ** 0.65) for value in range(256)]
-    return housing.point(curve * 3 + list(range(256)))
-
-
 def prepare_runtime_dimensions():
     """Repack wide sheets into power-of-two BLPs between 8 and 512 pixels.
 
@@ -265,9 +259,7 @@ def prepare_runtime_dimensions():
             atlas = Image.new("RGBA", (512, 128))
             for index, left in enumerate((106, 576)):
                 atlas.paste(source.crop((left - 1, 55, left + 73, 129)), (index * 128, 0))
-            housing = source.crop((896, 0, 1024, 128))
-            atlas.paste(housing, (256, 0))
-            atlas.paste(brightened_jewelry_housing(housing), (384, 0))
+            atlas.paste(source.crop((896, 0, 1024, 128)), (256, 0))
             outputs.append((path, atlas))
         else:
             if name == "media/tex/jewelry/SocketRail.blp":

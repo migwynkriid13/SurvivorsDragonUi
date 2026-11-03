@@ -13,26 +13,29 @@ Selected **03 — Cold-lit runes** uses static Runecarver metal and rune accents
 
 `scripts/prepare_jewelry_runecarver.py --source /path/to/RuneCarvingUI.PNG` accepts only the pinned source bytes. It clears the original inner crafting controls with an antialiased normalized-radius 0.33 cut, resizes the remaining lit frame to 118 × 120 and places it at `(5,4)` on a transparent 128 × 128 canvas. The original halo resizes to 124 × 126 at `(2,1)`, with source alpha multiplied by 0.32, below the frame. The completed cell blends 95% grayscale with 5% source RGB, retaining the original shading and alpha. This original empty-slot housing remains the unchanged `media/tex/jewelry/Runecarver.tga` authoring input. CI pins its original SHA-256 and exact runtime pixels.
 
-Empty slots and unavailable rarity use the original grey housing. Known
-rarity uses the brighter cell with a 60% color multiplier, raised to 95% for
-epic purple and legendary orange. The selected rare-blue accent is `66CCFF` and effects-only
-hover text uses raw native RGB.
+Empty slots, poor/common items and unavailable or unsupported rarities use the
+original grey housing. Native ranks 2–5 use the approved gem and halo palette
+in order: green `57E734`, blue `278DF4`, purple `B44DF2` and orange `FF891E`.
+Effects-only hover text uses native RGB.
 
-`--runtime media/tex/jewelry/Frame.blp` writes the neutral cell
-`(256,0)-(384,128)` and the equipped cell `(384,0)-(512,128)`. The equipped
-cell applies a 0.65 gamma curve to the original RGB while keeping its alpha.
-The helper preserves the atlas header, stock gold and shared pet/meter artwork.
-An existing retained input must match the original prepared pixels and is
-kept byte-for-byte.
+`--runtime media/tex/jewelry/Frame.blp` writes the original neutral cell
+`(256,0)-(384,128)` and clears the former bright cell at x=384–512. It
+preserves the atlas header, stock gold and shared pet/meter artwork.
 
 For a full rebuild, `prepare_jewelry_art.py` places the original input at
 `(896,0)-(1024,128)` in its authoring canvas. The client-texture repacker
-copies it to x=256 in the **512 × 128** `Frame.blp` and derives the equipped
-cell at x=384 with the same curve.
+copies it to x=256 in the **512 × 128** `Frame.blp`.
 
-Each static `BORDER` region starts with UVs `256/512, 384/512, 0, 1`, centered
-on its icon at local size `43 * 128 / 108`. The visible reader caches the crop
-and final color and defers hidden writes.
+Build the equipped atlas from the retained neutral input with
+`python3 scripts/prepare_jewelry_runecarver.py --rarity media/tex/jewelry/GemmedRunecarver.blp`.
+Each 128-square cell composites a radial rarity halo behind the original
+housing and four faceted stones above it. The halo fades to transparent
+by radius 61 and clears the item opening. The crown sits at `(64,17.5)`,
+and the smaller stones sit at `(21,64)`, `(95,34)` and `(95,94)`.
+The generated geometry uses the same grey bezels for all four palettes.
+
+Each static `BORDER` region is centered on its icon at local size
+`43 * 128 / 108`. The visible reader caches the successful texture and crop.
 
 The Layout edit envelopes include the static canvas. Attached top clearance is 41⅓ units at the reference button size, while the detached region uses the larger of the socket and carving sizes around the same center. The five regions reuse the current overlay, parent visibility and attachment/world cleanup in both Performance Mode states. The existing regions draw the baked halo as part of the housing.
 
@@ -50,7 +53,7 @@ Original World of Warcraft artwork remains copyright Blizzard Entertainment. The
 
 `scripts/prepare_jewelry_art.py` reads `bagborder2.blp` from a scratch directory supplied with `--sources`. A shared Raw1/Raw3 decoder preserves indexed colors and the separate alpha block; Pillow handles the other source formats. Pillow's own Raw1 path is not used because it omits that alpha block. This tool prepares image assets without loading or executing addon code.
 
-`prepare_jewelry_art.py` retains its 1024-by-256 authoring canvas. The runtime `media/tex/jewelry/Frame.blp` is **512 × 128**, with the stock gold rim at `(1,1)-(73,73)`, shared pet/meter rim at `(129,1)-(201,73)` and the two Runecarver cells described above. The client repacker copies the authoring crops without resampling. See [Client compatibility](../docs/CLIENT-COMPATIBILITY.md). The housings are centered on their item and socket positions. The jewelry frame scale is the native action-button width divided by 43.
+`prepare_jewelry_art.py` retains its 1024-by-256 authoring canvas. The runtime `media/tex/jewelry/Frame.blp` is **512 × 128**, with the stock gold rim at `(1,1)-(73,73)`, shared pet/meter rim at `(129,1)-(201,73)` and the neutral Runecarver cell described above. The client repacker copies the authoring crops without resampling. See [Client compatibility](../docs/CLIENT-COMPATIBILITY.md). The housings are centered on their item and socket positions. The jewelry frame scale is the native action-button width divided by 43.
 
 Native item hover frames remain 32 by 32 at local vertical center 46.5.
 The rendered item uses a centered artwork box set by `ICON_ART_SIZE` (currently 33.897596 units), shared by empty-slot

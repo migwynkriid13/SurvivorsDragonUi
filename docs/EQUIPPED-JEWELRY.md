@@ -1,6 +1,6 @@
 # Equipped jewelry
 
-The selected **03 — Cold-lit runes** artwork uses grey-metal Runecarver housings matched to the action bar. Runecarver supplies the surround: the old circle is removed from the top and sides, while attached jewelry keeps the small bottom arch that joins the bar. Equipped items with known rarity brighten and tint the metal housing. The row meets the original straight action-bar edge, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
+The Runecarver artwork uses grey-metal housings matched to the action bar. Runecarver supplies the surround: the old circle is removed from the top and sides, while attached jewelry keeps the small bottom arch that joins the bar. Uncommon through legendary items add a crown gem, three socket stones and a soft outer halo in their rarity color. The row meets the original straight action-bar edge, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
 
 ## Settings and placement
 
@@ -33,15 +33,10 @@ table supplies RGB. Missing, failed or invalid metadata keeps the existing
 green hover-text fallback while the normal equipment refresh retries. It never
 keeps a removed item's color. Empty slots have no hover card.
 
-Empty slots and items with unavailable rarity use the original grey housing.
-Known rarity uses a brighter crop of the same carving and tints the metal
-at 60%. Epic purple and legendary orange use a stronger 95% tint.
-Rare items use a lighter sky-blue accent on the artwork.
-Effects-only hover text uses the native rarity color.
-
+Green, blue, purple and orange gems and halos follow the native item quality.
+Empty slots, poor/common items and unavailable or unsupported qualities use
+the original grey housing. Effects-only hover text uses native rarity RGB.
 Both Performance Mode states and layout editing share the static artwork.
-The existing equipment reader changes the crop and vertex color on the same
-housing region only when needed and defers painting while hidden.
 Sources and preparation are recorded in
 [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md).
 
