@@ -435,9 +435,7 @@ Test("timer-only samples retain native reads without reentering layout or icon p
         c:SetSetting("hidePetTimers", false)
         local get = c.env.DFRL.display.Get
         c.env.DFRL.display.Get = function(key)
-            if key == "petRows" or key == "petSpacing" then
-                c.reads.layout = (c.reads.layout or 0) + 1
-            end
+            if key == "petRows" or key == "petSpacing" then c.reads.layout = (c.reads.layout or 0) + 1 end
             return get(key)
         end
         local circle = c.env.T.NewCircularIcon
@@ -494,6 +492,34 @@ Test("timer-only samples retain native reads without reentering layout or icon p
         c.layoutFrame:SetScale(1.25)
         c:Tick()
         assert(c.reads.binds == 2, "scale changes skipped icon recovery")
+    end
+end)
+
+Test("failed static pet artwork keeps its original retries and settles after recovery", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Pets()
+        c:SetSetting("performanceMode", performance)
+        local icon = "Interface\\Icons\\RetryTotem"
+        local totem = Totem("retry_totem", 2)
+        totem.icon = icon
+        c.failTexture = icon
+        c:Publish("AZSTOTEMS", { totem })
+        c:Tick()
+        local objects = #c.objects
+        c:ResetCounts()
+        c:Tick()
+        assert((c.writes.SetTexture or 0) > 0 and #c.objects == objects, "failed static art stopped retrying")
+        assert(not c.reads.totems and not c.reads.clock, "art retry repeated native timer reads")
+        c.failTexture = nil
+        c:Tick()
+        local visible = false
+        for _, object in ipairs(c.objects) do
+            if object.kind == "Texture" and object:GetTexture() == icon and object:IsVisible() then visible = true end
+        end
+        assert(visible and #c.objects == objects, "static artwork did not recover through the original pool")
+        c:ResetCounts()
+        c:Tick()
+        c:NoPresentationWrites()
     end
 end)
 

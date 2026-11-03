@@ -435,4 +435,92 @@ Test("divider binding retries preserve shield fill and numbers without hidden wo
     context:NoPresentationWrites()
 end)
 
-print("PASS " .. passed .. " player absorb scenarios")
+Test("primary captions reuse numeric conversion while native presentation checks stay live", function()
+    local begin = assert(string.find(playerSource, "    local primaryCaption = {}", first, true))
+    local finish = assert(string.find(playerSource, "    local function CreateValueText", begin, true))
+    local primarySource = string.sub(playerSource, begin, finish - 1)
+    for _, performance in ipairs({ false, true }) do
+        local c = H.New()
+        local env = c.env
+        c.settings.performanceMode = performance
+        local bar = env.CreateFrame("StatusBar", nil, env.UIParent)
+        local label = bar:CreateFontString(nil, "OVERLAY")
+        local function Read(key) c.reads[key] = (c.reads[key] or 0) + 1 end
+        local function Write(key) c.writes[key] = (c.writes[key] or 0) + 1 end
+        function bar:GetStatusBarColor()
+            Read("color")
+            return unpack(self.color or { 1, 1, 1, 1 })
+        end
+        function bar:SetStatusBarColor(red, green, blue)
+            Write("color")
+            self.color = { red, green, blue, 1 }
+        end
+        function bar:GetMinMaxValues()
+            Read("range")
+            return self.minimum, self.maximum
+        end
+        function bar:SetMinMaxValues(low, high)
+            Write("range")
+            self.minimum, self.maximum = low, high
+        end
+        function bar:GetValue()
+            Read("value")
+            return self.value
+        end
+        function bar:SetValue(value)
+            Write("value")
+            self.value = value
+        end
+        function label:GetText()
+            Read("text")
+            return self.text or ""
+        end
+        function label:SetText(value)
+            Write("SetText")
+            self.argumentType, self.text = type(value), tostring(value)
+        end
+        env.tostring = function(value)
+            if type(value) == "number" then Read("conversion") end
+            return tostring(value)
+        end
+        env.primaryBar, env.primaryText = bar, label
+        env.setPowerShown = function(shown) c.powerShown = shown end
+        env.ManaBarColor = { [0] = { r = 0, g = 0, b = 1 }, [1] = { r = 1, g = 0.5, b = 0 } }
+        env.DFRL.playerResources = {}
+        local chunk = assert(loadstring(primarySource, "production primary power presentation"))
+        setfenv(chunk, env)
+        chunk()
+        local update = env.DFRL.playerResources.SetPrimary
+        update(25, 100, 0)
+        assert(c.reads.conversion == 1 and label:GetText() == "25" and label.argumentType == "number")
+        c:ResetCounts()
+        for _ = 1, 10 do
+            update(25, 100, 0)
+        end
+        c:NoPresentationWrites()
+        assert(not c.reads.conversion and not next(c.writes), "unchanged primary power repeated conversion or writes")
+        assert(c.reads.color == 10 and c.reads.range == 10 and c.reads.value == 10 and c.reads.text == 10)
+        bar.color, bar.minimum, bar.maximum, bar.value = { 1, 0, 0, 0.5 }, -1, 50, 1
+        label.text, bar.shown = "", false
+        update(25, 100, 0)
+        assert(bar.color[3] == 1 and bar.color[4] == 1 and bar.minimum == 0 and bar.maximum == 100)
+        assert(bar.value == 25 and bar:IsShown() and c.powerShown and label:GetText() == "25")
+        assert(label.argumentType == "number" and not c.reads.conversion, "repair changed native numeric input")
+        update(30, 200, 1)
+        assert(label:GetText() == "30" and bar.maximum == 200 and bar.color[2] == 0.5)
+        update(nil, nil, nil)
+        assert(not bar:IsShown() and not c.powerShown and label:GetText() == "", "invalid power retained presentation")
+        c:ResetCounts()
+        update(30, 200, 1)
+        assert(c.reads.conversion == 1 and label:GetText() == "30", "invalid-to-valid recovery retained an old cache")
+        local binding = { original = label.SetText }
+        env.DFRL.locale.labels[label] = binding
+        label.text = ""
+        c:ResetCounts()
+        update(30, 200, 1)
+        assert(binding.source == 30 and label:GetText() == "30" and label.argumentType == "string")
+        assert(not c.reads.conversion, "bound label repeated numeric conversion")
+    end
+end)
+
+print("PASS " .. passed .. " player absorb/primary scenarios")

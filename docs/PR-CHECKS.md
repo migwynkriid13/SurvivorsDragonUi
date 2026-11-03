@@ -750,6 +750,18 @@ The assertions cover:
   clock reads and ten-Hz/deferred/fresh-hover boss-debuff work. Clock tests keep
   raw native phase/time/ownership and original effect inputs. These are CI-only
   call/lifecycle contracts and do not establish rendered parity or FPS gains.
+- Third-pass cases extend the existing pet/totem, world-marker, party-waypoint
+  and player-resource fixtures in both Performance Mode states. They require
+  unchanged native countdown sampling without layout/icon helper reentry,
+  unannounced metadata/group changes, bounds/scale recovery and static failed-art
+  retries. Marker cases require one full retirement, no repeated settled buffer
+  cleanup, retained failed-release retries, foreign handlers and pooled visible
+  recovery. Waypoint cases cover unchanged/replaced native tables, every scalar
+  identity input, invalid metadata and world reentry. Resource cases retain
+  actual text/color/alpha/range/value/visibility repair and native numeric setter
+  arguments while skipping unchanged conversions, including invalid-to-valid and
+  localization-bound recovery. These are authored CI-only contracts, not local
+  execution or native appearance/FPS evidence. Loot timing is unchanged.
 - API-timer presentation cases in `ui_aura_layout_perf_spec.lua` exercise
   the production owner with explicit native boundaries. They cover bright,
   text-free, borderless talent/jewelry timer icons filling their existing buttons

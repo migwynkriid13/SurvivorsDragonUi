@@ -143,6 +143,12 @@ the native roster removes it. Unavailable temporary timing shows `--:--`.
 For a mixed group, only temporary members contribute to the earliest timer;
 one unavailable member leaves that timer unknown.
 
+Timer-only samples reuse the combined row list and settled geometry, skipping
+static icon/name/count preparation while updating countdown captions. Native
+metadata changes still repaint the affected row; group-count changes rebuild
+the list and layout. Display choices, Show, scale, changed root bounds and
+failed artwork retain their existing next-reader recovery in both modes.
+
 Names, counts and status labels call `SetText` only when the displayed string
 changes. The root's Show/Hide calls occur only on visibility transitions. Hidden
 groups still accept roster changes and update shared edit bounds, but skip row

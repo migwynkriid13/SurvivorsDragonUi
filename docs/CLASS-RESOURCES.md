@@ -8,6 +8,12 @@ Rogue points and Warlock soul shards use the existing socket artwork. Lightwell 
 
 The primary bar reads `UnitPowerType("player")`, `UnitMana("player")` and `UnitManaMax("player")` independently of AZS phase and retained run snapshots. It requires an existing player, finite nonnegative current power and power type, and a finite positive native maximum. The primary bar uses that maximum directly, without inventing a pool or maximum for a class. Missing proc data does not hide valid primary power; missing primary power does not hide a valid proc meter.
 
+Both Performance Mode states retain those reads and actual text, color/alpha,
+range, value and visibility checks. The caption reuses its comparison string
+while the numeric value is unchanged, clears it with invalid data and continues
+passing the original number to an unbound native label. External text changes
+are repaired on the original reader/event cadence.
+
 The game update supplied by the owner on 2026-10-20 adds three `AZS_RUN` fields:
 
 | Field  | Meaning                                                                         |

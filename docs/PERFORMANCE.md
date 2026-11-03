@@ -4,6 +4,37 @@ The performance work removes repeated presentation writes while retaining native
 data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
 or native client dependency. Display choices use the existing saved display table.
 
+## Pet timers, world-icon retirement, waypoints and primary power — 2026-11-03
+
+Both Performance Mode states keep the existing tenth-second pet/summon/totem
+phase and native countdown reads. Timer-only samples reuse the combined row
+list, bounds and successful icon preparation, updating countdown captions at
+the same cadence. Publications, native group-count/metadata changes, display
+choices, scale, Show and altered root bounds still recover through that reader.
+Failed artwork keeps the original retries, including static groups with timers
+hidden. Choice cards and hidden/world retirement retain their existing behavior.
+
+World icons clear their catalog once per retired lifetime. Repeated disabled,
+hidden or out-of-world service calls skip the already completed buffer cleanup,
+while unfinished native handler releases retain their half-second retries.
+Reactivation makes full cleanup eligible again; retired callbacks stay inert
+and foreign handlers remain owned by their original caller.
+
+Waypoints reuse their last zone/map/stamp composite string until one of those
+validated scalar inputs changes. The original identity comparison, zone/run
+retirement, world recovery, nearest selection and arrow interpolation remain.
+Primary power reuses its numeric comparison string until the value changes or
+is cleared. Every sample still checks actual native text, fill color/alpha,
+range, value and visibility; an unbound label still receives the original
+number through native `SetText`.
+
+No polling interval, gameplay frame, region, asset, setting, saved state, event
+or updater is added. Loot timing is unchanged. CI-only cases cover countdown
+work, metadata/size changes, failed artwork, repeated retirement and release
+recovery, scalar identity invalidation and native resource repair in both modes.
+They were not run locally. Source review and pinned formatting do not establish
+native rendering parity or FPS gains.
+
 ## Debuff captions, banners, tooltip lookup and chat — 2026-11-03
 
 Both Performance Mode states retain native debuff timing reads while reusing
