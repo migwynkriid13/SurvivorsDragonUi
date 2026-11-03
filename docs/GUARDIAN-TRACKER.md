@@ -1,7 +1,7 @@
 # Guardian tracker
 
 The tracker uses selected design **04**: the published quest-tracker header above
-an open list. The header contains its medallion and **GUARDIANS** title, with no
+an open list. The header contains its medallion and gold **Guardians** title, with no
 alive count or minus/plus button. The title uses the space previously reserved
 for the button.
 

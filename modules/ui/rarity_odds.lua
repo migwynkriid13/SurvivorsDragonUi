@@ -1,7 +1,8 @@
 DFRL:NewMod("RarityOdds", 5, function()
-    local INTERVAL, WIDTH, SCALE, GAP = 0.25, 240, 0.85, 8
+    local style, SCALE = T.RightHudStyle, 0.85
+    local INTERVAL, WIDTH, GAP = 0.25, style.width / SCALE, 8
+    local TITLE_SIZE, TITLE_HEIGHT = style.titleSize / SCALE, 19
     local HEADER_HEIGHT, ROW_HEIGHT, COLUMN_LEFT = WIDTH / 8, 25, 88
-    local GOLD, WHITE = { 0.87, 0.74, 0.49 }, { 1, 0.96, 0.87 }
     local TIERS = {
         { "Rare", 0.28, 0.65, 1, 45 },
         { "Epic", 0.76, 0.49, 1, 45 },
@@ -12,8 +13,8 @@ DFRL:NewMod("RarityOdds", 5, function()
     local REWARDS = {
         { "Spells / cache jewelry", 0 },
         { "Guardian jewelry", 0.25 },
-        { "New cache amulets", 0.5 },
-        { "New guardian amulets", 0.75 },
+        { "Cache amulets", 0.5 },
+        { "Guardian amulets", 0.75 },
     }
     local HEIGHT = HEADER_HEIGHT + 21 + table.getn(REWARDS) * ROW_HEIGHT
     local display, layout, locale = DFRL.display, DFRL.layout, DFRL.locale
@@ -21,6 +22,7 @@ DFRL:NewMod("RarityOdds", 5, function()
     local meterRows = display.Get("meterRows")
     local inWorld, permitted, elapsed = true, not layout.IsHidden("rarityOdds"), INTERVAL
     local labels, language, registeredTop, shown
+    local width, drawnWidth, Reflow = WIDTH, nil, nil
     local retiredRun, retiredStats, paintedStrength
     local lastRun, lastStats, lastZone, lastClock
     local pendingFonts = {}
@@ -55,7 +57,17 @@ DFRL:NewMod("RarityOdds", 5, function()
         local center = math.max(half, math.min(height - half, (top + bottom) / 2))
         frame:ClearAllPoints()
         frame:SetPoint("RIGHT", UIParent, "BOTTOMRIGHT", right / SCALE, center / SCALE)
-    end, { labelAbove = true, refreshDefault = true })
+    end, {
+        labelAbove = true,
+        refreshDefault = true,
+        edgeWidth = true,
+        minWidth = WIDTH,
+        maxWidth = 960,
+        onResize = function(_, nextWidth)
+            width = nextWidth
+            if shown then Reflow() end
+        end,
+    })
 
     local function PlaceDefault()
         if not layout.IsPlaced("rarityOdds") then layout.Place("rarityOdds") end
@@ -109,22 +121,20 @@ DFRL:NewMod("RarityOdds", 5, function()
         return strength, phase == "choosing"
     end
 
-    local function Label(parent, size, x, y, width, color, justify, height)
+    local function Label(parent, size, color, justify, height)
         local label = parent:CreateFontString(nil, "OVERLAY")
-        label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-        label:SetWidth(width)
         label:SetHeight(height or size + 5)
         label:SetJustifyH(justify or "LEFT")
         label:SetJustifyV("MIDDLE")
         label:SetTextColor(unpack(color))
-        T.SetFont(label, size, "OUTLINE")
+        T.SetFont(label, size, "")
         T.SetChatShadow(label)
         if not label:GetFont() then pendingFonts[label] = size end
         return label
     end
 
     local function PreparePanel()
-        T.CreateQuestTrackerHeader(panel, WIDTH, HEADER_HEIGHT)
+        local header = T.CreateQuestTrackerHeader(panel, width, HEADER_HEIGHT)
         local icon = panel:CreateTexture(nil, "ARTWORK")
         icon:SetTexture("Interface\\Icons\\INV_Jewelry_Amulet_03")
         icon:SetTexCoord(0.07, 0.93, 0.07, 0.93)
@@ -133,30 +143,51 @@ DFRL:NewMod("RarityOdds", 5, function()
         icon:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -(HEADER_HEIGHT - 18) / 2)
         local rim = panel:CreateTexture(nil, "OVERLAY")
         rim:SetTexture(DFRL:GetInfoOrCons("tex") .. "character\\QualityBorder.blp")
-        rim:SetVertexColor(unpack(GOLD))
+        rim:SetVertexColor(0.87, 0.74, 0.49)
         rim:SetWidth(22)
         rim:SetHeight(22)
         rim:SetPoint("CENTER", icon, "CENTER", 0, 0)
         labels = {
-            title = Label(panel, 14, 36, -(HEADER_HEIGHT - 19) / 2, WIDTH - 46, GOLD),
+            header = header,
+            title = Label(panel, TITLE_SIZE, style.titleColor, "LEFT", TITLE_HEIGHT),
             tiers = {},
             rows = {},
         }
-        local x = COLUMN_LEFT
+        labels.title:SetPoint("TOPLEFT", panel, "TOPLEFT", 36, -(HEADER_HEIGHT - TITLE_HEIGHT) / 2)
         for index, tier in ipairs(TIERS) do
-            labels.tiers[index] =
-                Label(panel, 10, x, -HEADER_HEIGHT - 2, tier[5], { tier[2], tier[3], tier[4] }, "CENTER")
-            x = x + tier[5]
+            labels.tiers[index] = Label(panel, 10, { tier[2], tier[3], tier[4] }, "CENTER")
         end
         for index = 1, table.getn(REWARDS) do
-            local y = -HEADER_HEIGHT - 19 - (index - 1) * ROW_HEIGHT
-            local row = { name = Label(panel, 10, 10, y, COLUMN_LEFT - 12, GOLD, "LEFT", ROW_HEIGHT) }
-            local left = COLUMN_LEFT
-            for column, tier in ipairs(TIERS) do
-                row[column] = Label(panel, 10, left, y, tier[5], WHITE, "CENTER", ROW_HEIGHT)
-                left = left + tier[5]
+            local row = { name = Label(panel, 10, style.bodyColor, "LEFT", ROW_HEIGHT) }
+            row.name:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -HEADER_HEIGHT - 19 - (index - 1) * ROW_HEIGHT)
+            for column = 1, table.getn(TIERS) do
+                row[column] = Label(panel, 10, style.bodyColor, "CENTER", ROW_HEIGHT)
             end
             labels.rows[index] = row
+        end
+    end
+
+    Reflow = function()
+        if drawnWidth == width then return end
+        drawnWidth = width
+        labels.header:SetWidth(width)
+        labels.title:SetWidth(width - 46)
+        local extra = math.max(0, width - WIDTH)
+        local left = COLUMN_LEFT + extra / 2
+        for _, row in ipairs(labels.rows) do
+            row.name:SetWidth(left - 12)
+        end
+        for index, tier in ipairs(TIERS) do
+            local columnWidth = tier[5] + extra / 6
+            local heading = labels.tiers[index]
+            heading:SetPoint("TOPLEFT", panel, "TOPLEFT", left, -HEADER_HEIGHT - 2)
+            heading:SetWidth(columnWidth)
+            for rowIndex, row in ipairs(labels.rows) do
+                local label = row[index]
+                label:SetPoint("TOPLEFT", panel, "TOPLEFT", left, -HEADER_HEIGHT - 19 - (rowIndex - 1) * ROW_HEIGHT)
+                label:SetWidth(columnWidth)
+            end
+            left = left + columnWidth
         end
     end
 
@@ -222,7 +253,7 @@ DFRL:NewMod("RarityOdds", 5, function()
         end
         if not labels then PreparePanel() end
         for label, size in pairs(pendingFonts) do
-            T.SetFont(label, size, "OUTLINE")
+            T.SetFont(label, size, "")
             if label:GetFont() then pendingFonts[label] = nil end
         end
         if next(pendingFonts) then return end
@@ -230,11 +261,10 @@ DFRL:NewMod("RarityOdds", 5, function()
             Hide()
             return
         end
+        if not shown then PlaceDefault() end
+        Reflow()
         Paint(strength)
-        if not shown then
-            PlaceDefault()
-            panel:Show()
-        end
+        if not shown then panel:Show() end
         shown = true
     end
 

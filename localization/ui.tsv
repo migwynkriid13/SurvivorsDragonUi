@@ -354,7 +354,7 @@ Target debuffs on top	Osłabienia celu na górze	Zielschwächungen oben	Penalida
 Place target debuffs above the target frame.	Umieść osłabienia celu nad jego ramką.	Schwächungen über dem Zielfenster anzeigen.	Coloca as penalidades acima do quadro do alvo.	Coloca los perjuicios encima del marco del objetivo.	Place les affaiblissements au-dessus du cadre de la cible.	Plasează efectele negative deasupra cadrului țintei.	Hedef zayıflatmalarını hedef çerçevesinin üstüne yerleştir.	Размещать отрицательные эффекты над рамкой цели.	Розміщувати негативні ефекти над рамкою цілі.	将目标减益放在目标框体上方。	ターゲットの弱体効果をターゲットフレームの上に配置します。	대상 약화 효과를 대상 프레임 위에 배치합니다.	Umístit oslabení cíle nad jeho rámeček.
 LEVEL UP	AWANS	STUFENAUFSTIEG	SUBIU DE NÍVEL	SUBES DE NIVEL	NIVEAU SUPÉRIEUR	NIVEL NOU	SEVİYE ATLADIN	НОВЫЙ УРОВЕНЬ	НОВИЙ РІВЕНЬ	升级	レベルアップ	레벨 업	NOVÁ ÚROVEŇ
 Guardian tracker	Śledzenie strażników	Wächterübersicht	Rastreador de guardiões	Rastreador de guardianes	Suivi des gardiens	Monitor străjeri	Muhafız takibi	Обзор стражей	Огляд вартових	守卫追踪	ガーディアン一覧	수호자 추적	Přehled strážců
-GUARDIANS	STRAŻNICY	WÄCHTER	GUARDIÕES	GUARDIANES	GARDIENS	STRĂJERI	MUHAFIZLAR	СТРАЖИ	ВАРТОВІ	守卫	ガーディアン	수호자	STRÁŽCI
+Guardians	Strażnicy	Wächter	Guardiões	Guardianes	Gardiens	Străjeri	Muhafızlar	Стражи	Вартові	守卫	ガーディアン	수호자	Strážci
 Alive	Żywy	Lebendig	Vivo	Vivo	Vivant	În viață	Hayatta	Жив	Живий	存活	生存	생존	Naživu
 Respawns in %s	Odrodzi się za %s	Erscheint wieder in %s	Ressurge em %s	Reaparece en %s	Réapparaît dans %s	Reapare în %s	%s sonra yeniden doğar	Возродится через %s	Відродиться за %s	%s后重生	再出現まで %s	재생성까지 %s	Znovu se objeví za %s
 Empty	Puste	Leer	Vazio	Vacío	Vide	Gol	Boş	Пусто	Порожньо	空	空き	비어 있음	Prázdné
@@ -479,7 +479,7 @@ Show over reward cards	Pokaż nad kartami nagród	Über Belohnungskarten anzeige
 Rare	Rzadkie	Selten	Raro	Raro	Rare	Rar	Nadir	Редкое	Рідкісне	稀有	レア	희귀	Vzácné
 Epic	Epickie	Episch	Épico	Épico	Épique	Epic	Destansı	Эпическое	Епічне	史诗	エピック	영웅	Epické
 Legendary	Legendarne	Legendär	Lendário	Legendario	Légendaire	Legendar	Efsanevi	Легендарное	Легендарне	传说	レジェンド	전설	Legendární
-New cache amulets	Nowe amulety ze skrytki	Neue Truhenamulette	Novos amuletos de baú	Amuletos nuevos de cofres	Nouveaux talismans de cache	Amulete noi din cufăr	Yeni sandık muskaları	Новые амулеты из тайника	Нові амулети зі схованки	宝箱新护符	宝箱の新規アミュレット	보관함 신규 부적	Nové amulety z truhly
+Cache amulets	Amulety ze skrytki	Truhenamulette	Amuletos de baú	Amuletos de cofres	Talismans de cache	Amulete din cufăr	Sandık muskaları	Амулеты из тайника	Амулети зі схованки	宝箱护符	宝箱のアミュレット	보관함 부적	Amulety z truhly
 Guardian jewelry	Biżuteria strażnika	Wächterschmuck	Joias de guardião	Joyas de guardianes	Bijoux de gardien	Bijuterii de la străjer	Muhafız takıları	Украшения стража	Прикраси вартового	守卫珠宝	ガーディアンの宝飾品	수호자 장신구	Šperky strážce
-New guardian amulets	Nowe amulety strażnika	Neue Wächteramulette	Novos amuletos de guardião	Amuletos nuevos de guardianes	Nouveaux talismans de gardien	Amulete noi de la străjer	Yeni muhafız muskaları	Новые амулеты стража	Нові амулети вартового	守卫新护符	ガーディアンの新規アミュレット	수호자 신규 부적	Nové amulety strážce
+Guardian amulets	Amulety strażnika	Wächteramulette	Amuletos de guardião	Amuletos de guardianes	Talismans de gardien	Amulete de la străjer	Muhafız muskaları	Амулеты стража	Амулети вартового	守卫护符	ガーディアンのアミュレット	수호자 부적	Amulety strážce
 Spells / cache jewelry	Zaklęcia / biżuteria ze skrytki	Zauber / Truhenschmuck	Feitiços / joias de baú	Hechizos / joyas de cofre	Sorts / bijoux de cache	Vrăji / bijuterii din cufăr	Büyü / sandık takıları	Заклинания / тайник	Заклинання / схованка	法术 / 宝箱珠宝	呪文 / 宝箱の宝飾品	주문 / 보관함 장신구	Kouzla / šperky z truhly

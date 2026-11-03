@@ -1,5 +1,13 @@
 setfenv(1, DFRL:GetEnv())
 
+-- Default width and title size in UIParent units, independent of panel scale.
+DFRL.tools.RightHudStyle = {
+    width = 204,
+    titleSize = 10.4,
+    titleColor = { 1, 0.82, 0 },
+    bodyColor = { 1, 1, 1 },
+}
+
 -- Native screen-unit setters now round through 24-bit floats. Their getters
 -- need not return the exact Lua number that was set, even at a fixed viewport.
 function DFRL.tools.NearlyEqual(a, b)

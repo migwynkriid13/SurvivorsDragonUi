@@ -6,7 +6,7 @@ for _, performance in ipairs({ false, true }) do
     local context = H.New()
     local env, phase, top, hidden, failReadback = context.env, "playing", false, false, false
     local layout = env.DFRL.layout
-    local anchor, placed
+    local anchor, resize, placed
     local create, register = env.CreateFrame, layout.Register
     env.CreateFrame = function(kind, name, parent)
         local frame = create(kind, name, parent)
@@ -27,10 +27,12 @@ for _, performance in ipairs({ false, true }) do
         GetScale = function() return 0.85 end,
     }
     env.DFRL.guardianTrackerDefaults = { top = 252, right = -1.2 }
-    env.DFRL.damageMeterDefaults = { width = 240, scale = 0.8, header = 32, row = 32, footer = 32 }
+    env.DFRL.damageMeterDefaults = { width = 255, scale = 0.8, header = 32, row = 32, footer = 32 }
     layout.Register = function(key, frame, default, options)
         assert(options.refreshDefault, "viewport changes must recompute the default gap")
+        assert(options.edgeWidth and options.minWidth == 240 and options.maxWidth == 960)
         anchor = function() default(frame) end
+        resize = options.onResize
         register(key, frame, default)
     end
     layout.IsPlaced = function() return placed end
@@ -88,6 +90,11 @@ for _, performance in ipairs({ false, true }) do
     assert(panel:IsShown() and not env.SurvivorsDragonUiDisplay, "preview did not show or saved too early")
     local text, regions = Captions()
     assert(#text == 20 and text[1] == "Rarity odds" and text[5] == "Spells / cache jewelry", "compact table changed")
+    assert(text[13] == "Cache amulets" and text[17] == "Guardian amulets")
+    local _, titleSize, titleFlags = regions[1]:GetFont()
+    local r, g, b = regions[1]:GetTextColor()
+    assert(env.T.NearlyEqual(titleSize * panel.scale, 10.4) and titleFlags == "", "meter title font changed")
+    assert(r == 1 and g == 0.82 and b == 0, "meter title color changed")
     assert(text[6] == "14.0%" and text[7] == "7.3%" and text[8] == "2.4%")
     assert(text[10] == "16.7%" and text[14] == "18.9%" and text[18] == "20.5%")
     assert(
@@ -103,6 +110,12 @@ for _, performance in ipairs({ false, true }) do
     assert(panel:GetWidth() == 240 and panel.scale == 0.85 and panel.point[1] == "RIGHT")
     assert(env.T.NearlyEqual(panel.point[4] * panel.scale, -1.2), "odds were not aligned with the tracker")
     assert(env.T.NearlyEqual(panel.point[5] * panel.scale, 287.3), "odds were not centered in the default gap")
+    panel:SetWidth(360)
+    resize(panel, 360)
+    assert(regions[5]:GetWidth() == 136 and regions[6]:GetWidth() == 65 and regions[6]:GetText() == "14.0%")
+    panel:SetWidth(240)
+    resize(panel, 240)
+    assert(regions[5]:GetWidth() == 76 and regions[6]:GetWidth() == 45, "reset did not restore compact columns")
     env.UIParent:SetHeight(640)
     layout.Place("rarityOdds")
     assert(env.T.NearlyEqual(panel.point[4] * panel.scale, -213.2), "short viewport overlapped the right HUD stack")

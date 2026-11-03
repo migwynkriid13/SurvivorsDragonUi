@@ -21,10 +21,11 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local showMaximum = DFRL.display.Get("guardianShowMaximumHealth")
     local showPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true
     local shortenHealth = DFRL.display.Get("guardianShortHealth") ~= false
-    local DEFAULT_SCALE = 0.85
+    local style, DEFAULT_SCALE = T.RightHudStyle, 0.85
     local ROW_INSET, NAME_WIDTH, COLUMN_GAP = 12, 120, 16 * 0.9
     local HEALTH_RIGHT_OFFSET = 4
     local TITLE_LEFT = 44
+    local TITLE_SIZE = style.titleSize / DEFAULT_SCALE
     local TITLE_PADDING = TITLE_LEFT + ROW_INSET
     local WIDTH, ROW_HEIGHT = 128 + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, 26
     -- The health pill's right edge aligns with the default minimap edge.
@@ -32,7 +33,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     DFRL.guardianTrackerDefaults = defaults
     local visibleRows, rowOffset = DFRL.display.Get("guardianRows"), 0
     local preferredStatusWidth, headerHeight = 128, WIDTH / 8
-    local width, statusWidth = 240, 128
+    local width, statusWidth = style.width / DEFAULT_SCALE, 128
     local healthWidth = 0
     local presentation = { snapshot = { rows = {}, counts = {} }, shown = false, activeRows = 0 }
     local frame = CreateFrame("Frame", "DFRL_GuardianTracker", UIParent)
@@ -46,10 +47,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
 
     local function Label(parent, size, justify)
         local label = parent:CreateFontString(nil, "OVERLAY")
-        T.SetFont(label, size, "OUTLINE")
+        T.SetFont(label, size, "")
         label:SetJustifyH(justify or "LEFT")
         label:SetJustifyV("MIDDLE")
-        label:SetTextColor(0.87, 0.74, 0.49)
+        label:SetTextColor(unpack(style.bodyColor))
         T.SetChatShadow(label)
         return label
     end
@@ -64,7 +65,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local header = T.CreateQuestTrackerHeader(frame, width, headerHeight)
     local icon = Texture(frame, "waypoint\\GuardianFloating", "ARTWORK", 28, 28, 65 / 128, 65 / 128)
     icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 9, -6)
-    local title = Label(frame, 14)
+    local title = Label(frame, TITLE_SIZE)
+    title:SetTextColor(unpack(style.titleColor))
     title:SetPoint("TOPLEFT", frame, "TOPLEFT", TITLE_LEFT, -8)
     title:SetHeight(23)
     local measure = Label(frame, 12)
@@ -219,7 +221,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     -- populated format fields. Native guardian names remain bounded separately.
     local function CaptionWidth(source, first, size)
         if presentation.measureSize ~= (size or 12) then
-            T.SetFont(measure, size or 12, "OUTLINE")
+            T.SetFont(measure, size or 12, "")
             presentation.measureSize = size or 12
         end
         local maximum = 0
@@ -251,7 +253,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         for _, source in pairs(captions) do
             preferredStatusWidth = math.max(preferredStatusWidth, CaptionWidth(source) + 16)
         end
-        local titleWidth = CaptionWidth("GUARDIANS", nil, 14)
+        local titleWidth = CaptionWidth("Guardians", nil, TITLE_SIZE)
         if titleWidth <= 0 then return false end
         headerHeight = math.max(
             WIDTH,
@@ -334,7 +336,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
             header:SetHeight(headerHeight)
             presentation.headerHeight = headerHeight
         end
-        T.SetTextIfChanged(title, DFRL.locale.Text("GUARDIANS"))
+        T.SetTextIfChanged(title, DFRL.locale.Text("Guardians"))
         local filtered, count = presentation.filtered or {}, 0
         presentation.filtered = filtered
         if
