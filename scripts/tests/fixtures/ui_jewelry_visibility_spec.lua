@@ -16,7 +16,7 @@ local function Run(performanceMode)
         writes.hide = writes.hide + 1
         self.shown = false
     end
-    local enabled, visible, player = true, true, true
+    local enabled, visible, player, docked = true, true, true, true
     local textures, reads, qualityReads = {}, 0, 0
     local rarityUpdates, retirements = 0, 0
     env.slots = {}
@@ -40,7 +40,7 @@ local function Run(performanceMode)
     }
     env.hud = { Show = function() end, Hide = function() end, IsVisible = function() return visible end }
     env.detached = { Show = function() end, Hide = function() end }
-    env.Docked = function() return true end
+    env.Docked = function() return docked end
     env.CanPaint = function() return visible end
     env.UnitExists = function(unit)
         assert(unit == "player")
@@ -119,6 +119,15 @@ local function Run(performanceMode)
     visible = true
     api.Refresh()
     assert(reads == beforeReads + 5 and not slot.placeholder.shown, "hidden recovery retained stale placeholder state")
+
+    slot.carvingQuality = 4
+    visible, docked = false, false
+    local beforeRarity = rarityUpdates
+    api.Refresh()
+    assert(slot.carvingPending and rarityUpdates == beforeRarity, "docking change painted while hidden")
+    visible = true
+    api.Refresh()
+    assert(not slot.carvingPending and rarityUpdates == beforeRarity + 1, "docking change did not repaint on recovery")
 
     for _, boundary in ipairs({ "player", "world", "disabled" }) do
         if boundary == "player" then player = false end

@@ -101,6 +101,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SHARED_CARVING = texturePath .. "Frame.blp"
     local GEMMED_CARVING = texturePath .. "GemmedRunecarver.blp"
+    local ATTACHED_CARVING = texturePath .. "AttachedRunecarver.blp"
     local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
     local EMPTY_TEXTURES = {
         "EmptyRing.blp",
@@ -569,20 +570,26 @@ DFRL:NewMod("Jewelry", 4, function()
         slot.carving, slot.carvingPending = carving, true
     end
     local function PaintCarving(slot, quality)
-        local previous = slot.carvingQuality
-        if previous == quality then return true end
+        local docked = wantedDocked == true and quality > 0
+        local path = docked and ATTACHED_CARVING or (quality < 2 and SHARED_CARVING or GEMMED_CARVING)
+        if slot.carvingQuality == quality and slot.carvingPath == path then return true end
         local carving = slot.carving
-        if previous == nil or (previous < 2) ~= (quality < 2) then
-            local path = quality < 2 and SHARED_CARVING or GEMMED_CARVING
+        if slot.carvingPath ~= path then
             local loaded = carving:SetTexture(path)
             if not T.TextureAssigned(loaded, carving:GetTexture(), path) then
-                slot.carvingQuality = nil
+                slot.carvingQuality, slot.carvingPath = nil, nil
                 return false
             end
         end
         local left = quality < 2 and (256 + quality * 128) or (quality - 2) * 128
-        carving:SetTexCoord(left / 512, (left + 128) / 512, 0, 1)
-        slot.carvingQuality = quality
+        local top, bottom = 0, 1
+        if docked then
+            left = math.mod(quality - 1, 4) * 128
+            top = quality == 5 and 0.5 or 0
+            bottom = top + 0.5
+        end
+        carving:SetTexCoord(left / 512, (left + 128) / 512, top, bottom)
+        slot.carvingQuality, slot.carvingPath = quality, path
         return true
     end
     local function UpdateRarity(slot)
@@ -733,6 +740,11 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         local docked = Docked()
         if not shownWanted or wantedDocked ~= docked then
+            if wantedDocked ~= docked then
+                for _, slot in ipairs(slots) do
+                    if slot.carvingQuality and slot.carvingQuality > 0 then slot.carvingPending = true end
+                end
+            end
             cleared = false
             shownWanted, wantedDocked = true, docked
             if docked then

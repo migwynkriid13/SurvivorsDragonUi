@@ -3,6 +3,7 @@ assert(_VERSION == "Lua 5.1", "jewelry rarity fixtures require CI Lua 5.1")
 local env = setmetatable({}, { __index = _G })
 env._G = env
 env.SHARED_CARVING, env.GEMMED_CARVING = "Frame.blp", "GemmedRunecarver.blp"
+env.ATTACHED_CARVING = "AttachedRunecarver.blp"
 local visible, unavailable = true, nil
 local writes = { texture = 0, uv = 0, visibility = 0 }
 local methods = {}
@@ -46,11 +47,15 @@ local chunk = assert(loadfile(arg[1]))
 setfenv(chunk, env)
 local api = chunk()
 
-local function Housing(path, left)
+local function Housing(path, left, row)
     local region = slot.carving
     assert(region.shown and region.texture == path)
     assert(region.uv[1] == left / 512 and region.uv[2] == (left + 128) / 512)
-    assert(region.uv[3] == 0 and region.uv[4] == 1)
+    local top, bottom = 0, 1
+    if row then
+        top, bottom = row / 2, (row + 1) / 2
+    end
+    assert(region.uv[3] == top and region.uv[4] == bottom)
 end
 api.Clear(slot)
 Housing(env.SHARED_CARVING, 256)
@@ -87,6 +92,26 @@ for _, mode in ipairs({ "performanceMode", "editing" }) do
     api.Update(slot)
 end
 assert(writes.texture == bindings and writes.uv == crops, "settled slots repeated bindings or crops")
+
+env.wantedDocked, unavailable = true, env.ATTACHED_CARVING
+api.Update(slot)
+assert(slot.carvingPending, "failed attached artwork must retry")
+Housing(env.SHARED_CARVING, 256)
+unavailable = nil
+api.Update(slot)
+Housing(env.ATTACHED_CARVING, 0, 1)
+assert(not slot.carvingPending)
+bindings, crops = writes.texture, writes.uv
+for rank = 1, 5 do
+    quality = rank
+    api.Quality(slot)
+    api.Update(slot)
+    Housing(env.ATTACHED_CARVING, math.mod(rank - 1, 4) * 128, rank == 5 and 1 or 0)
+end
+assert(writes.texture == bindings and writes.uv == crops + 5, "attached crops did not reuse one atlas")
+env.wantedDocked = false
+api.Update(slot)
+Housing(env.GEMMED_CARVING, 384)
 
 quality, red = 4, 2
 api.Quality(slot)

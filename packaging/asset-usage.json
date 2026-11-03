@@ -34,7 +34,7 @@
   "source_assets": {
     "media/tex/jewelry/Runecarver.tga": {
       "output": "media/tex/jewelry/Frame.blp",
-      "reason": "Original Blizzard Runecarver housing for the neutral Frame.blp crop and the derived GemmedRunecarver.blp atlas; source and preparation are recorded in third_party/Jewelry-ARTWORK.md."
+      "reason": "Original Blizzard Runecarver housing for the Frame.blp, GemmedRunecarver.blp and AttachedRunecarver.blp crops. Source and preparation are recorded in third_party/Jewelry-ARTWORK.md."
     },
     "media/tex/timer/HeroicNumerals.tga": {
       "output": "media/tex/timer/HeroicNumerals.blp",

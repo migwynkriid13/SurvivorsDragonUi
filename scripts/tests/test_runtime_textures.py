@@ -61,6 +61,8 @@ class RuntimeTextureTests(unittest.TestCase):
 
         width, height, gemmed = blp_bgra_levels((directory / "GemmedRunecarver.blp").read_bytes())
         self.assertEqual((width, height, len(gemmed)), (512, 128, 1))
+        width, height, attached = blp_bgra_levels((directory / "AttachedRunecarver.blp").read_bytes())
+        self.assertEqual((width, height, len(attached)), (512, 256, 1))
 
         def pixel(pixels, cell, x, y):
             offset = (y * width + cell * 128 + x) * 4
@@ -69,9 +71,9 @@ class RuntimeTextureTests(unittest.TestCase):
 
         crops = [(levels[0], 3, None)]
         crops.extend((gemmed[0], cell, channel) for cell, channel in enumerate((1, 2, 2, 0)))
-        for pixels, cell, dominant_channel in crops:
+        for index, (pixels, cell, dominant_channel) in enumerate(crops):
             with self.subTest(cell=cell, dominant_channel=dominant_channel):
-                for x, y in ((64, 17), (21, 64), (95, 34), (95, 94), (64, 6)):
+                for x, y in ((64, 17), (21, 64), (95, 34), (95, 94), (6, 64)):
                     rgb = pixel(pixels, cell, x, y)
                     self.assertGreater(rgb[3], 0)
                     if dominant_channel is None:
@@ -80,12 +82,24 @@ class RuntimeTextureTests(unittest.TestCase):
                         self.assertEqual(rgb[dominant_channel], max(rgb[:3]))
                 self.assertEqual(pixel(pixels, cell, 64, 64)[3], empty[(64 * 128 + 64) * 4 + 3])
                 self.assertEqual(pixel(pixels, cell, 0, 64)[3], empty[(64 * 128) * 4 + 3])
+                # These points are equally far from the center. Only the left
+                # one is close to the protruding metal socket.
+                near_socket = pixel(pixels, cell, 8, 56)[3]
+                across_from_socket = pixel(pixels, cell, 119, 56)[3]
+                self.assertGreater(near_socket, across_from_socket + 80)
                 # The selected metal sample is solid and outside every gem.
                 offset = (64 * 128 + 110) * 4
                 blue, green, red, alpha = empty[offset:offset + 4]
                 self.assertEqual(alpha, 255)
                 self.assertEqual(pixel(pixels, cell, 110, 64), (red, green, blue, alpha))
-        self.assertNotEqual(pixel(gemmed[0], 1, 64, 6), pixel(gemmed[0], 2, 64, 6), "blue and purple share the same halo")
+                row, column = divmod(index, 4)
+                for x, y in ((24, 108), (103, 108)):
+                    clipped = pixel(attached[0], column, x, y + row * 128)[3]
+                    self.assertEqual(clipped, empty[(y * 128 + x) * 4 + 3])
+                    self.assertGreater(pixel(pixels, cell, x, y)[3], clipped + 80)
+                for x, y in ((64, 6), (64, 17), (64, 64), (110, 64)):
+                    self.assertEqual(pixel(attached[0], column, x, y + row * 128), pixel(pixels, cell, x, y))
+        self.assertNotEqual(pixel(gemmed[0], 1, 6, 64), pixel(gemmed[0], 2, 6, 64), "blue and purple share the same halo")
 
     def test_every_shipped_texture_fits_the_native_device_size_gate(self):
         manifest = json.loads((ROOT / "packaging/runtime-files.json").read_text())

@@ -14,7 +14,7 @@ import struct
 
 from PIL import Image, ImageDraw, ImageOps
 
-from prepare_client_textures import blp_bgra_levels, save_image
+from prepare_client_textures import blp_bgra_levels, image_from_bytes, save_image
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,24 +48,55 @@ def runtime_housing(path, housing):
     return bytes(data)
 
 
-def gemmed_housing(housing, palette):
-    """Bake the preview's halo behind the grey metal and its gems above."""
+def contour_halo_alpha(housing):
+    """Fade out from the outer metal edge, keeping the enclosed opening clear."""
+    width, height = housing.size
+    # This cutoff excludes the faint original glow and retains the metal tips.
+    silhouette = housing.getchannel("A").point(lambda alpha: 255 if alpha >= 101 else 0)
+    exterior = 128
+    ImageDraw.floodfill(silhouette, (0, 0), exterior)
+    outline = silhouette.load()
+    spread = 8
+    distances = {}
+    for y in range(1, height - 1):
+        for x in range(1, width - 1):
+            if outline[x, y] != 255 or exterior not in (
+                outline[x - 1, y], outline[x + 1, y], outline[x, y - 1], outline[x, y + 1],
+            ):
+                continue
+            for py in range(max(0, y - spread), min(height, y + spread + 1)):
+                for px in range(max(0, x - spread), min(width, x + spread + 1)):
+                    squared = (px - x) ** 2 + (py - y) ** 2
+                    if squared < distances.get((px, py), spread ** 2):
+                        distances[px, py] = squared
+
+    alpha = Image.new("L", housing.size)
+    pixels = alpha.load()
+    for (x, y), squared in distances.items():
+        distance = math.sqrt(squared)
+        if outline[x, y] == exterior:
+            fade = 1 - distance / spread
+            # Taper against the crop boundary so the atlas has no hard edge.
+            padding = min(x, y, width - 1 - x, height - 1 - y)
+            coverage = fade * fade * (3 - 2 * fade) * min(1, padding / 2)
+        else:
+            # Tuck the inner falloff under the antialiased metal edge.
+            coverage = max(0, 1 - distance / 2)
+        pixels[x, y] = round(255 * 0.61 * coverage)
+    return alpha
+
+
+def gemmed_housing(housing, palette, clearance=None):
+    """Bake a contour halo behind the grey metal and its gems above."""
     color, light, dark = palette
     halo_rgb = tuple(round(channel + (255 - channel) * 0.07) for channel in bytes.fromhex(color[1:]))
-    halo = Image.new("RGBA", (128, 128), (*halo_rgb, 0))
-    pixels = halo.load()
-    for y in range(128):
-        for x in range(128):
-            radius = math.hypot(x + 0.5 - 64, y + 0.5 - 64)
-            progress = (radius - 44) / 17
-            if progress <= 0.45:
-                opacity = 114 - 16 * max(0, progress) / 0.45
-            else:
-                opacity = 98 * max(0, (1 - progress) / 0.55)
-            # The runtime draws the composite above the item. Clear the halo
-            # inside the icon's reach to match the mockup's behind-icon halo.
-            opening = min(1, max(0, (radius - 42.6) / 0.8))
-            pixels[x, y] = (*halo_rgb, round(opacity * opening * 1.35))
+    halo = Image.new("RGBA", housing.size, halo_rgb)
+    alpha = contour_halo_alpha(housing)
+    if clearance is not None:
+        from PIL import ImageChops
+
+        alpha = ImageChops.multiply(alpha, clearance)
+    halo.putalpha(alpha)
     frame = Image.alpha_composite(halo, housing)
 
     scale = 4
@@ -91,6 +122,39 @@ def rarity_atlas(housing, path):
     atlas = Image.new("RGBA", (512, 128))
     for index, palette in enumerate(GEM_PALETTES):
         atlas.paste(gemmed_housing(housing, palette), (index * 128, 0))
+    save_image(atlas, path)
+
+
+def attached_rarity_atlas(housing, path):
+    """Use the shipped rail's coverage to clip the halo before compositing metal."""
+    from PIL import ImageChops
+
+    directory = ROOT / "media/tex/jewelry"
+    # The three 400-pixel spans start after a one-pixel neighbour gutter.
+    # Below the 152-pixel rail the action-bar background continues.
+    rail = Image.new("L", (1200, 166), 255)
+    for index, name in enumerate(("SocketRail.blp", "SocketRail_2.blp", "SocketRail_3.blp")):
+        strip = image_from_bytes((directory / name).read_bytes()).getchannel("A")
+        rail.paste(strip.crop((1, 0, 401, 152)), (400 * index, 0))
+
+    clearance = Image.new("L", housing.size, 255)
+    # At 36-unit buttons the housing uses 3 pixels per unit and the rail 4.
+    scale = 4 / 3
+    half = 64 * scale
+    for center in range(264, 937, 168):
+        coverage = rail.transform(
+            housing.size, Image.Transform.AFFINE, (scale, 0, center - half, 0, scale, 80 - half),
+            Image.Resampling.BILINEAR,
+        )
+        # Combine all five positions so reordering never exposes a halo over
+        # a connector. Keep a smooth edge but fully clear the bevel itself.
+        available = coverage.point(lambda alpha: max(0, 255 - 2 * alpha))
+        clearance = ImageChops.darker(clearance, available)
+
+    atlas = Image.new("RGBA", (512, 256))
+    for index, palette in enumerate((SILVER_PALETTE, *GEM_PALETTES)):
+        row, column = divmod(index, 4)
+        atlas.paste(gemmed_housing(housing, palette, clearance), (column * 128, row * 128))
     save_image(atlas, path)
 
 
@@ -135,12 +199,13 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, default=ROOT / "media/tex/jewelry/Runecarver.tga")
     parser.add_argument("--runtime", type=Path, help="Refresh the shared neutral and silver crops")
     parser.add_argument("--rarity", type=Path, help="Build the equipped gem and halo atlas")
+    parser.add_argument("--attached", type=Path, help="Build the rarity atlas with the action-bar arch masked")
     options = parser.parse_args()
-    if not (options.source or options.runtime or options.rarity):
-        parser.error("choose --source, --runtime or --rarity")
+    if not (options.source or options.runtime or options.rarity or options.attached):
+        parser.error("choose --source, --runtime, --rarity or --attached")
     if options.source:
         prepare(options.source, options.output)
-    if options.runtime or options.rarity:
+    if options.runtime or options.rarity or options.attached:
         with Image.open(options.output) as retained:
             housing = retained.convert("RGBA")
         if housing.size != (128, 128):
@@ -149,3 +214,5 @@ if __name__ == "__main__":
             options.runtime.write_bytes(runtime_housing(options.runtime, housing))
         if options.rarity:
             rarity_atlas(housing, options.rarity)
+        if options.attached:
+            attached_rarity_atlas(housing, options.attached)

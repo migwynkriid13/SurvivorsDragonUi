@@ -28,12 +28,22 @@ repacker copies them to x=256 and x=384 in the **512 × 128** `Frame.blp`.
 
 Build the four-color atlas from the retained neutral input with
 `python3 scripts/prepare_jewelry_runecarver.py --rarity media/tex/jewelry/GemmedRunecarver.blp`.
-Each 128-square cell composites a radial rarity halo behind the original
-housing and four faceted stones above it. The halo uses 35% more opacity than
-the approved preview and blends its color 7% toward white. It fades to
-transparent by radius 61 and clears the item opening. The crown sits at `(64,17.5)`,
-and the smaller stones sit at `(21,64)`, `(95,34)` and `(95,94)`.
+Each 128-square cell composites a rarity halo behind the original housing and
+four faceted stones above it. The generator traces the metal silhouette from the
+retained housing's alpha, following its spikes and socket bezels. The halo fades
+over eight pixels from that outline, tapers to clear at the crop edges and leaves
+the item opening clear. Its color blends 7% toward white. The crown sits at
+`(64,17.5)`, and the smaller stones sit at `(21,64)`, `(95,34)` and `(95,94)`.
 The colored faces fill more of the original grey bezels in all five palettes.
+
+For attached jewelry, generate `AttachedRunecarver.blp` with
+`python3 scripts/prepare_jewelry_runecarver.py --attached media/tex/jewelry/AttachedRunecarver.blp`.
+The 512 × 256 atlas packs silver through purple across its top row and orange
+in the first cell of the bottom row. It samples the three shipped rail strips
+at the five socket centers to fade just the rarity halo where it meets the
+lower connector or the straight bar. The metal and gems are composited above
+that halo. Detached jewelry uses the full contour in the original atlases.
+The neutral housing uses the same crop in either position.
 
 Each static `BORDER` region is centered on its icon at local size
 `43 * 128 / 108`. The visible reader caches the successful texture and crop.

@@ -180,9 +180,13 @@ no local tests, standalone validation or addon/game execution.
 Jewelry rarity cases extract the production quality, artwork and retirement
 helpers. They cover ranks 0–5, the shared silver crop, neutral fallback, raw tooltip RGB, changed-only
 bindings and UVs, mode parity, failed binding retries and hidden slot recovery.
+Attachment changes repaint the same rarity with the correct crop and defer
+that work while hidden.
 The fake native boundary rejects extra overlay allocation. Asset cases pin
 the authoring SHA-256 and neutral crop and inspect the five gem and halo cells,
-their clear opening and a shared solid metal pixel. These cases run in CI only.
+their clear opening and a shared solid metal pixel. Attached crops clear the
+halo at both arch joins while preserving upper glow and opaque metal. These
+cases run in CI only.
 
 Jewelry cache cases use the exact production reader/cache/compositor functions
 over fake native tooltip and texture boundaries. They cover unchanged successful
