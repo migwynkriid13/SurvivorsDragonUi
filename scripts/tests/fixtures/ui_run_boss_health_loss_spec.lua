@@ -77,7 +77,9 @@ local function New(performance)
         end
         function bar:GetBottom() error("boss loss sampled an unused vertical edge") end
         bar.GetTop, bar.GetHeight = bar.GetBottom, bar.GetBottom
-        return { frame = frame, bar = bar, overlay = overlay }
+        local row = { frame = frame, bar = bar, overlay = overlay }
+        row.fill = { SetFraction = function(value) row.fillFraction = value end }
+        return row
     end
     function context:Observe(row, value, maximum, key, name)
         controller:Observe(row, value, maximum or 1000, key or "boss:71", name or "Edwin VanCleef")
@@ -405,7 +407,10 @@ do
     assert(row.bar.value == 1 and row.health.received[1] == 1000 and not row.lossTexture)
     entry.hp = 800
     context.source.Rows("playing")
-    assert(row.bar.value == 0.8 and row.health.received[1] == 800, "loss animation delayed real health fill or text")
+    assert(
+        row.bar.value == 0.8 and row.fillFraction == 0.8 and row.health.received[1] == 800,
+        "loss animation delayed real health fill or text"
+    )
     assert(row.lossTexture:IsShown() and controller.count == 1, "received health decrease did not start its echo")
     assert(entry.hp == 800 and entry.maximum == 1000, "cosmetic loss changed the native snapshot")
     context.settings.bossShortHealth = false
@@ -626,29 +631,35 @@ do
         function object:SetValue(value) self.value = value end
         return object
     end
-    local frame, bar, name, overlay = context.source.Pill("CombinedPill", "FillWhite")
+    local frame, bar, name, overlay, fill = context.source.Pill("CombinedPill", "FillWhite", true)
     local getWidth = frame.GetWidth
     function frame:GetWidth()
         context.reads.pillWidth = (context.reads.pillWidth or 0) + 1
         return getWidth(self)
     end
+    fill.SetFraction(0.5)
     local allocated = #context.objects
-    local caps = {}
+    local caps, clip = {}, nil
     for _, object in ipairs(context.objects) do
         if object:GetParent() == overlay and object ~= name then table.insert(caps, object) end
+        if object.kind == "ScrollFrame" and object:GetParent() == bar then clip = object end
     end
     assert(#caps == 3, "pill gained drawing regions")
+    assert(clip and not bar.fillTexture and clip:GetFrameLevel() < overlay:GetFrameLevel())
     for _, width in ipairs({ 296, 148, 296 / 3, 74, 296 / 5, 3, 296 }) do
         frame:SetWidth(width)
         frame.RefreshWidth()
         assert(caps[1]:GetWidth() + caps[2]:GetWidth() < width, "narrow pill caps overlap")
-        assert(frame.paintedWidth > 0 and bar.fillTexture == "timer\\FillWhite.blp")
+        assert(frame.paintedWidth > 0)
+        Near(clip:GetWidth(), frame.paintedWidth / 2, "boss fill clip did not follow the resized pill")
         assert(frame.paintedOuterWidth == width, "successful artwork preparation did not retain its native width")
         context:ResetCounts()
         frame.RefreshWidth(frame:GetWidth())
         context:NoPresentationWrites()
         assert(context.reads.pillWidth == 1, "prepared artwork resampled the caller's native width")
     end
+    fill.SetFraction(0)
+    assert(not clip:IsShown(), "zero health retained a clipped fill")
     assert(#context.objects == allocated, "resizing pills allocated artwork")
 end
 

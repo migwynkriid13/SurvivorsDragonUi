@@ -79,6 +79,10 @@ function methods:SetFrameLevel(value)
     Write(self, "SetFrameLevel")
     self.level = value
 end
+function methods:SetScrollChild(child)
+    Write(self, "SetScrollChild")
+    self.scrollChild = child
+end
 function methods:CreateTexture(name) return self.context:Object("Texture", name, self) end
 function methods:CreateFontString(name) return self.context:Object("FontString", name, self) end
 

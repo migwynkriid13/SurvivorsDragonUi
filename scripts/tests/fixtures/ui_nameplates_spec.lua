@@ -93,6 +93,14 @@ local function Plates(setup)
                 Write(self, "SetTexCoord")
                 self.coords = { ... }
             end
+            function object:SetVertexColor(...)
+                Write(self, "SetVertexColor")
+                self.vertexColor = { ... }
+            end
+            function object:SetAllPoints(relative)
+                Write(self, "SetAllPoints")
+                self.allPoints = relative
+            end
             return object
         end
         local create = context.Object
@@ -141,6 +149,17 @@ local function Entries()
         { id = 10, kind = "guardian", name = "Hogger", hp = 70e12, hpm = 70e12 },
         { id = 11, kind = "boss", name = "Boss", hp = 16777217, hpm = 16777217 },
     }
+end
+
+local function PlateFill(context, health)
+    for _, object in ipairs(context.objects) do
+        if object.kind == "Texture" and object.allPoints == health then
+            local viewport = object:GetParent():GetParent()
+            assert(viewport.kind == "ScrollFrame" and viewport:GetParent() == health, "fill lost its private clip")
+            return object, viewport
+        end
+    end
+    error("missing clipped nameplate artwork")
 end
 
 local context = Plates()
@@ -269,6 +288,7 @@ assert(
     "normal bars did not allocate on demand"
 )
 local allocated = #context.objects
+local artwork = PlateFill(context, guardian.health)
 local writes = guardian.health.calls.SetValue or 0
 context.guardian.nativeBar.rangeReads, context.guardian.nativeBar.valueReads = 0, 0
 context:Tick(0.21)
@@ -303,6 +323,7 @@ context:Tick(0.21)
 assert(
     guardian.name:IsVisible()
         and not guardian.health:IsVisible()
+        and not artwork:IsVisible()
         and not guardian.shadow:IsVisible()
         and not guardian.background:IsVisible()
 )
@@ -313,7 +334,10 @@ assert(
 assert((guardian.health.calls.SetValue or 0) == writes, "names-only updated the cosmetic health fill")
 context:SetSetting("nameplatesNamesOnly", false)
 context:Tick(0.21)
-assert(#context.objects == allocated and guardian.health:IsVisible(), "normal mode did not reuse the pooled skin")
+assert(
+    #context.objects == allocated and guardian.health:IsVisible() and artwork:IsVisible(),
+    "normal mode did not reuse the pooled skin"
+)
 print("PASS names-only transitions hide actual regions and reuse lazily allocated bars")
 
 do
@@ -362,6 +386,15 @@ for _, performanceMode in ipairs({ false, true }) do
     current:Tick(0.21)
     local plate = current.guardian
     local native, health = plate.nativeBar, plate.fixture.style.health
+    local fill, viewport = PlateFill(current, health)
+    local nativeFill = native:GetStatusBarTexture()
+    local uvWrites = fill.calls.SetTexCoord or 0
+    assert(
+        fill:GetTexture() == current.env.DFRL:GetInfoOrCons("tex") .. "nameplates\\kui_bar.blp"
+            and viewport:GetWidth() == 98
+            and not health:GetStatusBarTexture(),
+        "nameplate did not draw the original artwork through a full-width clip"
+    )
     for _, bar in ipairs({ native, health }) do
         bar.rangeReads, bar.valueReads, bar.colorReads = 0, 0, 0
     end
@@ -369,7 +402,7 @@ for _, performanceMode in ipairs({ false, true }) do
     assert(native.rangeReads == 1 and native.valueReads == 1 and native.colorReads == 1)
     assert(health.rangeReads == 0 and health.valueReads == 0 and health.colorReads == 0)
 
-    local setRange, setValue, setColor = health.SetMinMaxValues, health.SetValue, health.SetStatusBarColor
+    local setRange, setValue = health.SetMinMaxValues, health.SetValue
     local reject = true
     function health:SetMinMaxValues(low, high)
         if reject then return end
@@ -379,25 +412,37 @@ for _, performanceMode in ipairs({ false, true }) do
     function health:SetValue(value)
         if not reject then setValue(self, value) end
     end
-    function health:SetStatusBarColor(...)
-        if not reject then setColor(self, ...) end
-    end
     native.maximum, native.value, native.color = 1000, 900, { 0, 1, 0, 1 }
     current:Call(native, "OnValueChanged")
-    assert(health.maximum ~= 1000 and health.value ~= 900 and health.color[2] ~= 0.6)
+    assert(health.maximum ~= 1000 and health.value ~= 900 and viewport:GetWidth() == 98)
     reject = false
     current:Tick(0.21)
-    assert(health.maximum == 1000 and health.value == 900 and health.color[2] == 0.6)
-    native.maximum = 1100
+    assert(health.maximum == 1000 and health.value == 900 and fill.vertexColor[2] == 0.6)
+    assert(current.env.T.NearlyEqual(viewport:GetWidth(), 98 * 0.9), "health did not resize the fixed-UV clip")
+    native.minimum, native.maximum = 100, 1100
     current:Tick(0.21)
     assert(health.maximum == 1100 and health.value == 900, "range change left a reset fill at its minimum")
+    assert(current.env.T.NearlyEqual(viewport:GetWidth(), 98 * 0.8), "fill ignored the nonzero minimum")
+
+    native.value = 100
+    current:Call(native, "OnValueChanged")
+    assert(not fill:IsVisible(), "empty health retained a submitted fill")
+    native.value = 900
+    current:Call(native, "OnValueChanged")
+    assert(fill:IsVisible(), "positive health did not restore the fill")
 
     plate:Hide()
-    health.maximum, health.value, health.color = 100, 0, { 1, 0, 0, 1 }
+    health.maximum, health.value = 100, 0
+    native.value = 800
+    current:Tick(0.21)
+    assert(not fill:IsVisible() and current.env.T.NearlyEqual(viewport:GetWidth(), 98 * 0.8))
     plate:Show()
-    assert(health.maximum == 1100 and health.value == 900 and health.color[2] == 0.6)
+    assert(health.maximum == 1100 and health.value == 800 and fill.vertexColor[2] == 0.6)
+    assert(current.env.T.NearlyEqual(viewport:GetWidth(), 98 * 0.7), "pooled fill retained the previous health")
+    assert((fill.calls.SetTexCoord or 0) == uvWrites, "health changes submitted new artwork UVs")
+    assert(native:GetStatusBarTexture() == nativeFill, "cosmetic clipping replaced the native SCT source")
 end
-print("PASS nameplate health skips unchanged cosmetic reads and retries rejected or recycled state in both modes")
+print("PASS fixed-UV nameplate fills retain native ranges, colors, hidden deferral and pooled recovery in both modes")
 
 local entries = Entries()
 entries[2].id = entries[1].id

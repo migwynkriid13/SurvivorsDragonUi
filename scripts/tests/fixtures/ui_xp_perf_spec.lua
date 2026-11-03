@@ -3,7 +3,10 @@ local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 local context = H.New()
 local env = context.env
 env.bar = env.CreateFrame("StatusBar", nil, env.UIParent)
-env.gain, env.spark = env.bar:CreateTexture(nil, "ARTWORK"), env.bar:CreateTexture(nil, "ARTWORK")
+env.sparkClip = env.CreateFrame("ScrollFrame", nil, env.bar)
+local canvas = env.CreateFrame("Frame", nil, env.sparkClip)
+env.gain, env.spark = canvas:CreateTexture(nil, "ARTWORK"), canvas:CreateTexture(nil, "ARTWORK")
+env.spark:SetWidth(12)
 env.width, env.gainStart, env.displayed = 100, 0.2, 0.6
 function env.bar:GetLeft()
     if not context.unresolvedEdges then return 20 end
@@ -37,14 +40,18 @@ assert(context.writes.SetPoint == 2 and context.writes.SetWidth == 1, "bar resiz
 context:ResetCounts()
 env.displayed = 1
 paint(0.5)
-assert(context.writes.SetTexCoord == 1 and env.spark.drawnWidth == 6, "spark end clipping changed")
+assert(
+    env.spark.drawnLeft == env.width - 6 and env.spark:GetWidth() == 12,
+    "spark end clipping changed its source quad"
+)
+assert(not context.writes.SetTexCoord, "spark end clipping rewrote source UVs")
 paint(0)
-assert(not env.gain:IsShown() and not env.spark:IsShown(), "final fade retained visible effect regions")
+assert(not env.gain:IsShown() and not env.sparkClip:IsShown(), "final fade retained visible effect regions")
 context:ResetCounts()
 paint(0)
 context:NoPresentationWrites()
 paint(0.5)
-assert(env.gain:IsShown() and env.spark:IsShown(), "pooled effects did not restore")
+assert(env.gain:IsShown() and env.spark:IsVisible(), "pooled effects did not restore")
 context.unresolvedEdges = true
 context:ResetCounts()
 paint(0.5)

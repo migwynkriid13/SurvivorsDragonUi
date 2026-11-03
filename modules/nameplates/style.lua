@@ -59,7 +59,9 @@ DFRL:NewMod("NameplateStyle", 5, function()
         health:SetPoint("BOTTOMRIGHT", visual, "BOTTOMRIGHT", -1, 1)
         health:SetFrameLevel(visual:GetFrameLevel() + 1)
         health:EnableMouse(false)
-        health:SetStatusBarTexture(path .. "kui_bar.blp")
+        style.healthFill = T.NewClippedFill(health)
+        style.healthFill.RefreshWidth(WIDTH - 2)
+        style.healthFill.SetTexture(path .. "kui_bar.blp")
 
         local raid = overlay:CreateTexture(nil, "OVERLAY")
         raid:SetPoint("LEFT", overlay, "RIGHT", 8, 0)
@@ -120,21 +122,12 @@ DFRL:NewMod("NameplateStyle", 5, function()
 
     local function ClearHealthSample(style)
         style.healthMinimum, style.healthMaximum, style.healthValue = nil, nil, nil
-        style.healthRed, style.healthGreen, style.healthBlue = nil, nil, nil
-    end
-
-    local function HasHealthColor(health, red, green, blue)
-        local oldRed, oldGreen, oldBlue, oldAlpha = health:GetStatusBarColor()
-        return T.NearlyEqual(oldRed, red)
-            and T.NearlyEqual(oldGreen, green)
-            and T.NearlyEqual(oldBlue, blue)
-            and (not oldAlpha or T.NearlyEqual(oldAlpha, 1))
     end
 
     local function UpdateHealth(style, minimum, maximum, value, red, green, blue)
         -- The private bar has no other writer. Cache actual readback so a
         -- rejected write or a range change that clamps the fill stays live.
-        local health = style.health
+        local health, fill = style.health, style.healthFill
         local oldMinimum, oldMaximum = style.healthMinimum, style.healthMaximum
         if oldMinimum == nil or oldMinimum ~= minimum or oldMaximum ~= maximum then
             if oldMinimum == nil then
@@ -156,14 +149,12 @@ DFRL:NewMod("NameplateStyle", 5, function()
             end
             style.healthValue = oldValue
         end
-        if style.healthRed ~= red or style.healthGreen ~= green or style.healthBlue ~= blue then
-            if not HasHealthColor(health, red, green, blue) then
-                style.healthRed, style.healthGreen, style.healthBlue = nil, nil, nil
-                health:SetStatusBarColor(red, green, blue, 1)
-                if not HasHealthColor(health, red, green, blue) then return end
-            end
-            style.healthRed, style.healthGreen, style.healthBlue = red, green, blue
+        local fraction = 0
+        if oldMinimum ~= nil and oldMaximum ~= nil and oldValue ~= nil and oldMaximum > oldMinimum then
+            fraction = (oldValue - oldMinimum) / (oldMaximum - oldMinimum)
         end
+        fill.SetColor(red, green, blue)
+        fill.SetFraction(fraction)
     end
 
     local function Update(plate, data, namesOnly, fontSize, sample, performanceMode)

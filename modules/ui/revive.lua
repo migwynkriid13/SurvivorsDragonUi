@@ -58,8 +58,9 @@ DFRL:NewMod("Revive", 4, function()
         bar:SetPoint("RIGHT", pill, "RIGHT", -8, 0)
         bar:SetHeight(15)
         bar:SetMinMaxValues(0, 1)
-        bar:SetStatusBarTexture(path .. "FillWhite.blp")
-        bar:SetStatusBarColor(0.35, 0.76, 0.44, 1)
+        local fill = T.NewClippedFill(bar)
+        fill.SetTexture(path .. "FillWhite.blp")
+        fill.SetColor(0.35, 0.76, 0.44, 1)
         bar:SetValue(0)
         bar:EnableMouse(false)
         local overlay = CreateFrame("Frame", nil, pill)
@@ -125,6 +126,9 @@ DFRL:NewMod("Revive", 4, function()
         local dirty = true
         local measuredText, measuredFace, measuredSize, measuredFlags, measuredScale, measuredWidth
         local function Paint(width)
+            width = width or view.animationWidth or root:GetWidth()
+            fill.RefreshWidth(width - 72)
+            fill.SetFraction(value)
             if paintedValue ~= value then
                 bar:SetValue(value)
                 paintedValue = value
@@ -142,7 +146,7 @@ DFRL:NewMod("Revive", 4, function()
                 return
             end
             PrepareEffects()
-            local x = 8 + ((width or root:GetWidth()) - 72) * value
+            local x = 8 + (width - 72) * value
             if sparkX ~= x then
                 spark:ClearAllPoints()
                 spark:SetPoint("CENTER", pill, "LEFT", x, 0)
@@ -161,6 +165,7 @@ DFRL:NewMod("Revive", 4, function()
             root:Hide()
             root:SetAlpha(1)
             bar:SetValue(0)
+            fill.SetFraction(0)
             paintedValue = 0
             if spark then spark:Hide() end
             for _, cross in ipairs(crosses) do

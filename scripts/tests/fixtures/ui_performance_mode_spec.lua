@@ -90,6 +90,7 @@ do
     env.UnitXPMax = function() return context.maximum end
     env.UnitLevel = function() return context.level end
     env.DFRL.mainBar = env.CreateFrame("Frame", "PerformanceActionBar", env.UIParent)
+    env.DFRL.mainBar:SetFrameLevel(4)
     env.DFRL.actionBarDefaults = { sideInset = 2, xpTop = 0, xpInset = 2 }
     env.T.SetChatShadow = function(label)
         label:SetShadowColor(0, 0, 0, 1)
@@ -98,8 +99,15 @@ do
     local create = context.Object
     function context:Object(...)
         local object = create(self, ...)
-        function object:SetStatusBarTexture(value) self.texture = value end
-        function object:SetStatusBarColor() end
+        local setPoint = object.SetPoint
+        function object:SetPoint(point, relative, relativePoint, x, y)
+            setPoint(self, point, relative, relativePoint, x, y)
+            self.points = self.points or {}
+            self.points[point] = { relative, relativePoint, x, y }
+        end
+        if object.kind == "ScrollFrame" then
+            function object:SetScrollChild(child) self.child = child end
+        end
         function object:SetMinMaxValues(low, high)
             self.minimum, self.maximum = low, high
         end
@@ -173,16 +181,37 @@ do
     display.FinishEdit(false)
     local controller = context:Controller("PLAYER_XP_UPDATE")
     local bar = env.DFRL_XPBar
-    local gain, spark
-    for _, object in ipairs(context.objects) do
-        if object.parent == bar and object.kind == "Texture" then
-            if object.texture and object.texture:find("main_soft.blp", 1, true) then gain = object end
-            if object.texture == "Interface\\CastingBar\\UI-CastingBar-Spark" then spark = object end
+    local function XPViewport(level)
+        for _, object in ipairs(context.objects) do
+            if object.kind == "ScrollFrame" and object.parent == bar and object:GetFrameLevel() == level then
+                return object
+            end
         end
     end
-    assert(not gain and not spark and bar:IsVisible(), "idle XP allocated unused gain effects")
+    local function XPEffects()
+        local clip = XPViewport(bar:GetFrameLevel() + 1)
+        if not clip then return end
+        local gain, spark
+        for _, object in ipairs(context.objects) do
+            if object.kind == "Texture" and object.parent == clip.child and object.texture then
+                if object.texture:find("main_soft.blp", 1, true) then gain = object end
+                if object.texture == "Interface\\CastingBar\\UI-CastingBar-Spark" then spark = object end
+            end
+        end
+        return gain, spark, clip
+    end
+    local gain, spark, sparkClip = XPEffects()
+    assert(not gain and not spark and not sparkClip and bar:IsVisible(), "idle XP allocated unused gain effects")
     context:Call(controller, "OnUpdate", 0.01)
     assert(bar:GetValue() == 0.2 and not controller:GetScript("OnUpdate"), "initial XP did not settle")
+    local fillClip = assert(XPViewport(bar:GetFrameLevel()), "XP fill did not prepare a clipped viewport")
+    assert(fillClip:IsShown() and env.T.NearlyEqual(fillClip:GetWidth(), bar:GetWidth() * 0.2))
+    local barWidth = bar:GetWidth()
+    bar:SetWidth(barWidth + 16)
+    context:Call(bar, "OnSizeChanged")
+    assert(env.T.NearlyEqual(fillClip:GetWidth(), (barWidth + 16) * 0.2), "XP resize left an old fill edge")
+    bar:SetWidth(barWidth)
+    context:Call(bar, "OnSizeChanged")
     local idlePool = #context.objects
     display.BeginEdit()
     display.Set("performanceMode", true)
@@ -193,6 +222,7 @@ do
         bar:GetValue() == 0.4 and #context.objects == idlePool and not controller:GetScript("OnUpdate"),
         "first static XP gain prepared unused effects or delayed native progress"
     )
+    assert(env.T.NearlyEqual(fillClip:GetWidth(), bar:GetWidth() * 0.4), "static XP retained an old fill edge")
     context.xp = 20
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.01)
@@ -201,7 +231,7 @@ do
     assert(display.Get("xpShowText") == false and display.Copy({ xpShowText = "true" }).xpShowText == false)
     local function XPLabel()
         for _, object in ipairs(context.objects) do
-            if object.parent == bar and object.kind == "FontString" then return object end
+            if object.kind == "FontString" and object.parent and object.parent.parent == bar then return object end
         end
     end
     assert(not XPLabel(), "disabled XP text allocated a label")
@@ -238,19 +268,23 @@ do
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.05)
     assert(context.writes.SetScript == 1, "coalesced receipts or gain setup reinstalled the active XP worker")
-    for _, object in ipairs(context.objects) do
-        if object.parent == bar and object.kind == "Texture" then
-            if object.texture and object.texture:find("main_soft.blp", 1, true) then gain = object end
-            if object.texture == "Interface\\CastingBar\\UI-CastingBar-Spark" then spark = object end
-        end
-    end
-    assert(gain and spark, "first real XP gain did not prepare its effects")
+    gain, spark, sparkClip = XPEffects()
+    assert(gain and spark and sparkClip, "first real XP gain did not prepare its effects")
     local effectsPoolSize = #context.objects
-    assert(effectsPoolSize == textPoolSize + 2, "first animated XP gain did not prepare exactly two effects")
+    assert(effectsPoolSize == textPoolSize + 4, "first animated XP gain did not prepare two textures and one viewport")
+    assert(sparkClip.parent == bar and sparkClip.child == spark.parent and spark.parent.parent == sparkClip)
     assert(
-        bar:GetValue() > 0.2 and bar:GetValue() < 0.6 and gain:IsShown() and spark:IsShown(),
+        sparkClip:GetFrameLevel() == fillClip:GetFrameLevel() + 1
+            and text.parent:GetFrameLevel() == sparkClip:GetFrameLevel() + 1,
+        "XP gain viewport did not sit between the fill and its overlay"
+    )
+    assert(sparkClip.points.LEFT[1] == bar and sparkClip.points.RIGHT[1] == bar)
+    assert(sparkClip:GetHeight() == spark:GetHeight() and spark:GetHeight() == bar:GetHeight() + 4)
+    assert(
+        bar:GetValue() > 0.2 and bar:GetValue() < 0.6 and gain:IsShown() and spark:IsVisible(),
         "normal XP gain did not animate"
     )
+    assert(env.T.NearlyEqual(fillClip:GetWidth(), bar:GetWidth() * bar:GetValue()), "animated fill missed native XP")
     assert(text:GetText() == "60/100", "XP text followed the animation instead of native XP")
     local progress, worker = bar:GetValue(), controller:GetScript("OnUpdate")
     display.BeginEdit()
@@ -263,7 +297,7 @@ do
     display.BeginEdit()
     display.Set("performanceMode", true)
     assert(
-        bar:GetValue() == 0.6 and not gain:IsShown() and not spark:IsShown(),
+        bar:GetValue() == 0.6 and not gain:IsShown() and not sparkClip:IsShown(),
         "Performance Mode did not settle the active XP gain"
     )
     assert(not controller:GetScript("OnUpdate"), "Performance Mode retained an XP animation worker")
@@ -274,7 +308,7 @@ do
     context:Call(controller, "OnUpdate", 0.01)
     assert(context.writes.SetScript == 2, "instant XP did not attach and detach exactly once")
     assert(
-        bar:GetValue() == 0.8 and not gain:IsShown() and not spark:IsShown(),
+        bar:GetValue() == 0.8 and not gain:IsShown() and not sparkClip:IsShown(),
         "Performance Mode did not use native XP immediately"
     )
     assert(text:GetText() == "80/100", "Performance Mode changed the compact XP format")
@@ -300,7 +334,7 @@ do
     display.Set("performanceMode", true)
     context:Event(controller, "PLAYER_LEAVING_WORLD")
     assert(
-        not controller:GetScript("OnUpdate") and not bar:IsShown() and not gain:IsShown() and not spark:IsShown(),
+        not controller:GetScript("OnUpdate") and not bar:IsShown() and not gain:IsShown() and not sparkClip:IsShown(),
         "world retirement retained XP presentation"
     )
     assert(not text:IsShown(), "world retirement retained XP text")
@@ -335,12 +369,38 @@ do
     context:Event(controller, "PLAYER_XP_UPDATE", "player")
     context:Call(controller, "OnUpdate", 0.01)
     assert(text:GetText() == "0/200" and text:IsVisible(), "zero XP or invalid-data recovery failed")
+    assert(not fillClip:IsShown(), "zero XP retained visible fill")
     display.BeginEdit()
     display.Set("attachXP", false)
     assert(
         text:IsVisible() and XPLabel() == text and #context.objects == effectsPoolSize,
         "detaching XP replaced or lost text or effect regions"
     )
+    assert(
+        fillClip:GetFrameLevel() == bar:GetFrameLevel()
+            and sparkClip:GetFrameLevel() == bar:GetFrameLevel() + 1
+            and text.parent:GetFrameLevel() == bar:GetFrameLevel() + 2,
+        "detaching XP changed its layer order"
+    )
+    context:Call(controller, "OnUpdate", 0.01)
+    context.xp = 1
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
+    context:Call(controller, "OnUpdate", 0.05)
+    assert(
+        spark:IsVisible() and spark.points.LEFT[3] < 0 and spark:GetWidth() == 12,
+        "left edge shrank the source spark"
+    )
+    context.xp = 200
+    context:Event(controller, "PLAYER_XP_UPDATE", "player")
+    context:Call(controller, "OnUpdate", 0.5)
+    assert(
+        spark:IsVisible() and spark.points.LEFT[3] + spark:GetWidth() > bar:GetWidth(),
+        "right edge shrank the spark"
+    )
+    assert(not context.writes.SetTexCoord, "XP motion changed the spark's source UVs")
+    context:Call(controller, "OnUpdate", 0.36)
+    assert(not sparkClip:IsShown() and not controller:GetScript("OnUpdate"), "finished gain kept its viewport active")
     display.Reset()
     assert(not text:IsShown() and not display.Get("xpShowText"), "reset retained XP text")
     local maxLevelPool = #context.objects

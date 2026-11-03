@@ -88,6 +88,25 @@ game-timer window used 0.74 materials per frame at 28.22 ms median window p95.
 The next 54 seconds with the custom timer used 0.43 materials per frame at
 29.74 ms median window p95, with a higher median streamed count (131 vs 124).
 
+### XP and health fills
+
+XP, Revive, boss bars and styled nameplates keep their native StatusBar
+ranges and values. A shared mouse-disabled viewport draws each fill from
+its existing full texture and clips it to the displayed fraction. Resizing
+updates the clip's bounds, and zero or hidden fills leave no visible art.
+This adds one viewport and one content frame per prepared fill, reusing the
+original single fill texture. Nameplates prepare it only for the full health
+presentation. The native nameplate data used by combat text stays separate.
+
+The XP gain spark uses a second, lazy viewport shared with its glow. It
+retains the vertical overhang and follows the XP bar when attached or
+detached. The existing border and caption sit above both viewports.
+XP gain timing, Revive smoothing and encounter health updates use their
+existing values and cadence in both Performance Mode states. Source UVs
+stay fixed, with the same clipped-edge sampling difference as the run
+timer. CI mocks cover ownership and geometry. These fills have no live
+performance or appearance measurements from this change.
+
 ## How to review a new feature or performance change
 
 The November work covered readers, animations, frame callbacks, retries and

@@ -115,6 +115,7 @@ local function Revive()
         context.crosses, context.spark = {}, nil
         for _, object in ipairs(context.objects) do
             if object.kind == "StatusBar" then context.bar = object end
+            if object.kind == "ScrollFrame" then context.fillClip = object end
             if object.kind == "FontString" then
                 if object:GetFont() and select(2, object:GetFont()) == 12 then
                     context.percent = object
@@ -132,7 +133,14 @@ local function Revive()
         end
     end
     context:FindEffects()
-    assert(context.bar and context.caption and context.percent and not context.spark and #context.crosses == 0)
+    assert(
+        context.bar
+            and context.fillClip
+            and context.caption
+            and context.percent
+            and not context.spark
+            and #context.crosses == 0
+    )
     function context:ResetPerf()
         self:ResetCounts()
         self.formats, self.percentFormats = 0, 0
@@ -168,6 +176,7 @@ do
     context:Tick(0.2)
     assert(not context.spark and #context.crosses == 0 and #context.objects == allocated)
     assert(context.bar.value == 0.5 and context.percent:GetText() == "50%")
+    assert(context.fillClip:GetWidth() == (context.root:GetWidth() - 72) / 2 and not context.bar.fill)
     context:SetSetting("performanceMode", false)
     assert(context.spark and #context.crosses == 12 and #context.objects == allocated + 13)
     allocated = #context.objects

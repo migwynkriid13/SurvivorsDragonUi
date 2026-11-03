@@ -229,6 +229,92 @@ function DFRL.tools.GetLocalSize(frame)
     return width, height
 end
 
+-- Keep native value/range ownership while drawing the full source texture
+-- through a changing viewport. Native StatusBar crops would change its UV key.
+function DFRL.tools.NewClippedFill(bar)
+    local fill = {}
+    local viewport = CreateFrame("ScrollFrame", nil, bar)
+    viewport:SetPoint("TOPLEFT", bar, "TOPLEFT", 0, 0)
+    viewport:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", 0, 0)
+    viewport:EnableMouse(false)
+    viewport:Hide()
+    local canvas = CreateFrame("Frame", nil, viewport)
+    canvas:SetWidth(1)
+    canvas:SetHeight(1)
+    canvas:EnableMouse(false)
+    viewport:SetScrollChild(canvas)
+    local texture = canvas:CreateTexture(nil, "ARTWORK")
+    texture:SetAllPoints(bar)
+
+    local fraction, shown = 0, false
+    local width, clippedWidth, wantedTexture, boundTexture
+    local red, green, blue, alpha
+    local function Paint()
+        local span = width and width * fraction
+        local visible = boundTexture ~= nil and span ~= nil and span > 0
+        if visible and clippedWidth ~= span then
+            viewport:SetWidth(span)
+            clippedWidth = span
+        end
+        if visible ~= shown then
+            if visible then
+                viewport:Show()
+            else
+                viewport:Hide()
+            end
+            shown = visible
+        end
+    end
+    local function BindTexture()
+        local previous = boundTexture
+        local loaded = texture:SetTexture(wantedTexture)
+        local assigned = texture:GetTexture()
+        if T.TextureAssigned(loaded, assigned, wantedTexture) then
+            boundTexture = wantedTexture
+        elseif not T.TextureAssigned(nil, assigned, previous) then
+            boundTexture = nil
+        end
+        return previous ~= boundTexture
+    end
+    function fill.SetTexture(path)
+        wantedTexture = path
+        if wantedTexture ~= boundTexture and BindTexture() then Paint() end
+        return wantedTexture ~= nil and wantedTexture == boundTexture
+    end
+    function fill.SetColor(r, g, b, a)
+        a = a or 1
+        if red == r and green == g and blue == b and alpha == a then return end
+        texture:SetVertexColor(r, g, b, a)
+        red, green, blue, alpha = r, g, b, a
+    end
+    function fill.RefreshWidth(value)
+        if value == nil then value = T.GetLocalWidth(bar) end
+        if type(value) ~= "number" or value <= 0 or value - value ~= 0 then value = nil end
+        if width == value then return end
+        width = value
+        Paint()
+    end
+    function fill.SetFraction(value)
+        if type(value) ~= "number" or value - value ~= 0 then value = 0 end
+        value = math.max(0, math.min(1, value))
+        local changed = value ~= fraction
+        fraction = value
+        if value > 0 and wantedTexture and wantedTexture ~= boundTexture and BindTexture() then changed = true end
+        if value > 0 and not width then
+            fill.RefreshWidth()
+        elseif changed then
+            Paint()
+        end
+    end
+    function fill.RefreshLevel()
+        local level = bar:GetFrameLevel()
+        if viewport:GetFrameLevel() ~= level then viewport:SetFrameLevel(level) end
+        if canvas:GetFrameLevel() ~= level then canvas:SetFrameLevel(level) end
+    end
+    fill.RefreshLevel()
+    return fill
+end
+
 -- Bar ownership snapshots only objects registered before SDUI prepares artwork.
 function DFRL.tools.NewActionBarState(ignored)
     local owner, objects, visited = {}, {}, {}

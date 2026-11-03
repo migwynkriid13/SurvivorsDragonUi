@@ -23,6 +23,53 @@ Test("texture assignments share native flags, exact readback and failure precede
     assert(not assigned(nil, nil, wanted) and not assigned(nil, nil, nil), "missing artwork became ready")
 end)
 
+Test("clipped fills reuse a full source texture and recover missing artwork", function()
+    local c = H.New()
+    local env = c.env
+    local bar = env.CreateFrame("StatusBar", nil, env.UIParent)
+    bar:SetFrameLevel(6)
+    local first = #c.objects
+    local fill = env.T.NewClippedFill(bar)
+    local viewport, canvas, texture = c.objects[first + 1], c.objects[first + 2], c.objects[first + 3]
+    assert(viewport.kind == "ScrollFrame" and viewport:GetParent() == bar)
+    assert(viewport.scrollChild == canvas and texture:GetParent() == canvas and not viewport:IsShown())
+    assert(viewport:GetFrameLevel() == 6 and canvas:GetFrameLevel() == 6)
+    fill.RefreshWidth(100)
+    fill.SetColor(1, 0.5, 0.2, 0.8)
+    local path = "Interface\\Icons\\Clipped.blp"
+    c.failTexture = path
+    assert(not fill.SetTexture(path))
+    c:ResetCounts()
+    fill.SetFraction(0)
+    assert(not next(c.writes), "empty fill retried its missing artwork")
+    fill.SetFraction(0.25)
+    assert(not viewport:IsShown(), "unbound fill exposed a viewport")
+    c.failTexture = nil
+    fill.SetFraction(0.25)
+    assert(viewport:IsShown() and viewport:GetWidth() == 25 and texture:GetTexture() == path)
+    assert(not c.writes.SetTexCoord, "clip rewrote source UVs")
+
+    c:ResetCounts()
+    fill.SetFraction(0.25)
+    fill.RefreshWidth(100)
+    fill.RefreshLevel()
+    fill.SetColor(1, 0.5, 0.2, 0.8)
+    assert(fill.SetTexture(path) and not next(c.writes), "settled fill repeated native writes")
+    fill.RefreshWidth(200)
+    assert(viewport:GetWidth() == 50 and c.writes.SetWidth == 1 and not c.writes.SetTexCoord)
+    fill.SetFraction(0)
+    assert(not viewport:IsShown(), "zero fill left its viewport shown")
+    fill.SetFraction(2)
+    assert(viewport:IsShown() and viewport:GetWidth() == 200, "overflow extended the fill past its owner")
+    bar:Hide()
+    assert(not viewport:IsVisible(), "clip did not inherit parent hiding")
+    bar:Show()
+    bar:SetFrameLevel(8)
+    fill.RefreshLevel()
+    assert(viewport:IsVisible() and viewport:GetFrameLevel() == 8 and canvas:GetFrameLevel() == 8)
+    assert(#c.objects == first + 3, "fill recovery allocated replacement widgets")
+end)
+
 Test("HUD restoration retains capture until native readback accepts the original preference", function()
     local c = H.New()
     c:Load("core/hud.lua")

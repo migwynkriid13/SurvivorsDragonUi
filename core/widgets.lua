@@ -255,9 +255,13 @@ end
 -- Encounter health uses the same fill, label style and native values everywhere.
 DFRL.tools.EncounterHealthStyle = { red = 0.86, green = 0.12, blue = 0.1, alpha = 1, fontSize = 12 }
 
-function DFRL.tools.StyleEncounterHealth(bar, label)
+function DFRL.tools.StyleEncounterHealth(bar, label, fill)
     local style = T.EncounterHealthStyle
-    bar:SetStatusBarColor(style.red, style.green, style.blue, style.alpha)
+    if fill then
+        fill.SetColor(style.red, style.green, style.blue, style.alpha)
+    else
+        bar:SetStatusBarColor(style.red, style.green, style.blue, style.alpha)
+    end
     T.SetFont(label, style.fontSize, "OUTLINE")
     label:SetTextColor(1, 1, 1)
 end

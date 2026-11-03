@@ -431,7 +431,7 @@ DFRL:NewMod("RunTimers", 5, function()
         return texture
     end
 
-    local function Pill(name, fillName)
+    local function Pill(name, fillName, clipped)
         local frame = CreateFrame("Frame", name, UIParent)
         frame:SetWidth(BAR_WIDTH + 16)
         frame:SetHeight(31)
@@ -446,7 +446,14 @@ DFRL:NewMod("RunTimers", 5, function()
         bar:SetPoint("LEFT", frame, "LEFT", 8, 0)
         bar:SetPoint("RIGHT", frame, "RIGHT", -8, 0)
         bar:SetMinMaxValues(0, 1)
-        bar:SetStatusBarTexture(path .. fillName .. ".blp")
+        local fill
+        if clipped then
+            fill = T.NewClippedFill(bar)
+            fill.SetTexture(path .. fillName .. ".blp")
+            fill.RefreshWidth(BAR_WIDTH)
+        else
+            bar:SetStatusBarTexture(path .. fillName .. ".blp")
+        end
         bar:SetValue(0)
 
         local overlay = CreateFrame("Frame", nil, frame)
@@ -472,7 +479,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 frame.paintedOuterWidth = outerWidth
                 return
             end
-            -- Stretch the original background sample; StatusBar owns fill UVs.
+            -- Stretch the original background sample and keep the fill bounds aligned.
             local capWidth = math.min(35, outerWidth * 0.49)
             left:SetWidth(capWidth)
             right:SetWidth(capWidth)
@@ -483,9 +490,10 @@ DFRL:NewMod("RunTimers", 5, function()
             bar:SetPoint("LEFT", frame, "LEFT", inset, 0)
             bar:SetPoint("RIGHT", frame, "RIGHT", -inset, 0)
             frame.paintedWidth, frame.paintedOuterWidth = width, outerWidth
+            if fill then fill.RefreshWidth(width) end
         end
         frame:Hide()
-        return frame, bar, text, overlay
+        return frame, bar, text, overlay, fill
     end
 
     local function NewRunMarker(parent)
@@ -4059,6 +4067,7 @@ DFRL:NewMod("RunTimers", 5, function()
         T.SetTextIfChanged(row.name, "")
         T.SetEncounterHealthText(row.health, nil, nil, false, false)
         if row.value ~= 0 then row.bar:SetValue(0) end
+        row.fill.SetFraction(0)
         row.value, row.layoutOffset, row.layoutX = 0, nil, nil
         row.id, row.key = nil, nil
         table.insert(spareRows, row)
@@ -4599,16 +4608,26 @@ DFRL:NewMod("RunTimers", 5, function()
         local row = table.remove(spareRows)
         if row then return row end
         createdRows = createdRows + 1
-        local frame, bar, name, rowOverlay = Pill("DFRL_BossHealthPill" .. tostring(createdRows), "FillWhite")
+        local frame, bar, name, rowOverlay, fill =
+            Pill("DFRL_BossHealthPill" .. tostring(createdRows), "FillWhite", true)
         frame:SetParent(bossGroup)
+        fill.RefreshLevel()
         T.SetFont(name, 12, "OUTLINE")
         name:SetWidth(BAR_WIDTH)
         name:SetHeight(14)
         local health = rowOverlay:CreateFontString(nil, "OVERLAY")
         health:SetPoint("CENTER", frame, "CENTER", 0, 0)
         health:SetHeight(14)
-        T.StyleEncounterHealth(bar, health)
-        return { frame = frame, bar = bar, overlay = rowOverlay, name = name, health = health, debuffs = {} }
+        T.StyleEncounterHealth(bar, health, fill)
+        return {
+            frame = frame,
+            bar = bar,
+            fill = fill,
+            overlay = rowOverlay,
+            name = name,
+            health = health,
+            debuffs = {},
+        }
     end
 
     local function Permanent(effect) return effect.permanent == true or effect.permanent == 1 end
@@ -4954,6 +4973,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 end
                 local value = math.min(1, entry.hp / entry.maximum)
                 if row.value ~= value then row.bar:SetValue(value) end
+                row.fill.SetFraction(value)
                 row.value = value
                 T.SetTextIfChanged(row.name, entry.name)
                 T.SetEncounterHealthText(
