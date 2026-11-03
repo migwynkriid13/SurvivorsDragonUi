@@ -269,7 +269,11 @@ function DFRL.tools.NewCombatTextApi()
             Retry(now)
             return nil, true
         end
-        local events, seen, previous = {}, {}, state.presentedAt
+        local events, seen
+        if count > 0 then
+            events, seen = {}, {}
+        end
+        local previous = state.presentedAt
         for index = 1, count do
             local event = Event(value.events[index], value.clockSeconds)
             if
@@ -292,8 +296,10 @@ function DFRL.tools.NewCombatTextApi()
                 table.insert(events, event)
             end
         end
+        -- An empty batch can still prime or advance the cursor and clock.
         state.cursor, state.streamId, state.worldId = value.cursor, value.streamId, value.worldId
         state.clock, state.presentedAt = value.clockSeconds, previous
+        if not seen then return end
         for id in pairs(seen) do
             state.slot = math.mod(state.slot, 4096) + 1
             local old = state.order[state.slot]

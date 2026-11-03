@@ -38,6 +38,7 @@ env.tostring = function(value)
     return tostring(value)
 end
 env.FitTallyField = function(field)
+    if field.enabled == false then return end
     context.fitted = context.fitted or {}
     context.fitted[field.key] = field.text:GetText()
     context.reads.fit = (context.reads.fit or 0) + 1
@@ -240,6 +241,27 @@ context.now = 1
 Values(1, 2, 3)
 api.Update()
 assert(Value("kills") == "1" and Value("gold") == "2", "UI clock rollback permanently froze held counters")
+local kills = env.tallyFields[1]
+for _, performance in ipairs({ false, true }) do
+    Mode(performance)
+    local previous = kills.text:GetText()
+    local reads = 0
+    local getText = kills.text.GetText
+    function kills.text:GetText()
+        reads = reads + 1
+        return getText(self)
+    end
+    kills.enabled = false
+    local sample = performance and 33 or 32
+    Values(sample, 2, 3)
+    api.Update()
+    assert(reads == 0 and getText(kills.text) == previous, "disabled counter touched its native label")
+    assert(kills.counterValue == sample and not kills.counterText, "disabled counter lost or formatted its sample")
+    kills.enabled = true
+    api.Paint(kills)
+    assert(Value("kills") == tostring(sample), "re-enabled counter did not paint the latest accepted sample")
+    kills.text.GetText = getText
+end
 assert(table.getn(context.objects) == allocated, "cadence changes allocated drawing objects")
 print(
     "PASS kill/gold text uses 250-ms normal and five-second Performance Mode sampling with live cache cost and safe resets"

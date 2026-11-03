@@ -11,7 +11,14 @@ env.groups = { env.buffGroup, env.debuffGroup }
 env.nativeFrames, env.entries = {}, {}
 env.iconSize, env.gap, env.rowGap, env.columns = 28, 3, 14, 6
 env.flipped, env.editing = false, false
-local reads, sizes = 0, 0
+local reads, sizes, visibilityReads = 0, 0, 0
+for _, group in ipairs(env.groups) do
+    local visible = group.frame.IsVisible
+    function group.frame:IsVisible()
+        visibilityReads = visibilityReads + 1
+        return visible(self)
+    end
+end
 for index = 1, 2 do
     local native = env.CreateFrame("Frame", nil, env.container)
     function native:GetNumPoints() return self.point and 1 or 0 end
@@ -42,10 +49,11 @@ local layout = chunk()
 layout(false)
 assert(reads == 3 and sizes == 3 and env.entries[2].slot == 1 and env.entries[3].slot == 0)
 assert(not env.buffGroup.dirty and not env.debuffGroup.dirty)
-reads, sizes = 0, 0
+reads, sizes, visibilityReads = 0, 0, 0
 env.nativeFrames[1].point = { "CENTER", env.UIParent, "CENTER", 20, 30 }
 layout(false)
 assert(reads == 0 and sizes == 0, "settled native anchor repair rescanned aura slots")
+assert(visibilityReads == 1, "settled native anchor repair read group visibility beyond its own guard")
 assert(env.nativeFrames[1].point[1] == "TOPLEFT" and env.nativeFrames[1].point[2] == env.container)
 env.entries[1].button:Hide()
 env.buffGroup.dirty = true

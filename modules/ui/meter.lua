@@ -1103,10 +1103,12 @@ local function BuildMeter()
         offset = math.max(0, math.min(offset, snapshot.count - visible))
         local maximum = snapshot.maximum or 0
         local party = modes[mode].party
-        local classColor = party and PARTY_COLOR or T.GetPlayerClassColor() or { 0.8, 0.63, 0.28 }
-        local classRed, classGreen, classBlue = unpack(classColor)
+        local classRed, classGreen, classBlue
         if not party and palette.mode == "custom" then
             classRed, classGreen, classBlue = palette.red, palette.green, palette.blue
+        else
+            local classColor = party and PARTY_COLOR or T.GetPlayerClassColor() or { 0.8, 0.63, 0.28 }
+            classRed, classGreen, classBlue = unpack(classColor)
         end
         if party and options.icons and not apiActive then
             if snapshot.count > 0 then

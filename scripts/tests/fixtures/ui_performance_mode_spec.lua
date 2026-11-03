@@ -91,7 +91,6 @@ do
     env.UnitLevel = function() return context.level end
     env.DFRL.mainBar = env.CreateFrame("Frame", "PerformanceActionBar", env.UIParent)
     env.DFRL.actionBarDefaults = { sideInset = 2, xpTop = 0, xpInset = 2 }
-    env.T.GetLocalSize = function(frame) return frame:GetWidth(), frame:GetHeight() end
     env.T.SetChatShadow = function(label)
         label:SetShadowColor(0, 0, 0, 1)
         label:SetShadowOffset(1, -1)
@@ -105,6 +104,8 @@ do
             self.minimum, self.maximum = low, high
         end
         function object:GetValue() return self.value end
+        function object:GetLeft() return 0 end
+        function object:GetRight() return self:GetWidth() end
         function object:SetValue(value)
             context.writes.SetValue = (context.writes.SetValue or 0) + 1
             self.value = value

@@ -218,6 +218,8 @@ end
 -- Native size getters return an authored local size when set, but an already
 -- scaled span for anchor-only axes. Edges consistently use the frame's own
 -- units. Keep the raw getter as a fallback while edge geometry is unresolved.
+function DFRL.tools.GetLocalWidth(frame) return EdgeExtent(frame:GetLeft(), frame:GetRight()) or frame:GetWidth() end
+
 function DFRL.tools.GetLocalSize(frame)
     local left, right = frame:GetLeft(), frame:GetRight()
     local bottom, top = frame:GetBottom(), frame:GetTop()

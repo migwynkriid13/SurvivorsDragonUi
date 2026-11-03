@@ -234,7 +234,7 @@ DFRL:NewMod("Xprep", 1, function()
     end
 
     local function PaintGlow(alpha)
-        local width = T.GetLocalSize(bar)
+        local width = T.GetLocalWidth(bar)
         local left, right = (gainStart or displayed) * width, displayed * width
         if right > left and alpha > 0 then
             if gain.drawnLeft ~= left then
@@ -284,7 +284,7 @@ DFRL:NewMod("Xprep", 1, function()
         origin, destination, age, fadeAge = displayed, value, 0, nil
         gainStart = gainStart or displayed
         -- Use retail's distance-based pacing, bounded for this much shorter bar.
-        local width = T.GetLocalSize(bar)
+        local width = T.GetLocalWidth(bar)
         duration = math.max(0.18, math.min(0.45, (value - displayed) * width * 0.008))
         events:SetScript("OnUpdate", OnUpdate)
     end

@@ -45,7 +45,10 @@ local function Player(performance)
         context.reads.phase = (context.reads.phase or 0) + 1
         return context.phase
     end
-    env.UnitExists = function(unit) return unit == "player" and context.exists end
+    env.UnitExists = function(unit)
+        context.reads.exists = (context.reads.exists or 0) + 1
+        return unit == "player" and context.exists
+    end
     env.UnitHealth = function() return context.current end
     env.UnitHealthMax = function() return context.maximum end
     env.UnitIsDead = function() return context.current == 0 end
@@ -230,8 +233,18 @@ Test("Performance Mode retains static shield numbers and hides only the optional
     context:SetSetting("showHealthPercentage", false)
     context:ResetCounts()
     context:Tick()
-    assert(not context.reads.fields, "disabled numeric and overlay presentation still read shield fields")
+    assert(not context.reads.fields and not context.reads.exists, "disabled resources still read unused native values")
+    assert(context.reads.phase == 1, "disabled resources stopped observing phase retirement")
     context:NoPresentationWrites()
+
+    context.phase = "ready"
+    context:SetSetting("performanceMode", false)
+    context:ResetCounts()
+    context:Tick()
+    assert(context.reads.phase == 1 and not context.reads.exists, "an unavailable shield still read player existence")
+    context.phase = "playing"
+    context:Publish(1600)
+    assert(context.reads.exists == 1 and frame:IsShown(), "normal mode did not check the player for usable shield data")
 end)
 
 Test("zero invalid and dead native shield data clear both numbers and artwork", function()

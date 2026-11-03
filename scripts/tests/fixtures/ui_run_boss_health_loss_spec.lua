@@ -75,16 +75,8 @@ local function New(performance)
             if context.unresolvedEdges then return end
             return (context.physicalLeft or 137) / ((context.uiScale or 1) * (context.groupScale or 1)) + width(self)
         end
-        function bar:GetBottom()
-            context.reads.edges = (context.reads.edges or 0) + 1
-            if context.unresolvedEdges then return end
-            return (context.physicalBottom or 91) / ((context.uiScale or 1) * (context.groupScale or 1))
-        end
-        function bar:GetTop()
-            context.reads.edges = (context.reads.edges or 0) + 1
-            if context.unresolvedEdges then return end
-            return (context.physicalBottom or 91) / ((context.uiScale or 1) * (context.groupScale or 1)) + 15
-        end
+        function bar:GetBottom() error("boss loss sampled an unused vertical edge") end
+        bar.GetTop, bar.GetHeight = bar.GetBottom, bar.GetBottom
         return { frame = frame, bar = bar, overlay = overlay }
     end
     function context:Observe(row, value, maximum, key, name)
@@ -116,7 +108,7 @@ do
     assert(row.lossTexture and controller.count == 1, "normal mode did not arm a future loss")
 end
 
--- H.New loads the actual core/tools.lua, including EdgeExtent and GetLocalSize.
+-- H.New loads the actual core/tools.lua, including EdgeExtent and GetLocalWidth.
 -- Model the native distinction between anchor-sized raw getters and local edge
 -- coordinates here instead of replacing that production geometry helper.
 for _, uiScale in ipairs({ 0.64, 0.9, 1, 1.2 }) do
@@ -149,7 +141,7 @@ for _, uiScale in ipairs({ 0.64, 0.9, 1, 1.2 }) do
         context:Observe(row, 0.8)
         Bounds(0.8, 1, 280)
         assert(
-            context.reads.edges == 4 and not context.reads.width,
+            context.reads.edges == 2 and not context.reads.width,
             "resolved loss geometry did not use production local edges"
         )
 
@@ -325,6 +317,7 @@ do
     context.missingWidth, context.unresolvedEdges = true, true
     context:Observe(row, 0.8)
     assert(controller.count == 1 and not row.lossTexture, "missing metrics prepared unusable loss artwork")
+    assert(context.reads.edges == 2 and context.reads.width == 1, "unresolved loss edges did not query native width")
     context.missingWidth = nil
     row.bar:SetWidth(0)
     context:ResetCounts()

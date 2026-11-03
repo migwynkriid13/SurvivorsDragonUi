@@ -179,7 +179,7 @@ DFRL:NewMod("Class resources", 2, function()
             or DFRL.display.Get("showHealthPercentage")
         if inWorld then state = ReadRun(visible and (classEnabled or absorbEnabled)) end
         if not visible then return end
-        local exists = inWorld and UnitExists("player")
+        local exists = inWorld and (classEnabled or (absorbEnabled and state)) and UnitExists("player")
         if DFRL.playerResources then
             if absorbEnabled and exists and state then
                 DFRL.playerResources.SetAbsorb(state.sh, state.hp, state.hpm)

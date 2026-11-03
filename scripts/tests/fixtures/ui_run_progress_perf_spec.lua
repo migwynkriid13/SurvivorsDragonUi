@@ -112,6 +112,7 @@ do
     assert(context.reads.time == 2, "row refreshes reread elapsed time between displayed seconds")
     assert(context.reads.width == 1 and context.paintedWidth == 296, "settled timer resampled its pill width")
     assert(context.reads.length == 2 and context.reads.schedule == 2, "schedule did not use one-second fallback")
+    assert(#context.markers == 1, "unrelated row refreshes prepared unchanged markers")
     assert(context.reads.ownership == 33, "native ownership lost frame cadence")
     assert(#context.flows == 33 and #context.states == 33, "throttling native clock reads slowed cosmetic presentation")
     for index, flow in ipairs(context.flows) do

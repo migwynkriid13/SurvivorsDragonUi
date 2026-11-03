@@ -614,7 +614,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         local function Paint(row, edge)
-            local width = T.GetLocalSize(row.bar)
+            local width = T.GetLocalWidth(row.bar)
             if not IsNumber(width) or width <= 0 then return end
             local texture = row.lossTexture
             if not texture then
@@ -3448,6 +3448,10 @@ DFRL:NewMod("RunTimers", 5, function()
         entry.fieldWidth = width
         FitTallyField(entry)
     end
+    local function PaintTallyValue(entry)
+        if not entry.counterText and entry.counterValue ~= nil then entry.counterText = tostring(entry.counterValue) end
+        T.SetTextIfChanged(entry.text, entry.counterText or "")
+    end
     local function CreateGoldGlow(entry)
         local content, text = entry.content, entry.text
         local glowOpacity = 1.4
@@ -3803,6 +3807,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 entry.content:SetFrameLevel(entry.frame:GetFrameLevel() + 1)
                 entry.content:SetScale(contentScale)
                 if entry.enabled then
+                    if not entry.frame:IsShown() then PaintTallyValue(entry) end
                     SetTallyFieldWidth(entry, sectionWidth)
                     entry.frame:ClearAllPoints()
                     entry.frame:SetPoint("LEFT", tally, "TOPLEFT", inset + visibleIndex * sectionWidth, -rowCenter)
@@ -3968,9 +3973,9 @@ DFRL:NewMod("RunTimers", 5, function()
                     if refreshCounters or not counter then
                         local value = math.floor(state[field.key])
                         if field.counterValue ~= value then
-                            field.counterValue, field.counterText = value, tostring(value)
+                            field.counterValue, field.counterText = value, nil
                         end
-                        T.SetTextIfChanged(field.text, field.counterText)
+                        if field.enabled ~= false then PaintTallyValue(field) end
                     end
                     FitTallyField(field)
                 end
@@ -4427,7 +4432,9 @@ DFRL:NewMod("RunTimers", 5, function()
         for index = table.getn(entries) + 1, table.getn(markers) do
             if markerStates[index] then render.markerStatesDirty = true end
             markerStates[index] = nil
-            HideMarker(markers[index])
+            local marker = markers[index]
+            HideMarker(marker)
+            if marker:IsShown() or marker.check:IsShown() then render.markerStatesDirty = true end
         end
     end
 
@@ -5145,18 +5152,19 @@ DFRL:NewMod("RunTimers", 5, function()
                 render.runMaximum, render.runValue = maximum, value
                 -- Missing schedule replay affects only spawn markers, never a clock
                 -- whose native elapsed time and duration have already recovered.
-                if
-                    refreshRows
+                local markerWidth = runBar.layoutWidth or BAR_WIDTH
+                local markerInputsChanged = starting
                     or render.clockHidden
                     or render.markerEntries ~= scheduled
                     or render.markerMaximum ~= maximum
-                    or render.markerWidth ~= (runBar.layoutWidth or BAR_WIDTH)
-                then
+                    or render.markerWidth ~= markerWidth
+                if refreshRows or markerInputsChanged then
                     render.runHeroic = run.affixes:HeroicLevel(not zoneRunPending)
-                    run.heroicLevel:Update(render.runHeroic, maximum, runBar.layoutWidth or BAR_WIDTH)
+                    run.heroicLevel:Update(render.runHeroic, maximum, markerWidth)
+                end
+                if markerInputsChanged then
                     UpdateMarkers(maximum, scheduled or render.emptySchedule)
-                    render.markerEntries, render.markerMaximum = scheduled, maximum
-                    render.markerWidth = runBar.layoutWidth or BAR_WIDTH
+                    render.markerEntries, render.markerMaximum, render.markerWidth = scheduled, maximum, markerWidth
                 end
                 SetRunAppearance(render.runHeroic, endless)
                 UpdateRunFlow(value, maximum)

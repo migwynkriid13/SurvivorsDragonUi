@@ -115,8 +115,8 @@ DFRL:NewMod("Player Auras", 2, function()
             end
         end
         for _, group in ipairs(groups) do
-            local paint = group.frame:IsVisible()
-            if (paint or editing) and (force or group.dirty or editing) then
+            local paint = (force or group.dirty or editing) and group.frame:IsVisible()
+            if paint or editing then
                 local slot = 0
                 for priority = 1, 2 do
                     for _, entry in ipairs(entries) do
