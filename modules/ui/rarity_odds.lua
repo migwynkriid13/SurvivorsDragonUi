@@ -18,7 +18,7 @@ DFRL:NewMod("RarityOdds", 5, function()
     }
     local HEIGHT = HEADER_HEIGHT + 21 + table.getn(REWARDS) * ROW_HEIGHT
     local display, layout, locale = DFRL.display, DFRL.layout, DFRL.locale
-    local enabled, overCards = display.Get("rarityOdds"), display.Get("rarityOddsOverCards")
+    local enabled = display.Get("rarityOdds")
     local meterRows = display.Get("meterRows")
     local inWorld, permitted, elapsed = true, not layout.IsHidden("rarityOdds"), INTERVAL
     local labels, language, registeredTop, shown
@@ -92,7 +92,7 @@ DFRL:NewMod("RarityOdds", 5, function()
         end
         if
             phase == "choosing"
-            and (not overCards or type(AZS_SetOnTopOfScreens) ~= "function" or type(AZS_IsOnTopOfScreens) ~= "function")
+            and (type(AZS_SetOnTopOfScreens) ~= "function" or type(AZS_IsOnTopOfScreens) ~= "function")
         then
             return
         end
@@ -300,10 +300,9 @@ DFRL:NewMod("RarityOdds", 5, function()
             meterRows = rows
             DFRL.RefreshRarityOddsPlacement()
         end
-        local show, above = display.Get("rarityOdds"), display.Get("rarityOddsOverCards")
-        if enabled == show and overCards == above then return end
-        enabled, overCards = show, above
-        if not above and registeredTop then Hide() end
+        local show = display.Get("rarityOdds")
+        if enabled == show then return end
+        enabled = show
         Sync()
     end)
     locale.Listen(function() elapsed = INTERVAL end)

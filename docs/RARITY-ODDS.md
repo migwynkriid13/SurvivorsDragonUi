@@ -5,9 +5,9 @@ a side handle to widen the panel or a corner to scale it. It shares the visible
 default width and gold title style of Guardians and the DPS meter. The panel
 centers between the tracker and the space reserved for the meter, or sits beside
 that stack when the viewport is too short. Layout keeps the geometry you save.
-**Show over reward cards** defaults on and uses the game's frame layer API when
-available. Both settings use the existing preview, Confirm, Cancel, profiles
-and reset paths.
+The panel automatically stays above reward cards when the game's frame layer
+API is available. The setting uses the existing preview, Confirm, Cancel,
+profiles and reset paths.
 
 ## What the numbers measure
 

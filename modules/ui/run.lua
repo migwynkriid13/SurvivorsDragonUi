@@ -2042,7 +2042,6 @@ DFRL:NewMod("RunTimers", 5, function()
             {
                 key = "rarityOdds",
                 label = "Rarity odds",
-                master = "rarityOdds",
                 options = {
                     {
                         "rarityOdds",
@@ -2050,7 +2049,6 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Estimate the rarity of spell and jewelry rewards.",
                         wide = true,
                     },
-                    { "rarityOddsOverCards", "Show over reward cards", "Requires an updated game.", wide = true },
                 },
             },
             {

@@ -41,7 +41,6 @@ DFRL:NewMod("Display", 0, function()
         lootMode = "sdui",
         lootShowMarks = true,
         rarityOdds = false,
-        rarityOddsOverCards = true,
         petRows = 6,
         petSpacing = 4,
         hidePetNames = false,

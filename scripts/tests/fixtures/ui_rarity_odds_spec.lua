@@ -165,12 +165,19 @@ for _, performance in ipairs({ false, true }) do
     Tick()
     assert(not context.writes.top, "unchanged choice rewrote native registration")
     display.BeginEdit()
-    display.Set("rarityOddsOverCards", false)
+    display.Set("rarityOdds", false)
     Tick()
-    assert(not panel:IsShown() and not top)
+    assert(not panel:IsShown() and not top and not reader:GetScript("OnUpdate"))
     display.FinishEdit(false)
     Tick()
     assert(panel:IsShown() and top)
+    local readTop = env.AZS_IsOnTopOfScreens
+    env.AZS_IsOnTopOfScreens = nil
+    Tick()
+    assert(not panel:IsShown() and not top, "unsupported overlay left odds above the cards")
+    env.AZS_IsOnTopOfScreens = readTop
+    Tick()
+    assert(panel:IsShown() and top, "card overlay did not recover automatically")
     hidden = true
     visibility(false)
     context:ResetCounts()
