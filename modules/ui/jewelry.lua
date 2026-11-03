@@ -2,7 +2,7 @@
 --[[
 Selected 03 Runecarver housings use grey metal matching the action-bar surround.
 Equipped rarity tints a brighter version of the same grey carving.
-Rare-blue artwork uses a lighter sky blue; other rarity colors stay native.
+Rare-blue artwork uses a lighter sky blue and legendary orange uses a stronger tint.
 Effects-only hover text keeps the full native rarity color.
 The housing and soft halo are baked together in the existing Frame.blp atlas;
 five static regions inherit the shared overlay's visibility and scale.
@@ -590,15 +590,18 @@ DFRL:NewMod("Jewelry", 4, function()
             slot.carvingBright = known
         end
         local rarityR, rarityG, rarityB = slot.qualityR, slot.qualityG, slot.qualityB
-        -- Lighten only rare-blue artwork; keep received RGB for effect text.
+        -- Use sky blue for rare artwork and keep the received RGB for effect text.
         if known and slot.quality == 3 then
             rarityR, rarityG, rarityB = 0.4, 0.8, 1
         end
         local red, green, blue = 1, 1, 1
         if known then
-            red = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * rarityR
-            green = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * rarityG
-            blue = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * rarityB
+            -- Legendary orange needs less neutral metal mixed into the tint.
+            local strength = slot.quality == 5 and 0.95 or RARITY_TINT_STRENGTH
+            local neutral = 1 - strength
+            red = neutral + strength * rarityR
+            green = neutral + strength * rarityG
+            blue = neutral + strength * rarityB
         end
         if slot.carvingR ~= red or slot.carvingG ~= green or slot.carvingB ~= blue then
             slot.carving:SetVertexColor(red, green, blue, 1)

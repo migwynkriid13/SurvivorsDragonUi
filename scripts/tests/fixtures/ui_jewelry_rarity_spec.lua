@@ -112,6 +112,14 @@ for _, entry in ipairs(env.slots) do
     Housing(entry.carving, 384)
     assert(entry.qualityR == red and entry.qualityG == green and entry.qualityB == blue)
 end
+-- Legendary orange uses more of the native color on the same equipped crop.
+quality, red, green, blue = 5, 1, 0.5, 0
+crops = writes.uv
+api.Quality(slot)
+api.Update(slot)
+Color(slot.carving, 1, 0.525, 0.05)
+assert(slot.qualityR == red and slot.qualityG == green and slot.qualityB == blue)
+assert(writes.uv == crops, "legendary tint rebound the equipped crop")
 api.Clear(slot)
 Color(slot.carving, 1, 1, 1)
 Housing(slot.carving, 256)
@@ -120,6 +128,7 @@ api.Clear(slot)
 assert(writes.color == colors and writes.uv == crops, "settled empty slot repainted its housing")
 slot.texture = "native:return"
 slot.empty = false
+quality, red, green, blue = 3, 0, 0.44, 0.87
 api.Quality(slot)
 api.Update(slot)
 Color(slot.carving, 0.64, 0.88, 1)

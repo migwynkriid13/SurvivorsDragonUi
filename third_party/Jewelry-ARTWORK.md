@@ -14,8 +14,9 @@ Selected **03 — Cold-lit runes** uses static Runecarver metal and rune accents
 `scripts/prepare_jewelry_runecarver.py --source /path/to/RuneCarvingUI.PNG` accepts only the pinned source bytes. It clears the original inner crafting controls with an antialiased normalized-radius 0.33 cut, resizes the remaining lit frame to 118 × 120 and places it at `(5,4)` on a transparent 128 × 128 canvas. The original halo resizes to 124 × 126 at `(2,1)`, with source alpha multiplied by 0.32, below the frame. The completed cell blends 95% grayscale with 5% source RGB, retaining the original shading and alpha. This original empty-slot housing remains the unchanged `media/tex/jewelry/Runecarver.tga` authoring input. CI pins its original SHA-256 and exact runtime pixels.
 
 Empty slots and unavailable rarity use the original grey housing. Known
-rarity uses the brighter cell with a 60% color multiplier. The selected
-rare-blue accent is `66CCFF` and effects-only hover text uses raw native RGB.
+rarity uses the brighter cell with a 60% color multiplier, raised to 95% for
+legendary orange. The selected rare-blue accent is `66CCFF` and effects-only
+hover text uses raw native RGB.
 
 `--runtime media/tex/jewelry/Frame.blp` writes the neutral cell
 `(256,0)-(384,128)` and the equipped cell `(384,0)-(512,128)`. The equipped

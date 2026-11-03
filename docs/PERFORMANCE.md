@@ -340,8 +340,9 @@ reader, event, updater or setting. No live rendering or FPS result is claimed.
 The original 95%-desaturated `Runecarver.tga` supplies the neutral crop at
 x=256–384 in the 512-by-128 `Frame.blp`. Empty slots and invalid metadata use
 that crop. Known equipped rarity uses the brighter x=384–512 crop with a
-60% color multiplier. The 0.65 RGB gamma curve lifts midtones and preserves
-the original alpha. Rare rank 3 uses sky-blue `66CCFF` artwork and tooltip text
+60% color multiplier, raised to 95% for legendary orange. The 0.65 RGB gamma
+curve lifts midtones and preserves the original alpha. Rare rank 3 uses
+sky-blue `66CCFF` artwork and tooltip text
 retains native RGB.
 
 Each of the five housing regions binds the neutral crop at construction.

@@ -34,8 +34,9 @@ green hover-text fallback while the normal equipment refresh retries. It never
 keeps a removed item's color. Empty slots have no hover card.
 
 Empty slots and items with unavailable rarity use the original grey housing.
-Known rarity uses a brighter crop of the same carving and a 60% tint across
-the metal. Rare items use the lighter sky-blue accent on the artwork.
+Known rarity uses a brighter crop of the same carving and tints the metal
+at 60%. Legendary items use a stronger 95% tint so the orange reads clearly.
+Rare items use a lighter sky-blue accent on the artwork.
 Effects-only hover text uses the native rarity color.
 
 Both Performance Mode states and layout editing share the static artwork.
