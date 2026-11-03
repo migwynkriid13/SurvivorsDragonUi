@@ -136,6 +136,42 @@ assert(normal:GetAlpha() == faded, "mode preview restarted the notification life
 print(
     "PASS static banners are opaque, idle between deadlines and retain queued/hidden expiry and normal fade restoration"
 )
+env.DFRL.banners.Clear()
+local holdStarted = context.now
+context.handler({ id = 107, text = "Opaque hold" })
+local held = assert(BannerLabel("Opaque hold"))
+local root = held:GetParent()
+local isVisible = root.IsVisible
+local visibilityReads = 0
+root.IsVisible = function(self)
+    visibilityReads = visibilityReads + 1
+    return isVisible(self)
+end
+context.now = holdStarted + 0.2
+context:Call(controller, "OnUpdate", 0.2)
+assert(held:GetAlpha() == 1, "normal banner never became opaque")
+visibilityReads = 0
+context.now = holdStarted + 1
+context:Call(controller, "OnUpdate", 0.8)
+assert(visibilityReads == 0 and held:GetAlpha() == 1, "opaque hold repeated the paint traversal")
+context.handler({ id = 108, text = "Staggered fade" })
+local staggered = assert(BannerLabel("Staggered fade"))
+context.now = holdStarted + 1.08
+context:Call(controller, "OnUpdate", 0.08)
+assert(staggered:GetAlpha() > 0 and staggered:GetAlpha() < 1, "opaque row blocked a new banner fade")
+context.now = holdStarted + 1.25
+context:Call(controller, "OnUpdate", 0.17)
+assert(staggered:GetAlpha() == 1, "new banner did not settle")
+context.now = holdStarted + 3.6
+context:Call(controller, "OnUpdate", 2.35)
+assert(held:GetAlpha() > 0 and held:GetAlpha() < 1, "opaque hold missed the first fade-out deadline")
+assert(staggered:GetAlpha() == 1, "earlier deadline faded the wrong banner")
+context.now = holdStarted + 4.11
+context:Call(controller, "OnUpdate", 0.51)
+assert(not BannerLabel("Opaque hold") and staggered:IsShown(), "staggered holds changed original expiry")
+root.IsVisible = isVisible
+env.DFRL.banners.Clear()
+print("PASS normal banners skip opaque hold work and retain staggered fades and expiry")
 local warningKey = "An Explosive Orb appears! Destroy it before it bursts!"
 local allocations = table.getn(context.objects)
 local languageCount = 0

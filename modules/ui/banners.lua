@@ -62,7 +62,7 @@ DFRL:NewMod("RunBanners", 4, function()
     local MAX_ERRORS = 32
     local age, painted = 0, 0
     local performanceMode = DFRL.display.Get("performanceMode")
-    local nextPaintAt
+    local nextPaintAt, lastPaintAt
     local OnBanner, Refresh, Update, SyncUpdates
     local companions = {}
     local errorBanners = {}
@@ -222,7 +222,7 @@ DFRL:NewMod("RunBanners", 4, function()
             seenOrder[index] = nil
         end
         visibleCount, queueCount, seenCount = 0, 0, 0
-        nextPaintAt = nil
+        nextPaintAt, lastPaintAt = nil, nil
         table.setn(visible, 0)
         table.setn(queue, 0)
         table.setn(seenOrder, 0)
@@ -555,7 +555,8 @@ DFRL:NewMod("RunBanners", 4, function()
         return ready
     end
     local function Paint(now)
-        local nextAt
+        local nextAt, animating
+        local paint = root:IsVisible()
         local index, moved = 1, false
         while index <= visibleCount do
             local row = visible[index]
@@ -570,19 +571,26 @@ DFRL:NewMod("RunBanners", 4, function()
                 table.setn(visible, visibleCount)
                 moved = true
             else
-                if root:IsVisible() then
+                local deadline = row.started + HOLD + FADE_OUT
+                if paint then
                     Present(row)
                     local alpha = performanceMode and 1
                         or math.min(1, elapsed / FADE_IN, (HOLD + FADE_OUT - elapsed) / FADE_OUT)
                     if row.alpha ~= alpha then row.label:SetAlpha(alpha) end
                     row.alpha = alpha
+                    if not performanceMode then
+                        if elapsed < FADE_IN or elapsed >= HOLD then
+                            animating = true
+                        else
+                            deadline = row.started + HOLD
+                        end
+                    end
                 end
-                local expiresAt = row.started + HOLD + FADE_OUT
-                nextAt = nextAt and math.min(nextAt, expiresAt) or expiresAt
+                nextAt = nextAt and math.min(nextAt, deadline) or deadline
                 index = index + 1
             end
         end
-        if moved or (needsReflow and root:IsVisible()) then Reflow() end
+        if moved or (needsReflow and paint) then Reflow() end
         local promoted = false
         while queueCount > 0 and visibleCount < MAX_VISIBLE do
             if not Push(queue[1], now) then break end
@@ -591,8 +599,10 @@ DFRL:NewMod("RunBanners", 4, function()
             queueCount = queueCount - 1
             table.setn(queue, queueCount)
         end
-        -- Include newly promoted rows in the next retirement deadline sample.
-        nextPaintAt = not (moved or promoted) and nextAt or nil
+        -- Keep the existing paint cadence for fades and newly promoted rows.
+        -- Fully opaque rows need only their next fade or retirement deadline.
+        nextPaintAt = not (animating or moved or promoted) and nextAt or nil
+        lastPaintAt = now
     end
     Update = function()
         local elapsed = tonumber(arg1) or 0
@@ -605,7 +615,7 @@ DFRL:NewMod("RunBanners", 4, function()
         if not active or visibleCount == 0 or painted < 1 / 30 then return end
         painted = 0
         local now = GetTime()
-        if performanceMode and nextPaintAt and now < nextPaintAt then return end
+        if nextPaintAt and now >= lastPaintAt and now < nextPaintAt then return end
         Paint(now)
     end
     local function Tick()

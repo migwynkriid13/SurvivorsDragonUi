@@ -1240,8 +1240,13 @@ glowing number synchronization, separate cache-cost refresh, retained-text
 fitting, hidden recovery, mode changes and native run/tally retirement. These
 remain CI-only.
 
-Banner cases include the former
-fade-out window and hidden-born rows, preserving original receipt lifetimes.
+Banner cases cover the opaque hold, staggered fades, the former fade-out
+window in Performance Mode, and hidden-born rows. Nameplate cases count
+native and private bar reads and cover rejected writes, range changes and
+plate reuse in both modes. Waypoint cases cover hidden sampling, receipt
+wakeups, visible minimap repair, and reuse of a complete nearest score
+without changing its next deadline. Changed publications and partial scores
+still run through selection.
 
 Static checks cannot prove that a shared callback is reached, native publications
 arrive in the expected order, hidden views remain idle, or textures render with

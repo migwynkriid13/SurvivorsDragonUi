@@ -62,7 +62,7 @@ def main():
         navigation_distance = extract_source("modules/map/waypoints.lua", ["UpdateDistance"])
         waypoint_frame = extract_source("modules/map/waypoints.lua", [
             "NEAREST_INTERVAL", "nearestClock", "guideRespawns", "Number", "FrameVisible",
-            "RespawnTarget", "CanSelectNearest", "Choose", "Rotate", "WrapAngle", "Blend", "UpdateGuide",
+            "WipeSnapshotTable", "RespawnTarget", "CanSelectNearest", "Choose", "Rotate", "WrapAngle", "Blend", "UpdateGuide",
         ])
         waypoint_buffers = extract_source("modules/map/waypoints.lua", [
             "Number", "Integer", "WipeSnapshotTable", "ClearSnapshotBuffer", "RejectSnapshot", "SnapshotRow", "Snapshot",

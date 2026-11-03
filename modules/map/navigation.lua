@@ -243,6 +243,10 @@ DFRL:NewMod("Navigation", 2, function()
         return not (sampling and frameSample.downedRead and frameSample.downedPresent == false)
     end
     function navigation.WorldPosition() return LivePosition() end
+    function navigation.SampleWorldPosition()
+        -- Scoring and its fingerprint must observe the same native position.
+        if sampling and navigation.IsRunPhase(navigation.Phase()) then return LivePosition() end
+    end
     function navigation.DownedPartySnapshot()
         local getter = _G.AZS_GetDownedPartyMembers
         if type(getter) ~= "function" then

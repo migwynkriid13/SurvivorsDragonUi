@@ -139,7 +139,9 @@ remain live. Hiding or retiring an icon clears its caption cache.
 A banner event's completed service attempt resets the existing 200-ms fallback
 age. Run/CVar/world events still check native ownership immediately; the timer
 no longer repeats that same work just after the event. Rendering and notification
-deadlines use their independent clocks and keep the original fades/expiry.
+deadlines use their independent clocks. When every visible row is fully opaque,
+the paint tick waits for the next fade or expiry, even in normal mode. Fades
+keep their 30-Hz cap and the original lifetime and queue timing.
 
 Tooltip placement caches a failed icon lookup only for an explicitly observed
 owner. New icon registrations, replacement action/equipment lists, list growth,
@@ -2643,7 +2645,10 @@ acceptance and minimap work keep their existing cadence. Party selection and
 next-respawn timer priority retain their existing behavior. Existing UI elapsed
 time schedules one scoring pass when due, without replaying missed intervals
 after a delayed frame. An unchanged accepted-list reference also skips the
-current-identity walk between checks. Each scoring pass
+current-identity walk between checks. A due pass can reuse a complete live
+world-distance result when the accepted publication and exact player position,
+map, run and space match. The five-second deadline still advances. Partial
+results and legacy map scoring continue on the existing schedule. Each scoring pass
 is linear in the accepted destination count, with no new event, updater,
 drawing region, asset or saved history. Shared sampling reuses the
 run/player/metric reads; map fallback can still need one native projection per
@@ -3742,7 +3747,10 @@ anonymous-plate identity limit and snapshot policy are documented in
   Localized labels retain their original source caption for language changes.
 - Nameplate styling skips unchanged native suppression, health, names and raid
   icon writes. Live SCT discovery, position sampling and hit matching keep their
-  original cadence.
+  original cadence. The private health bar retains confirmed range, fill and
+  color values in both Performance Mode states. Stable bars skip those three
+  reads per style pass. Changed writes get read back, range changes recheck the
+  fill, and reused or unmasked plates sample the bar again.
 - Run schedules are validated and copied per received native publication rather
   than per rendered frame. Receipt generations, run boundaries and the one-use
   reload handoff remain authoritative.
@@ -3756,7 +3764,10 @@ anonymous-plate identity limit and snapshot policy are documented in
   continue to be read through their existing APIs.
 - Waypoint snapshots reuse accepted copies between receipts. Live position,
   bearing and facing sampling remain unchanged; identical pin positions and
-  arrow UVs are not resent.
+  arrow UVs are not resent. With every guide and the minimap hidden, the
+  controller opens a shared sample only on its 100-ms or deferred refresh.
+  The visible minimap still handles native flag and player arrow recovery
+  every frame. Empty pin pools skip traversal when there is no usable geometry.
 - Small unit frames route unit-specific events through the exact token and
   native unit aliases. Ownership, world and target transitions refresh the
   complete group. Native colors are compared directly so later native writes

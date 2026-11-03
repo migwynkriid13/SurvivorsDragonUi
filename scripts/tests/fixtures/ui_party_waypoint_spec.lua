@@ -81,9 +81,12 @@ env.DFRL.navigation = {
     Heading = function() return 0 end,
     SetPoints = function(key, points) navigationPoints[key] = points end,
     Reset = function() end,
-    WithSample = function(callback) callback() end,
+    WithSample = function(callback)
+        c.reads.waypointSample = (c.reads.waypointSample or 0) + 1
+        callback()
+    end,
     UpdateMinimapPlayer = function() end,
-    StyleMinimap = function() end,
+    StyleMinimap = function() c.reads.minimapStyle = (c.reads.minimapStyle or 0) + 1 end,
     MinimapLevel = function() return 12 end,
     MinimapSize = function() return 100, 100 end,
 }
@@ -279,6 +282,22 @@ end
 display.Reset()
 assert(not display.Get("partyGuidance") and not display.Get("mirrorPartyWaypoint"), "full reset lost defaults")
 assert(not display.Get("cacheGuidance") and not display.Get("guardianGuidance"))
+minimapVisible = false
+Tick()
+c:ResetCounts()
+Tick(0.0625)
+assert(not c.reads.waypointSample, "fully hidden waypoints opened a frame sample between refreshes")
+Tick(0.0625)
+assert(c.reads.waypointSample == 1, "fully hidden waypoints missed their regular refresh")
+c:Event(reader, "CHAT_MSG_ADDON", "AZSRUN")
+Tick(0.01)
+assert(c.reads.waypointSample == 2, "a received run update waited for the regular refresh")
+minimapVisible = true
+Tick(0.01)
+assert(
+    c.reads.waypointSample == 3 and c.reads.minimapStyle == 1,
+    "an empty visible minimap skipped native layer repair"
+)
 print(
     "PASS fallen-ally guidance uses fresh native death/position, shared selection/Layout, transactional settings and bounded idle work"
 )

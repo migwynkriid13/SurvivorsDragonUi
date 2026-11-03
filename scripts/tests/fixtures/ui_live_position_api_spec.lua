@@ -262,7 +262,7 @@ display.BeginEdit()
 display.Set("cacheGuidance", true)
 display.Set("guardianGuidance", true)
 display.Set("partyGuidance", false)
-local function Tick() c:Call(reader, "OnUpdate", 0.1) end
+local function Tick(elapsed) c:Call(reader, "OnUpdate", elapsed or 0.1) end
 local function Pin(key)
     for _, object in ipairs(c.objects) do
         if object.parent == env.Minimap and object.entryKey == key and object:IsShown() then return object end
@@ -341,6 +341,68 @@ c:NoPresentationWrites()
 env.UIParent:Show()
 Tick()
 assert(Visible(), "shown views did not resume fresh live positions")
+
+do
+    display.Set("guardianGuidance", false)
+    local cacheHud = env.DFRL_CacheWaypoint
+    local distance
+    for _, object in ipairs(c.objects) do
+        if object.parent == cacheHud and object.kind == "FontString" and object.font[2] == 15 then distance = object end
+    end
+    assert(distance, "cache guide lost its distance label")
+    local scoreReads, delta = 0, nav.Delta
+    function nav.Delta(target)
+        scoreReads = scoreReads + 1
+        return delta(target)
+    end
+    local function Cache(id, x)
+        local cache = Point(x, 0)
+        cache.id = id
+        return cache
+    end
+    local function Publish(entries)
+        env.AZS_CHESTS, env.AZS_CHESTS_UPDATED = entries, env.AZS_CHESTS_UPDATED + 1
+        c:Event(reader, "CHAT_MSG_ADDON", "AZSCHESTS")
+    end
+    position = Position()
+    local near, far = Cache(10, 10), Cache(11, 100)
+    Publish({ near, far })
+    Tick()
+    assert(scoreReads == 2 and distance:GetText() == "10 yards", "new caches did not establish a complete live score")
+    position.sampleId, position.facing, position.z = "next frame", 1, 5
+    scoreReads = 0
+    Tick(5.1)
+    assert(scoreReads == 0 and distance:GetText() == "10 yards", "identical world scoring inputs repeated the search")
+
+    position.x = 105
+    Tick(1)
+    assert(scoreReads == 0 and distance:GetText() == "95 yards", "skipping a search moved the next selection deadline")
+    Tick(4.1)
+    assert(scoreReads == 2 and distance:GetText() == "5 yards", "next deadline missed changed world coordinates")
+
+    -- Two accepted publications can recycle the original list object.
+    local closest = Cache(12, 104)
+    Publish({ near, far, Cache(12, 150) })
+    Tick()
+    Publish({ near, far, closest })
+    Tick()
+    scoreReads = 0
+    Tick(5.1)
+    assert(scoreReads == 3 and distance:GetText() == "1 yards", "a reused buffer hid changed destination coordinates")
+
+    local unknown = Cache(13, 105)
+    unknown.spaceId = "different space"
+    Publish({ near, far, closest, unknown })
+    Tick()
+    scoreReads = 0
+    Tick(5.1)
+    assert(scoreReads == 4 and distance:GetText() == "1 yards", "unmatched world space supplied a distance")
+    scoreReads = 0
+    Tick(5.1)
+    assert(scoreReads == 4, "a partial score incorrectly skipped the next retry")
+    nav.Delta = delta
+end
+
 c:Event(reader, "PLAYER_LEAVING_WORLD")
 assert(
     not Pin("1") and not Pin("1:3") and not env.DFRL_CacheWaypoint:IsShown(),

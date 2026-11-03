@@ -15,7 +15,8 @@ Three passive pooled labels share an independent UIParent-owned root, centered
 in a 420-unit text column. Native wrapping and measured label height determine
 the space between rows. They fade in over 0.15 seconds and fade out over 0.6
 seconds after 3.5 seconds. UI time controls only their cosmetic lifetime.
-Cosmetic painting is limited to 30 Hz; ownership retries run at five Hz.
+Visible fades paint at up to 30 Hz. Fully opaque banners wait for the next
+fade or expiry. Ownership retries still run at five Hz.
 
 With **PERFORMANCE MODE** on, every custom banner appears fully opaque and
 disappears at its original expiry without either fade. This also applies to

@@ -118,6 +118,54 @@ DFRL:NewMod("NameplateStyle", 5, function()
         end
     end
 
+    local function ClearHealthSample(style)
+        style.healthMinimum, style.healthMaximum, style.healthValue = nil, nil, nil
+        style.healthRed, style.healthGreen, style.healthBlue = nil, nil, nil
+    end
+
+    local function HasHealthColor(health, red, green, blue)
+        local oldRed, oldGreen, oldBlue, oldAlpha = health:GetStatusBarColor()
+        return T.NearlyEqual(oldRed, red)
+            and T.NearlyEqual(oldGreen, green)
+            and T.NearlyEqual(oldBlue, blue)
+            and (not oldAlpha or T.NearlyEqual(oldAlpha, 1))
+    end
+
+    local function UpdateHealth(style, minimum, maximum, value, red, green, blue)
+        -- The private bar has no other writer. Cache actual readback so a
+        -- rejected write or a range change that clamps the fill stays live.
+        local health = style.health
+        local oldMinimum, oldMaximum = style.healthMinimum, style.healthMaximum
+        if oldMinimum == nil or oldMinimum ~= minimum or oldMaximum ~= maximum then
+            if oldMinimum == nil then
+                oldMinimum, oldMaximum = health:GetMinMaxValues()
+            end
+            if oldMinimum ~= minimum or oldMaximum ~= maximum then
+                health:SetMinMaxValues(minimum, maximum)
+                oldMinimum, oldMaximum = health:GetMinMaxValues()
+                style.healthValue = nil
+            end
+            style.healthMinimum, style.healthMaximum = oldMinimum, oldMaximum
+        end
+        local oldValue = style.healthValue
+        if oldValue == nil or oldValue ~= value then
+            if oldValue == nil then oldValue = health:GetValue() end
+            if oldValue ~= value then
+                health:SetValue(value)
+                oldValue = health:GetValue()
+            end
+            style.healthValue = oldValue
+        end
+        if style.healthRed ~= red or style.healthGreen ~= green or style.healthBlue ~= blue then
+            if not HasHealthColor(health, red, green, blue) then
+                style.healthRed, style.healthGreen, style.healthBlue = nil, nil, nil
+                health:SetStatusBarColor(red, green, blue, 1)
+                if not HasHealthColor(health, red, green, blue) then return end
+            end
+            style.healthRed, style.healthGreen, style.healthBlue = red, green, blue
+        end
+    end
+
     local function Update(plate, data, namesOnly, fontSize, sample, performanceMode)
         if not plate:IsShown() then return end
         local style = data.style
@@ -149,6 +197,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
         if nativeTexture and nativeTexture.SetAlpha and nativeTexture:GetAlpha() ~= 0 then nativeTexture:SetAlpha(0) end
 
         if style.namesOnly ~= namesOnly or style.performanceMode ~= performanceMode then
+            ClearHealthSample(style)
             if namesOnly then
                 if style.health then
                     if style.background:IsShown() then style.background:Hide() end
@@ -210,25 +259,17 @@ DFRL:NewMod("NameplateStyle", 5, function()
             value = data.bar:GetValue()
         end
         red, green, blue = PlateColor(red, green, blue)
-        local oldMinimum, oldMaximum = style.health:GetMinMaxValues()
-        if oldMinimum ~= minimum or oldMaximum ~= maximum then style.health:SetMinMaxValues(minimum, maximum) end
-        if style.health:GetValue() ~= value then style.health:SetValue(value) end
-        local oldRed, oldGreen, oldBlue, oldAlpha = style.health:GetStatusBarColor()
-        if
-            not T.NearlyEqual(oldRed, red)
-            or not T.NearlyEqual(oldGreen, green)
-            or not T.NearlyEqual(oldBlue, blue)
-            or (oldAlpha and not T.NearlyEqual(oldAlpha, 1))
-        then
-            style.health:SetStatusBarColor(red, green, blue, 1)
-        end
+        UpdateHealth(style, minimum, maximum, value, red, green, blue)
         local regions = data.nativeRegions
         CopyNativeIcon(style.raid, regions and regions[6])
     end
 
     local function SetMasked(data, masked)
         local style = data.style
-        if not style or style.masked == masked then return end
+        if not style then return end
+        -- Forced restores also revisit a reused native plate without a mask change.
+        ClearHealthSample(style)
+        if style.masked == masked then return end
         style.masked = masked
         -- Hide only the complete custom visual child, including its shadow.
         -- The native plate stays live for the V-off SCT coordinate feed.

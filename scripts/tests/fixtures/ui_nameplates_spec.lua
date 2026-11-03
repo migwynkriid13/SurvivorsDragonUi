@@ -75,7 +75,10 @@ local function Plates(setup)
                 Write(self, "SetValue")
                 self.value = value
             end
-            function object:GetStatusBarColor() return unpack(self.color or { 1, 0, 0, 1 }) end
+            function object:GetStatusBarColor()
+                self.colorReads = (self.colorReads or 0) + 1
+                return unpack(self.color or { 1, 0, 0, 1 })
+            end
             function object:SetStatusBarColor(...)
                 Write(self, "SetStatusBarColor")
                 self.color = { ... }
@@ -349,6 +352,52 @@ do
     assert(skin.shadow == shadow and shadow:IsVisible() and #current.objects == prepared)
 end
 print("PASS Performance Mode hides pooled plate shadows, defers their first allocation and retains names/health")
+
+for _, performanceMode in ipairs({ false, true }) do
+    local current = Plates(function(owner)
+        owner.settings.nameplatesNamesOnly = false
+        owner.settings.nameplatesBossGuardiansOnly = false
+        owner.settings.performanceMode = performanceMode
+    end)
+    current:Tick(0.21)
+    local plate = current.guardian
+    local native, health = plate.nativeBar, plate.fixture.style.health
+    for _, bar in ipairs({ native, health }) do
+        bar.rangeReads, bar.valueReads, bar.colorReads = 0, 0, 0
+    end
+    current:Tick(0.21)
+    assert(native.rangeReads == 1 and native.valueReads == 1 and native.colorReads == 1)
+    assert(health.rangeReads == 0 and health.valueReads == 0 and health.colorReads == 0)
+
+    local setRange, setValue, setColor = health.SetMinMaxValues, health.SetValue, health.SetStatusBarColor
+    local reject = true
+    function health:SetMinMaxValues(low, high)
+        if reject then return end
+        setRange(self, low, high)
+        self.value = low
+    end
+    function health:SetValue(value)
+        if not reject then setValue(self, value) end
+    end
+    function health:SetStatusBarColor(...)
+        if not reject then setColor(self, ...) end
+    end
+    native.maximum, native.value, native.color = 1000, 900, { 0, 1, 0, 1 }
+    current:Call(native, "OnValueChanged")
+    assert(health.maximum ~= 1000 and health.value ~= 900 and health.color[2] ~= 0.6)
+    reject = false
+    current:Tick(0.21)
+    assert(health.maximum == 1000 and health.value == 900 and health.color[2] == 0.6)
+    native.maximum = 1100
+    current:Tick(0.21)
+    assert(health.maximum == 1100 and health.value == 900, "range change left a reset fill at its minimum")
+
+    plate:Hide()
+    health.maximum, health.value, health.color = 100, 0, { 1, 0, 0, 1 }
+    plate:Show()
+    assert(health.maximum == 1100 and health.value == 900 and health.color[2] == 0.6)
+end
+print("PASS nameplate health skips unchanged cosmetic reads and retries rejected or recycled state in both modes")
 
 local entries = Entries()
 entries[2].id = entries[1].id

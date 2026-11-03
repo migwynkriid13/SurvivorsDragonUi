@@ -531,8 +531,10 @@ DFRL:NewMod("Waypoints", 3, function()
             end
             local pinsVisible = false
             for _, tracker in ipairs(trackers) do
-                UpdateTrackerPins(tracker, scale, edge, checkHover)
-                if next(tracker.minimapPins) then pinsVisible = true end
+                if scale or next(tracker.minimapPins) then
+                    UpdateTrackerPins(tracker, scale, edge, checkHover)
+                    if next(tracker.minimapPins) then pinsVisible = true end
+                end
             end
             navigation.UpdateMinimapPlayer(pinsVisible)
             if checkHover then UpdateGuardianTooltip() end
@@ -678,6 +680,7 @@ DFRL:NewMod("Waypoints", 3, function()
         tracker.selectedKey, tracker.selected, tracker.provisionalSelection = nil, nil, nil
         tracker.selectionDeferred = nil
         tracker.selectionEntries, tracker.nextSelectionAt = nil, nil
+        WipeSnapshotTable(tracker.nearestScore)
         tracker.presentation = nil
         ClearSnapshotBuffer(tracker.snapshotBuffer)
         ClearSnapshotBuffer(tracker.stagingSnapshot)
@@ -879,6 +882,7 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         -- The accepted list keeps its identity for the whole publication.
         -- Only the spare buffer is writable during candidate validation.
+        WipeSnapshotTable(tracker.nearestScore)
         tracker.snapshotBuffer, tracker.stagingSnapshot = buffer, tracker.snapshotBuffer
         tracker.acceptedSnapshot = list
         tracker.acceptedGeneration, tracker.acceptedStamp, tracker.acceptedEntries = received, stamp, result
@@ -917,6 +921,7 @@ DFRL:NewMod("Waypoints", 3, function()
             tracker.provisionalSelection = nil
             tracker.selectionDeferred = nil
             tracker.selectionEntries, tracker.nextSelectionAt = nil, nil
+            WipeSnapshotTable(tracker.nearestScore)
             return
         end
         local previous
@@ -955,14 +960,39 @@ DFRL:NewMod("Waypoints", 3, function()
         then
             return
         end
-        tracker.selectionDeferred = nil
         -- Throttle the all-destination search independently of the responsive
         -- selected-arrow/minimap reader. Initial and retired targets bypass it.
-        if tracker.kind ~= "party" then tracker.nextSelectionAt = nearestClock + NEAREST_INTERVAL end
+        local position, complete
+        local scored = tracker.nearestScore
+        if tracker.kind ~= "party" then
+            -- A skipped pass still advances the deadline for later movement.
+            tracker.nextSelectionAt = nearestClock + NEAREST_INTERVAL
+            if tracker.entries[1] and navigation.SampleWorldPosition then
+                position = navigation.SampleWorldPosition()
+            end
+            complete = position and position.runId ~= nil
+            if
+                complete
+                and previous
+                and not tracker.selectionDeferred
+                and scored
+                and scored.x == position.x
+                and scored.y == position.y
+                and scored.mapId == position.mapId
+                and scored.runId == position.runId
+                and scored.spaceId == position.spaceId
+            then
+                return
+            end
+        end
+        tracker.selectionDeferred = nil
         tracker.selected = nil
         local best
         for _, entry in ipairs(tracker.entries) do
             local east, north, distance = navigation.Delta(entry)
+            -- Only complete native world distances are repeatable from this
+            -- position and publication. Map fallbacks and partial scores retry.
+            if complete and (entry.mapSelection or not Number(distance)) then complete = false end
             local score = distance or (east and math.sqrt(east * east + north * north))
             if score and (not best or score < best or (score == best and entry.key == tracker.selectedKey)) then
                 tracker.selected, best = entry, score
@@ -975,6 +1005,14 @@ DFRL:NewMod("Waypoints", 3, function()
             -- then resolve the automatic nearest selection on a later refresh.
             tracker.selected = previous or tracker.entries[1]
             tracker.provisionalSelection = tracker.selected ~= nil
+        end
+        if complete then
+            scored = scored or {}
+            scored.x, scored.y, scored.mapId, scored.runId, scored.spaceId =
+                position.x, position.y, position.mapId, position.runId, position.spaceId
+            tracker.nearestScore = scored
+        else
+            WipeSnapshotTable(scored)
         end
         tracker.selectedKey = tracker.selected and tracker.selected.key or nil
     end
@@ -1245,26 +1283,39 @@ DFRL:NewMod("Waypoints", 3, function()
         -- Defer reads until the native parser and zone/minimap handlers finish.
         dirty = true
     end)
+    local elapsed, refreshDue, minimapVisible
     local function UpdateWaypoints()
-        local elapsed = tonumber(arg1) or 0
-        if not Number(elapsed) or elapsed < 0 then elapsed = 0 end
-        nearestClock = nearestClock + elapsed
-        age = age + elapsed
-        local refreshed = false
-        if dirty or age >= 0.1 then
+        if refreshDue then
             dirty, age = false, 0
             Refresh()
             if worldMarkers then worldMarkers.Service(inWorld) end
-            refreshed = true
         end
         if inWorld then
             for _, tracker in ipairs(trackers) do
-                if refreshed or tracker.hud:IsVisible() then UpdateGuide(tracker, elapsed) end
+                if refreshDue or tracker.hud:IsVisible() then UpdateGuide(tracker, elapsed) end
             end
         end
-        if refreshed or (Minimap and Minimap:IsVisible()) then UpdateMinimapPins(refreshed) end
+        if refreshDue or minimapVisible then UpdateMinimapPins(refreshDue) end
     end
-    controller:SetScript("OnUpdate", function() navigation.WithSample(UpdateWaypoints) end)
+    controller:SetScript("OnUpdate", function()
+        elapsed = tonumber(arg1) or 0
+        if not Number(elapsed) or elapsed < 0 then elapsed = 0 end
+        nearestClock = nearestClock + elapsed
+        age = age + elapsed
+        refreshDue = dirty or age >= 0.1
+        minimapVisible = not refreshDue and Minimap and Minimap:IsVisible()
+        if refreshDue or minimapVisible then
+            navigation.WithSample(UpdateWaypoints)
+        elseif inWorld then
+            -- Hidden guides and minimap need only the regular or deferred refresh.
+            for _, tracker in ipairs(trackers) do
+                if tracker.hud:IsVisible() then
+                    navigation.WithSample(UpdateWaypoints)
+                    return
+                end
+            end
+        end
+    end)
     local function UpdateDisplay()
         if worldMarkers then
             worldMarkers.UpdateOptions()
