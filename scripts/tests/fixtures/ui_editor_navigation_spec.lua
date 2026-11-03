@@ -1581,6 +1581,14 @@ local customJewelry = assert(env.displayControls.jewelryCustomOrder)
 local jewelryChoices = assert(dialog.jewelryOrderSettings)
 assert(not customJewelry.editorChecked and not jewelryChoices.enabled and #jewelryChoices.controls == 5)
 assert(not dialog.editorDropdownMenu:IsShown(), "Jewelry retained a dropdown from another page")
+do
+    local style = assert(dialog.displayModes.jewelryFrameStyle.dropdown)
+    assert(style.dropdownValue == "runecarver", "Jewelry did not select Runecarver by default")
+    SelectChoice(style, "original")
+    editor.Display()
+    assert(style.dropdownValue == "original" and display.Get("jewelryFrameStyle") == "original")
+    assert(env.SurvivorsDragonUiDisplay.jewelryFrameStyle ~= "original", "Jewelry style saved before Confirm")
+end
 context:Call(customJewelry, "OnClick")
 editor.Display()
 assert(jewelryChoices.enabled, "custom order incorrectly depends on the SDUI action bar")
@@ -1612,6 +1620,7 @@ assert(display.Get("attachJewelry") and display.Get("attachTally"), "native prev
 env.DFRL.layout.CancelEdit()
 assert(not jewelryMenu:IsShown() and not jewelryMenu.owner, "Cancel retained the jewelry dropdown")
 assert(display.Get("customActionBar") and display.Get("attachJewelry") and display.Get("attachTally"))
+assert(display.Get("jewelryFrameStyle") == "runecarver", "Cancel retained the draft jewelry style")
 assert(
     not display.Get("jewelryCustomOrder") and display.Get("jewelryOrder") == "12345",
     "Cancel retained jewelry order"

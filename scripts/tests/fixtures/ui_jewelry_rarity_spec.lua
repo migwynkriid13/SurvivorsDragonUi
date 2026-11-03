@@ -4,6 +4,8 @@ local env = setmetatable({}, { __index = _G })
 env._G = env
 env.SHARED_CARVING, env.GEMMED_CARVING = "Frame.blp", "GemmedRunecarver.blp"
 env.ATTACHED_CARVING = "AttachedRunecarver.blp"
+env.ORIGINAL_RIM, env.ORIGINAL_BACKING = "OriginalRim.blp", "OriginalSocketDetached.blp"
+env.originalRimSize, env.carvingSize, env.socketSize = 36, 43 * 128 / 108, 43 * 40 / 36
 local visible, unavailable = true, nil
 local writes = { texture = 0, uv = 0, visibility = 0 }
 local methods = {}
@@ -13,6 +15,10 @@ function methods:SetTexture(path)
     self.texture = path
 end
 function methods:GetTexture() return self.texture end
+function methods:SetWidth(value) self.width = value end
+function methods:SetHeight(value) self.height = value end
+function methods:SetPoint() end
+function methods:SetVertexColor(...) self.color = { ... } end
 function methods:SetTexCoord(...)
     writes.uv = writes.uv + 1
     self.uv = { ... }
@@ -30,7 +36,14 @@ local function Region() return setmetatable({}, { __index = methods }) end
 env.T = {
     TextureAssigned = function(loaded, assigned, wanted) return loaded ~= false and assigned == wanted end,
 }
-env.hud = { IsVisible = function() return visible end }
+local backings = 0
+env.hud = {
+    IsVisible = function() return visible end,
+    CreateTexture = function()
+        backings = backings + 1
+        return Region()
+    end,
+}
 env.HideTooltip = function() end
 env.overlay = { CreateTexture = function() error("rarity must reuse the housing region") end }
 local slot = { id = 1, carving = Region(), carvingPending = true, placeholderShown = false }
@@ -152,5 +165,30 @@ assert(not slot.carving.shown and slot.carvingPending, "failed neutral return sh
 unavailable = nil
 api.Clear(slot)
 Housing(env.SHARED_CARVING, 256)
+assert(backings == 0, "Runecarver allocated the old backing")
+env.originalFrame, env.wantedDocked = true, true
+api.Update(slot)
+assert(slot.carving.texture == env.ORIGINAL_RIM and slot.carving.width == 36 and slot.carving.uv[1] == 1 / 256)
+assert(backings == 0, "attached original style allocated detached art")
+slot.texture, slot.empty = "native:original", nil
+api.Quality(slot)
+api.Update(slot)
+assert(slot.carving.uv[1] == 129 / 256 and slot.carving.color[1] == red, "old rim lost native rarity tint")
+env.wantedDocked, visible = false, false
+api.Update(slot)
+assert(backings == 0 and slot.carvingPending, "hidden original style allocated a backing")
+visible, unavailable = true, env.ORIGINAL_BACKING
+api.Update(slot)
+assert(backings == 1 and not slot.originalBacking:IsShown() and slot.carvingPending)
+unavailable = nil
+api.Update(slot)
+assert(backings == 1 and slot.originalBacking:IsShown() and not slot.carvingPending)
+bindings, crops, visibility = writes.texture, writes.uv, writes.visibility
+api.Update(slot)
+assert(writes.texture == bindings and writes.uv == crops and writes.visibility == visibility)
+env.originalFrame = false
+api.Update(slot)
+Housing(env.GEMMED_CARVING, 256)
+assert(slot.carving.width == env.carvingSize and slot.carving.color[1] == 1 and not slot.originalBacking:IsShown())
 print("PASS Runecarver quality selects the approved gem and halo artwork through one reused housing region")
 print("PASS rarity keeps native tooltip RGB, changed-only writes, neutral fallback and hidden recovery")

@@ -122,13 +122,18 @@ jewelry restores the complete original action-bar artwork.
 
 The prepared jewelry BLP files ship through the runtime manifest. TGA preparation inputs, original source BLPs, sample item icons and previews are excluded. Static image preparation does not establish packaged-client rendering; runtime appearance remains unverified.
 
-## Retired detached silver outline
+## Original circular frames
 
-The old `SocketDetached.tga` / `SocketDetached.blp` drew a second silver circle
-behind every detached Runecarver housing. Both files and their runtime-manifest
-entry are removed. Jewelry no longer creates those five backing regions or
-shows/hides them when attachment changes. Runecarver, item icons, empty-slot
-pictures, hover frames and the original detached placement remain.
+The Original style uses the artwork from the
+[pre-Runecarver jewelry version](https://github.com/migwynkriid13/SurvivorsDragonUi/tree/b3f1311fe4161d32f3d7f2265caef77b684857e2/media/tex/jewelry).
+`OriginalRim.blp` copies the historical gold and neutral 72-square crops
+into a 256 × 128 atlas at (1, 1) and (129, 1), with the surrounding gutter
+pixels preserved. The neutral rim takes the item's native rarity color.
+
+The three `OriginalSocketRail*.blp` strips and
+`OriginalSocketDetached.blp` keep the original BLP bytes and UVs. The rail
+reuses the attached connector's regions. Original detached jewelry uses the
+silver backing below each item.
 
 ## Original WoW empty-slot pictures
 
@@ -146,6 +151,6 @@ The script writes the existing uncompressed RGBA `EmptyNeck.tga`, `EmptyRing.tga
 
 The full 64-by-64 image maps to the existing 32-by-32 placeholder frame, independently of the equipped item’s 5% zoom and cropped strips. Both rings share the ring picture and both trinkets share the trinket picture. Attached and detached rows retain their original rims, dimensions and placement; no native reads, tooltip state, layout lifecycle, setting or saved value changes. Only static artwork preparation and previews were performed; game-side rendering remains unverified.
 
-The following historical static preview shows the original placeholder preparation with the former gold rim. That extra rim is no longer drawn by jewelry; the current Runecarver-only preview is above. It is artwork evidence, not an in-game capture. The preview is outside the runtime manifest.
+This historical static preview shows the placeholder artwork with the gold rim used by Original. The preview is outside the runtime manifest.
 
 ![Prepared empty jewelry artwork inside the original gold rims](../docs/previews/jewelry-empty-slots.png)

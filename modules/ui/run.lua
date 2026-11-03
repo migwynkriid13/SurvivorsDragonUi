@@ -2132,12 +2132,21 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "jewelry",
                 label = "Equipped jewelry",
                 jewelryPicker = true,
+                mode = {
+                    key = "jewelryFrameStyle",
+                    label = "Frame style",
+                    after = "equippedJewelry",
+                    values = {
+                        { "runecarver", "Runecarver", "Carved frames with rarity gems." },
+                        { "original", "Original", "Restore the original circular jewelry frames." },
+                    },
+                },
                 options = {
                     { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },
                     {
                         "attachJewelry",
                         "Attach jewelry to action bar",
-                        "Off: move jewelry separately, keeping the silver rims.",
+                        "Off: move jewelry separately.",
                     },
                     {
                         "hideNativeBuild",

@@ -31,11 +31,12 @@ def main():
         jewelry_cache = extract_source("modules/ui/jewelry.lua", [
             "ICON_SIZE", "ICON_ART_SIZE", "ICON_ZOOM", "iconSpan", "iconInset", "PrepareIconParts", "Number",
             "InvalidateEffects", "ReadEffects", "SetPlaceholderShown", "ClearSlot", "PaintIcons",
-            "Clear", "Refresh",
+            "Clear", "ApplyFrameStyle", "Refresh",
         ])
         jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons, PrepareIconParts = PrepareIconParts, Clear = Clear, Refresh = Refresh }\n"
         jewelry_rarity = extract_source("modules/ui/jewelry.lua", [
-            "Number", "PaintCarving", "UpdateRarity", "SetQuality", "UpdateQuality",
+            "Number", "BindCarving", "SetRimPresentation", "PaintCarving", "PaintOriginalRim",
+            "PaintOriginalBacking", "UpdateRarity", "SetQuality", "UpdateQuality",
             "SetPlaceholderShown", "ClearSlot",
         ])
         jewelry_rarity = jewelry_rarity.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = UpdateRarity, Quality = UpdateQuality, Clear = ClearSlot }\n"

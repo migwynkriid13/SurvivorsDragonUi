@@ -542,7 +542,7 @@ measure this sixteen-band layout.
 
 ## Runecarver jewelry and gemmed rarity artwork — 2026-11-03
 
-The old upper and side socket surround is removed in both attachment modes.
+The Runecarver style clears the upper and side socket surround in both attachment modes.
 The three attached `SocketRail` strips retain the small bottom arch joining
 each housing to the original straight bar edge, with transparent item cutouts.
 The connector keeps its native bevel and bar join. Its narrow curved ends
@@ -551,8 +551,7 @@ tabs. Curve distances and artwork are prepared offline; this adds no runtime
 geometry, frame, region, texture binding or recurring work. The rest of the old
 circle stays removed.
 Their region count, anchors, guttered joins and visibility handoff stay the
-same. Detached jewelry no longer creates five hidden/visible backing-circle
-textures or updates their visibility on display changes. `SocketDetached.blp`
+same. The default Runecarver style skips detached backing-circle allocation. `SocketDetached.blp`
 and its authoring copy are retired from the repository and runtime manifest.
 The same five Runecarver housings supply the complete surround in both modes;
 item, placeholder, hover and saved-placement behavior remain.
@@ -571,6 +570,12 @@ the displayed crop changes. Settled slots skip rarity preparation. The
 reader defers hidden painting, retries failed bindings and uses the neutral
 crop while gemmed artwork is unavailable. Both Performance Mode states and
 editing share the static artwork.
+
+The Original frame style reuses the five housing regions, the item-icon pool
+and the three attached rail strips. A visible detached Original row creates
+at most one silver backing region per slot on first use. It reuses those
+regions on later visits and hides them in Runecarver or while attached.
+Style changes use the existing display listener and visible equipment reader.
 
 CI cases cover the five rarity crops, the original neutral pixels, native tooltip
 RGB, changed-only writes, failed bindings and hidden recovery. In-game

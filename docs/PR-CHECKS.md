@@ -188,6 +188,11 @@ their clear opening and a shared solid metal pixel. Attached crops clear the
 halo at both arch joins while preserving upper glow and opaque metal. These
 cases run in CI only.
 
+Original frame cases cover the gold and native-rarity rims, deferred
+detached backing allocation, texture retries, reuse and returning to
+Runecarver. The editor and Display cases cover the default, draft preview,
+Cancel, Confirm, profiles and reset. These cases use fake UI objects.
+
 Jewelry cache cases use the exact production reader/cache/compositor functions
 over fake native tooltip and texture boundaries. They cover unchanged successful
 reads, same-icon item replacement, inventory/language invalidation, missing or

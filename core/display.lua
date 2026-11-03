@@ -127,6 +127,7 @@ DFRL:NewMod("Display", 0, function()
         hideNativeBuild = true,
         attachJewelry = true,
         jewelryCustomOrder = false,
+        jewelryFrameStyle = "runecarver",
         jewelryOrder = "12345",
         attachXP = true,
         xpShowText = false,
@@ -226,6 +227,9 @@ DFRL:NewMod("Display", 0, function()
     local function NormalizeIconStyle(value)
         if value == "default" or value == "original" then return value end
     end
+    local function NormalizeJewelryFrameStyle(value)
+        if value == "runecarver" or value == "original" then return value end
+    end
     local tex = DFRL:GetInfoOrCons("tex")
     local originalCrest = tex .. "waypoint\\GuardianClassic.blp"
     local bossSkull = tex .. "waypoint\\WorldQuestBoss.blp"
@@ -276,6 +280,7 @@ DFRL:NewMod("Display", 0, function()
         if type(source) == "table" then value = source[key] end
         if colorKeys[key] then return NormalizeColor(value) or defaults[key] end
         if iconStyleKeys[key] then return NormalizeIconStyle(value) or defaults[key] end
+        if key == "jewelryFrameStyle" then return NormalizeJewelryFrameStyle(value) or defaults[key] end
         if key == "jewelryOrder" then return NormalizeJewelryOrder(value) or defaults[key] end
         if key == "meterColorMode" then return NormalizeMeterColorMode(value) or defaults[key] end
         if key == "worldCacheIconMode" or key == "worldBossIconMode" then
@@ -347,6 +352,9 @@ DFRL:NewMod("Display", 0, function()
             if not value then return end
         elseif iconStyleKeys[key] then
             value = NormalizeIconStyle(value)
+            if not value then return end
+        elseif key == "jewelryFrameStyle" then
+            value = NormalizeJewelryFrameStyle(value)
             if not value then return end
         elseif key == "jewelryOrder" then
             value = NormalizeJewelryOrder(value)
