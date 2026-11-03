@@ -13,7 +13,8 @@ local function Tracker()
     context.entries = { context.entry }
     env.DFRL.minimapDefaults = { right = 16 }
     env.DFRL.guardians = {
-        GetSnapshot = function(snapshot)
+        GetSnapshot = function(snapshot, trackerShowDead)
+            assert(trackerShowDead == context.settings.guardianShowDead, "tracker lost the current dead-row filter")
             context.reads.snapshot = (context.reads.snapshot or 0) + 1
             snapshot.status, snapshot.rows = "ready", context.entries
             snapshot.revision, snapshot.generation = context.revision, context.generation

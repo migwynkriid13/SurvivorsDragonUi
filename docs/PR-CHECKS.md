@@ -1248,6 +1248,11 @@ wakeups, visible minimap repair, and reuse of a complete nearest score
 without changing its next deadline. Changed publications and partial scores
 still run through selection.
 
+The cadence fixtures also cover skipped guardian queries, zero minimap
+countdowns, same-pass phase reuse, the idle legacy/MSBT clock gate and its
+first-hit recovery, run pill resize recovery, exact flow clipping, and the
+elapsed time and long-frame cap of the gold glow.
+
 Static checks cannot prove that a shared callback is reached, native publications
 arrive in the expected order, hidden views remain idle, or textures render with
 the correct pixels. They also cannot measure live draw calls, GPU memory or FPS.

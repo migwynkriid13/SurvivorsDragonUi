@@ -33,6 +33,11 @@ env.math.sin = function(...)
     context.reads.pulses = (context.reads.pulses or 0) + 1
     return math.sin(...)
 end
+local nearlyEqual = env.T.NearlyEqual
+env.T.NearlyEqual = function(a, b)
+    context.reads.geometry = (context.reads.geometry or 0) + 1
+    return nearlyEqual(a, b)
+end
 local chunk = assert(loadfile(assert(arg[1], "missing extracted timer source")))
 setfenv(chunk, env)
 local source = chunk()
@@ -82,11 +87,16 @@ context:ResetCounts()
 context.now = context.now + 0.001
 source.Update(42, 960)
 context:NoPresentationWrites()
-assert(not context.reads.pulses, "Endless escaped the shared thirty-Hz throttle")
+assert(not context.reads.geometry and not context.reads.pulses, "settled Endless repeated geometry or painted early")
 source.Appearance(2, false)
 context.now = context.now + 0.04
 source.Update(42, 960)
 assert(math.abs(glow:GetWidth() - 280 * 42 / 960) < 1e-9, "regular progress retained full Endless clipping")
+context:ResetCounts()
+env.runBar.layoutWidth = 300
+context.now = context.now + 0.001
+source.Update(42, 960)
+assert(math.abs(glow:GetWidth() - 300 * 42 / 960) < 1e-9 and context.reads.pulses, "resize missed immediate clipping")
 source.Appearance(0, true)
 context.now = context.now + 0.04
 source.Update(0, 960)

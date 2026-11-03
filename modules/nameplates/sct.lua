@@ -2870,6 +2870,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- One tab-header or slot pair consumes a step; empty tabs stay bounded.
         RebuildSpellTextures(4)
         if nativeText.Selected() then return end
+        if table.getn(activeTexts) == 0 and table.getn(pending) == 0 and table.getn(pendingGroups) == 0 then return end
         local now = GetTime()
         UpdatePending(now)
         UpdateTexts(now, arg1)

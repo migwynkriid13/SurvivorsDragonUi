@@ -271,7 +271,14 @@ progress fraction. A cosmetic zero remains `returning` until native `left == 0`
 confirms `due`; a return requires an actual occupied snapshot.
 `Remaining(left, now)` shares that calculation with accepted minimap copies,
 returning nil for an unready roster or unknown/negative `left`; the caller samples
-official run time once without requesting a health-bearing snapshot.
+official run time once when a drawable timer is positive. Native zero still
+shows `0:00`.
+
+The tracker requests health only for fighting guardians and skips countdown
+reads when **Show dead** hides returning lairs. Counts and status still
+include the whole roster. The default consumer snapshot retains all available
+health and countdowns. Lair acceptance shares the current waypoint phase
+sample, while standalone snapshot reads check native phase afresh.
 
 `GetChanges(afterRevision, afterGeneration)` returns copied observations since a
 consumer's cursor, with `revision`, `generation`, `entries`, `reset` and, for a

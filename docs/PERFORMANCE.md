@@ -1202,9 +1202,11 @@ event, updater, option or SavedVariable is added by rank/mode selection.
 Rank changes recolor stable scattered stream/foam positions rather than splitting
 or overlaying the native fill. Unchanged tier colors, base fill, sizes,
 UVs and settled visibility skip native writes. Width changes reflow the existing
-stream spacing/span; glints and glow track the actual filled width. Native
-two-second progress dirties this geometry once per changed sample. Pool
-retirement hides active pieces, and later accepted state reuses their artwork.
+stream spacing/span; glints and glow track the actual filled width. Pill width
+is read on resize or visible recovery. Flow keeps its exact clip edge until
+width, stepped progress, duration or appearance changes. Those changes are
+applied before the paint gate. Pool retirement hides active pieces, and later
+accepted state reuses their artwork.
 
 Endless retains its tier palette and changes one existing nine-texture stream
 lane into moving glitter points. The remaining eighteen broad streaks preserve
@@ -1746,6 +1748,8 @@ shared frame callback's elapsed time so the counters can refresh between
 Cache cost, affordability and native ownership are refreshed through the shared
 HUD pass. Performance Mode schedules its display samples with `GetTime()`.
 Between samples the fit helper can refit retained text or retry missing metrics.
+The normal gold glow accumulates the same clamped frame deltas and advances
+its phase at the existing 30-Hz paint gate.
 
 Actual Performance Mode transitions, tally retirement and existing zone/new-run
 or native-clock rollback boundaries reset the sampling deadline. Routine
@@ -3760,8 +3764,10 @@ anonymous-plate identity limit and snapshot policy are documented in
   catch up from current native data.
 - Boss and guardian rows update changed content and reflow changed geometry.
   Guardian views may reuse their own copied snapshot; private accepted lairs are
-  never returned to callers. Native remaining time and spawn-matched health
-  continue to be read through their existing APIs.
+  never returned to callers. The tracker reads native health for fighting
+  guardians and time for displayed returning lairs at the existing ten-Hz
+  cadence. Zero-only minimap countdowns skip the clock. Lair acceptance reuses
+  the phase from the current waypoint pass.
 - Waypoint snapshots reuse accepted copies between receipts. Live position,
   bearing and facing sampling remain unchanged; identical pin positions and
   arrow UVs are not resent. With every guide and the minimap hidden, the

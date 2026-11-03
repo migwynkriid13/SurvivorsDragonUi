@@ -6,8 +6,10 @@ do
     local context = H.New()
     local env = context.env
     local phase, now = "playing", 100
-    env.DFRL.navigation = { IsRunPhase = function(value) return value == "playing" or value == "paused" end }
-    env.AZS_GetPhase = function() return phase end
+    env.AZS_GetPhase = function()
+        context.reads.phase = (context.reads.phase or 0) + 1
+        return phase
+    end
     env.AZS_GetRunTime = function()
         context.reads.clock = (context.reads.clock or 0) + 1
         return now
@@ -17,12 +19,18 @@ do
         context.reads.guardians = (context.reads.guardians or 0) + 1
         return { { id = 7, hp = 50, hpm = 100 } }
     end
+    context:Load("modules/map/navigation.lua", "Navigation")
     context:Load("modules/ui/guardians.lua", "GuardianRoster")
+    local navigation = env.DFRL.navigation
     local roster = env.DFRL.guardians
-    roster.AcceptLairs({
-        { index = 1, id = 7, state = "awake", name = "Guardian" },
-        { index = 2, id = 0, state = "empty", left = 0 },
-    }, 1, 1)
+    navigation.WithSample(function()
+        assert(navigation.Phase() == "playing")
+        roster.AcceptLairs({
+            { index = 1, id = 7, state = "awake", name = "Guardian" },
+            { index = 2, id = 0, state = "empty", left = 0 },
+        }, 1, 1)
+    end)
+    assert(context.reads.phase == 1, "lair acceptance reread the waypoint sample's native phase")
     context:ResetCounts()
     local snapshot = roster.GetSnapshot()
     assert(not context.reads.clock, "a roster without returning lairs sampled a countdown clock")
@@ -68,10 +76,56 @@ do
     now = 100.5
     snapshot = roster.GetSnapshot(snapshot)
     assert(snapshot.rows[1].remaining == 19.5, "missing clock data did not retry on the next snapshot")
+
+    phase = "playing"
+    env.AZS_GetGuardians = function()
+        context.reads.guardians = (context.reads.guardians or 0) + 1
+        return { { id = 7, hp = 65, hpm = 100 } }
+    end
+    local asleep = { index = 1, id = 7, state = "asleep" }
+    local returning = { index = 2, id = 0, state = "empty", left = 10 }
+    roster.AcceptLairs({ asleep, returning }, 3, 3)
+    now = 101.5
+    context:ResetCounts()
+    snapshot = roster.GetSnapshot(snapshot)
+    assert(
+        context.reads.guardians == 1
+            and context.reads.clock == 1
+            and snapshot.rows[1].hp == 65
+            and snapshot.rows[2].remaining == 9,
+        "default roster snapshot lost asleep health or a returning countdown"
+    )
+    context:ResetCounts()
+    snapshot = roster.GetSnapshot(snapshot, false)
+    assert(
+        not context.reads.guardians
+            and not context.reads.clock
+            and not snapshot.rows[1].hp
+            and not snapshot.rows[2].remaining
+            and snapshot.counts.asleep == 1
+            and snapshot.counts.returning == 1,
+        "tracker sampled unused native data or retained old fields in its snapshot"
+    )
+    context:ResetCounts()
+    snapshot = roster.GetSnapshot(snapshot, true)
+    assert(
+        not context.reads.guardians and context.reads.clock == 1 and snapshot.rows[2].remaining == 9,
+        "showing returning rows failed to sample a fresh countdown"
+    )
+    asleep.state = "awake"
+    roster.AcceptLairs({ asleep, returning }, 4, 4)
+    context:ResetCounts()
+    snapshot = roster.GetSnapshot(snapshot, false)
+    assert(
+        context.reads.guardians == 1 and not context.reads.clock and snapshot.rows[1].healthFraction == 0.65,
+        "a fighting guardian did not resume fresh health reads"
+    )
     phase = "ready"
     context:ResetCounts()
     snapshot = roster.GetSnapshot(snapshot)
-    assert(snapshot.status == "inactive" and #snapshot.rows == 0 and not context.reads.clock)
+    assert(
+        snapshot.status == "inactive" and #snapshot.rows == 0 and context.reads.phase == 1 and not context.reads.clock
+    )
 end
 print("PASS guardian roster samples native countdown time only when used and shares missing samples within one pass")
 

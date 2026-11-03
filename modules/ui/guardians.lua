@@ -25,7 +25,7 @@ DFRL:NewMod("GuardianRoster", 2, function()
     end
     local function Active()
         local navigation = DFRL.navigation
-        return navigation and navigation.IsRunPhase(Native("AZS_GetPhase")) or false
+        return navigation and navigation.IsRunPhase(navigation.Phase()) or false
     end
     local function Living(row) return row.state == "asleep" or row.state == "awake" end
     local function Copy(row, copy)
@@ -183,8 +183,9 @@ DFRL:NewMod("GuardianRoster", 2, function()
     end
 
     -- Callers may reuse their own copy; accepted private rows are never exposed.
-    -- No UI clock advances gameplay.
-    function roster.GetSnapshot(snapshot)
+    -- The tracker shows fighting health and reads countdowns when dead rows are shown.
+    -- Other callers get the full snapshot when the tracker choice is absent.
+    function roster.GetSnapshot(snapshot, trackerShowDead)
         snapshot = snapshot or { rows = {}, counts = {} }
         local changed = snapshot.revision ~= revision or snapshot.generation ~= generation or snapshot.status ~= "ready"
         snapshot.revision, snapshot.generation, snapshot.status = revision, generation, "inactive"
@@ -211,7 +212,7 @@ DFRL:NewMod("GuardianRoster", 2, function()
             return snapshot
         end
         -- Only accepted lair publications change roster identity, status and
-        -- counts. Health and native remaining time still read every snapshot.
+        -- counts. Read requested health and remaining time fresh each pass.
         if changed then
             counts.total, counts.living, counts.asleep, counts.fighting = 0, 0, 0, 0
             counts.returning, counts.due, counts.empty = 0, 0, 0
@@ -247,18 +248,24 @@ DFRL:NewMod("GuardianRoster", 2, function()
                 snapshot.rows[index] = row
             end
             if Living(row) then
-                if not health then health = Health() end
                 row.hp, row.maximum, row.healthFraction = nil, nil, nil
-                local unit = health[row.id]
-                if unit then
-                    row.hp, row.maximum = unit.hp, unit.maximum
-                    row.healthFraction = math.max(0, math.min(1, unit.hp / unit.maximum))
+                if trackerShowDead == nil or row.state == "awake" then
+                    if not health then health = Health() end
+                    local unit = health[row.id]
+                    if unit then
+                        row.hp, row.maximum = unit.hp, unit.maximum
+                        row.healthFraction = math.max(0, math.min(1, unit.hp / unit.maximum))
+                    end
                 end
             elseif Number(row.left) and row.left > 0 then
-                if not clockRead then
-                    now, clockRead = Native("AZS_GetRunTime"), true
+                if trackerShowDead == false then
+                    row.remaining = nil
+                else
+                    if not clockRead then
+                        now, clockRead = Native("AZS_GetRunTime"), true
+                    end
+                    row.remaining = roster.Remaining(row.left, now)
                 end
-                row.remaining = roster.Remaining(row.left, now)
             elseif row.left == 0 then
                 -- Due is confirmed by the native snapshot. A cosmetic zero
                 -- above never invents a return, spawn, or state transition.

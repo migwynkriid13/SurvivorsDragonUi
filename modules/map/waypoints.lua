@@ -484,7 +484,7 @@ DFRL:NewMod("Waypoints", 3, function()
                             and showGuardianTimers
                             and entry.state == "empty"
                             and Number(entry.left)
-                            and entry.left >= 0
+                            and entry.left > 0
                             and now == nil
                         then
                             now = Native("AZS_GetRunTime") or false

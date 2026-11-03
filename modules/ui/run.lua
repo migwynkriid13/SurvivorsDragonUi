@@ -763,6 +763,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local style, endless = RUN_TIER_STYLES[0], false
         local sparkleCount, effectRight = 0, 0
         local configured, geometryDirty = false, true
+        local effectWidth, effectSeconds, effectMaximum, effectEndless, filledWidth
         local runGlow = bar:CreateTexture(nil, "OVERLAY")
         runGlow:SetTexture(path .. "FillWhite.blp")
         runGlow:SetBlendMode("ADD")
@@ -1056,8 +1057,17 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             -- Width changes and native two-second progress share one geometry pass.
             local width = bar.layoutWidth or BAR_WIDTH
-            local filledWidth = width * (endless and 1 or math.min(1, seconds / maximum))
-            ResizeEffects(filledWidth)
+            if
+                geometryDirty
+                or effectWidth ~= width
+                or effectSeconds ~= seconds
+                or effectMaximum ~= maximum
+                or effectEndless ~= endless
+            then
+                filledWidth = width * (endless and 1 or math.min(1, seconds / maximum))
+                ResizeEffects(filledWidth)
+                effectWidth, effectSeconds, effectMaximum, effectEndless = width, seconds, maximum, endless
+            end
             -- UI time only moves decoration; native elapsed time owns the fill.
             -- Crop each pooled streak to that fill without texture wrapping or
             -- newer clipping APIs, beneath the separate metal border and skulls.
@@ -1134,6 +1144,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
+    HookScript(run, "OnSizeChanged", function() run.widthDirty = true end)
     run.affixes = CreateRunAffixes(run)
     run.heroicLevel = NewHeroicNumeral(runBar, overlay, run.affixes)
     local bossText = overlay:CreateFontString(nil, "OVERLAY")
@@ -3288,6 +3299,7 @@ DFRL:NewMod("RunTimers", 5, function()
         onEdit = EditRunFont,
         onResize = function()
             runBar.layoutWidth = run:GetWidth() - 16
+            run.widthDirty = true
             RefreshClockLabel(runClock)
             RefreshClockLabel(bossClock)
             UpdateRunFontBounds()
@@ -3581,9 +3593,9 @@ DFRL:NewMod("RunTimers", 5, function()
                 return
             end
             local elapsed = math.max(0, math.min(tonumber(arg1) or 0, 0.1))
-            entry.glowPhase = math.mod(entry.glowPhase + elapsed * 2 * math.pi / 4.8, 2 * math.pi)
             entry.glowAge = entry.glowAge + elapsed
             if entry.glowAge < 1 / 30 then return end
+            entry.glowPhase = math.mod(entry.glowPhase + entry.glowAge * 2 * math.pi / 4.8, 2 * math.pi)
             entry.glowAge = 0
             PaintGlow()
         end
@@ -5108,7 +5120,15 @@ DFRL:NewMod("RunTimers", 5, function()
                 run:Show()
             end
             if run:IsVisible() then
-                run.RefreshWidth()
+                if starting or showing or run.widthDirty then
+                    local width = run:GetWidth()
+                    if IsNumber(width) and width > 0 then
+                        run.widthDirty = nil
+                        run.RefreshWidth(width)
+                    else
+                        run.widthDirty = true
+                    end
+                end
                 if render.runMaximum ~= maximum then runBar:SetMinMaxValues(0, maximum) end
                 local atLimit = seconds >= maximum
                 if timeDue or runPublished or starting then

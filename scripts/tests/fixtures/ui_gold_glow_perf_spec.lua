@@ -59,7 +59,9 @@ do
     c.fontAlphas = 0
     c:Call(entry.content, "OnUpdate", 0.01)
     c:NoPresentationWrites()
+    assert(entry.glowPhase == 0, "gold glow advanced its phase between paints")
     c:Call(entry.content, "OnUpdate", 0.025)
+    assert(math.abs(entry.glowPhase - 0.035 * 2 * math.pi / 4.8) < 1e-12, "gold glow lost elapsed time between paints")
     assert(c.fontAlphas > 0 and c.fontAlphas < 8, "gold glow rewrote unchanged alpha copies")
     local cosine, sine = math.cos(entry.glowPhase), math.sin(entry.glowPhase)
     for index, glow in ipairs(entry.glow) do
@@ -68,6 +70,12 @@ do
         local expected = (0.04 + 0.14 * facing ^ 4) * 1.4
         assert(math.abs(glow:GetAlpha() - expected) < 1e-12, "gold glow brightness equation changed")
     end
+    local phase = entry.glowPhase
+    c:Call(entry.content, "OnUpdate", 0.3)
+    assert(
+        math.abs(entry.glowPhase - phase - 0.1 * 2 * math.pi / 4.8) < 1e-12,
+        "long frame bypassed the glow delta cap"
+    )
     entry.text:SetText("456")
     api.Set(true)
     for _, glow in ipairs(entry.glow) do

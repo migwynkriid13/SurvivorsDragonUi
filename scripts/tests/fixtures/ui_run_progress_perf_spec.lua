@@ -11,9 +11,13 @@ local function Clock()
     env.AZS_RUN, env.runSequence = { t = 0, endl = 0, nb = 30 }, 0
     env.BAR_WIDTH = 280
     env.run = env.CreateFrame("Frame", nil, env.UIParent)
+    env.run:SetWidth(296)
     env.run:Hide()
     function env.run:IsVisible() return self.shown and not context.hidden end
-    env.run.RefreshWidth = function() context.reads.width = (context.reads.width or 0) + 1 end
+    env.run.RefreshWidth = function(width)
+        context.reads.width = (context.reads.width or 0) + 1
+        context.paintedWidth = width
+    end
     env.run.affixes = {
         Update = function(_, accepted, force) context.affixes = { accepted = accepted, force = force } end,
         HeroicLevel = function(_, accepted) return accepted and context.heroicRank or nil end,
@@ -106,6 +110,7 @@ do
     assert(context.writes.value == 1 and env.runBar.value == 10, "fill moved within a native two-second step")
     assert(context.writes.range == 1 and env.runBar.maximum == 960, "unchanged maximum rewrote the range")
     assert(context.reads.time == 2, "row refreshes reread elapsed time between displayed seconds")
+    assert(context.reads.width == 1 and context.paintedWidth == 296, "settled timer resampled its pill width")
     assert(context.reads.length == 2 and context.reads.schedule == 2, "schedule did not use one-second fallback")
     assert(context.reads.ownership == 33, "native ownership lost frame cadence")
     assert(#context.flows == 33 and #context.states == 33, "throttling native clock reads slowed cosmetic presentation")
@@ -168,8 +173,11 @@ do
     context:Sample(2.2)
     context.hidden = true
     context:ResetPerf()
+    env.run:SetWidth(336)
+    env.run.widthDirty = true
     context:Sample(50.7, nil, true, 48.5)
     assert(not context.writes.value and not context.writes.range, "hidden clock wrote its fill")
+    assert(not context.reads.width, "hidden clock applied pending pill geometry")
     assert(#context.flows == 0 and #context.captions == 0 and #context.appearance == 0 and #context.states == 0)
     assert(#context.markers == 0 and env.render.clockHidden and env.runBar.value == 2, "hidden clock painted effects")
     assert(
@@ -179,6 +187,7 @@ do
     context.hidden = false
     context:Sample(50.9, nil, false, 0.2)
     assert(env.runBar.value == 50 and context.writes.value == 1, "Show did not paint current native progress")
+    assert(context.reads.width == 1 and context.paintedWidth == 336, "Show missed a hidden width change")
     assert(context.flows[1].value == 50 and context.captions[1].seconds == 50.9 and not env.render.clockHidden)
     assert(#context.markers == 1 and context.markers[1].entries == context.schedule, "Show lost schedule recovery")
     context:ResetPerf()

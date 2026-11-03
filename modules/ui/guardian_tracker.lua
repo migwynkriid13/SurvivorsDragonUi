@@ -308,7 +308,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end
     local function Refresh()
         if not inWorld or DFRL.layout.IsHidden("guardianTracker") or not UIParent:IsVisible() then return end
-        local snapshot = roster.GetSnapshot(presentation.snapshot)
+        local snapshot = roster.GetSnapshot(presentation.snapshot, showDead)
         if snapshot.status ~= "ready" or not snapshot.rows[1] then
             Clear()
             return

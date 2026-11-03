@@ -1506,24 +1506,30 @@ Test("scrolling expires, reuses its pool and remains idle with no active labels"
     context:NoPresentationWrites()
 end)
 
-Test("empty SCT queues skip remembered-size writes and resume for new hits", function()
-    local context = SCT(true)
-    local writes = 0
-    local setn = context.env.table.setn
-    context.env.table.setn = function(list, count)
-        writes = writes + 1
-        setn(list, count)
+Test("empty legacy and scrolling SCT queues skip their clock and resume for new hits", function()
+    for _, scrolling in ipairs({ false, true }) do
+        local context = SCT(scrolling)
+        local writes, clockReads = 0, 0
+        local setn, getTime = context.env.table.setn, context.env.GetTime
+        context.env.table.setn = function(list, count)
+            writes = writes + 1
+            setn(list, count)
+        end
+        context.env.GetTime = function()
+            clockReads = clockReads + 1
+            return getTime()
+        end
+        context:Tick(0.016)
+        assert(writes == 0 and clockReads == 1, "empty SCT still worked after the existing plate scan")
+        context:Hit(111)
+        writes = 0
+        context:Tick(0.2)
+        assert(writes > 0 and context:Labels()[1]:GetText() == "111", "a new hit did not resume queue processing")
+        context:Tick(1.5)
+        writes, clockReads = 0, 0
+        context:Tick(0.016)
+        assert(writes == 0 and clockReads == 1 and #context:Labels() == 0, "retired queues did not return to idle")
     end
-    context:Tick(0.016)
-    assert(writes == 0, "empty queue/text passes still rewrote remembered lengths")
-    context:Hit(111)
-    writes = 0
-    context:Tick(0.1)
-    assert(writes > 0 and context:Labels()[1]:GetText() == "111", "a new hit did not resume queue processing")
-    context:Tick(1.5)
-    writes = 0
-    context:Tick(0.016)
-    assert(writes == 0 and #context:Labels() == 0, "retired queues did not return to the idle path")
 end)
 
 Test("source lookup scans one spellbook per publication generation across SCT and meter callers", function()
