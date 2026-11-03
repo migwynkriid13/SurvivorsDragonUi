@@ -2,9 +2,12 @@
 -- media/tex/meter/LICENSE.txt. Pinned source: third_party/DetailsTWW-ARTWORK.md.
 -- Reset glyph: Blizzard Entertainment; provenance in the same source notes.
 -- The existing gold ring retains third_party/Jewelry-ARTWORK.md's provenance.
+local meterDefaults = { width = 240, scale = 0.8, header = 32, row = 32, footer = 32 }
+DFRL.damageMeterDefaults = meterDefaults
+
 local function BuildMeter()
-    local HEADER, ROW_HEIGHT, FOOTER, REFRESH_SECONDS = 32, 32, 32, 1
-    local width, fontSize = 240, DFRL.display.Get("meterFontSize")
+    local HEADER, ROW_HEIGHT, FOOTER, REFRESH_SECONDS = meterDefaults.header, meterDefaults.row, meterDefaults.footer, 1
+    local width, fontSize = meterDefaults.width, DFRL.display.Get("meterFontSize")
     local nameFontSize = DFRL.display.Get("meterNameFontSize")
     local enabled = DFRL.display.Get("meterEnabled")
     local visible = DFRL.display.Get("meterRows")
@@ -160,7 +163,7 @@ local function BuildMeter()
     local tooltipState = {}
     local hovered
     local root = CreateFrame("Frame", "DFRL_DamageMeter", UIParent)
-    root:SetScale(0.8)
+    root:SetScale(meterDefaults.scale)
     root:SetWidth(width)
     root:SetHeight(HEADER + visible * ROW_HEIGHT + FOOTER)
     root:SetFrameStrata("MEDIUM")

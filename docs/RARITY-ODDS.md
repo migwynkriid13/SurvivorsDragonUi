@@ -1,9 +1,12 @@
 # Rarity odds
 
 Enable **Show rarity odds** in **Interface** → **Rarity odds**. Move, scale or
-hide the panel in Layout. **Show over reward cards** defaults on and uses the
-game's frame layer API when available. Both settings use the existing preview,
-Confirm, Cancel, profiles and reset paths.
+hide the panel in Layout. Its default width and scale match the Guardian
+Tracker. The panel centers between the tracker and the space reserved for the
+DPS meter, or sits beside that stack when the viewport is too short. Layout
+keeps any position you save. **Show over reward cards** defaults on and uses
+the game's frame layer API when available. Both settings use the existing
+preview, Confirm, Cancel, profiles and reset paths.
 
 ## What the numbers measure
 
@@ -39,6 +42,7 @@ and four textures. The two [Quest Tracker header strips](../third_party/Guardian
 share the guardian tracker's layout and alpha. The native amulet icon uses
 the existing loot quality rim with a warm gold tint. Four text rows sit
 directly over the world, with the shared text outline and shadow for contrast.
+Reward names can wrap while the three numeric columns keep fixed widths.
 Both Performance Mode states use this static presentation. The controller
 samples at most four times per second while permitted. Unchanged roll strength
 skips odds formatting and text writes. A language change refreshes captions on

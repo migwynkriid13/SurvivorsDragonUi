@@ -6,6 +6,38 @@ for _, performance in ipairs({ false, true }) do
     local context = H.New()
     local env, phase, top, hidden, failReadback = context.env, "playing", false, false, false
     local layout = env.DFRL.layout
+    local anchor, placed
+    local create, register = env.CreateFrame, layout.Register
+    env.CreateFrame = function(kind, name, parent)
+        local frame = create(kind, name, parent)
+        if name == "SurvivorsDragonUiRarityOdds" then
+            local setPoint = frame.SetPoint
+            function frame:SetScale(scale) self.scale = scale end
+            function frame:SetPoint(point, relative, target, x, y)
+                setPoint(self, point, relative, target, x, y)
+                self.point = { point, relative, target, x, y }
+            end
+        end
+        return frame
+    end
+    env.UIParent:SetHeight(768)
+    env.DFRL_GuardianTracker = {
+        GetHeight = function() return 172 end,
+        GetWidth = function() return 240 end,
+        GetScale = function() return 0.85 end,
+    }
+    env.DFRL.guardianTrackerDefaults = { top = 252, right = -1.2 }
+    env.DFRL.damageMeterDefaults = { width = 240, scale = 0.8, header = 32, row = 32, footer = 32 }
+    layout.Register = function(key, frame, default, options)
+        assert(options.refreshDefault, "viewport changes must recompute the default gap")
+        anchor = function() default(frame) end
+        register(key, frame, default)
+    end
+    layout.IsPlaced = function() return placed end
+    layout.Place = function(key)
+        assert(key == "rarityOdds")
+        anchor()
+    end
     layout.IsHidden = function() return hidden end
     local listen, visibility = layout.ListenVisibility
     layout.ListenVisibility = function(key, callback)
@@ -36,11 +68,14 @@ for _, performance in ipairs({ false, true }) do
     local panel = assert(env.SurvivorsDragonUiRarityOdds)
     local function Tick() context:Call(reader, "OnUpdate", 0.25) end
     local function Captions()
-        local text = {}
+        local text, regions = {}, {}
         for _, object in ipairs(context.objects) do
-            if object.kind == "FontString" and object.parent == panel then table.insert(text, object:GetText()) end
+            if object.kind == "FontString" and object.parent == panel then
+                table.insert(text, object:GetText())
+                table.insert(regions, object)
+            end
         end
-        return text
+        return text, regions
     end
 
     Tick()
@@ -51,16 +86,33 @@ for _, performance in ipairs({ false, true }) do
     display.Set("rarityOdds", true)
     Tick()
     assert(panel:IsShown() and not env.SurvivorsDragonUiDisplay, "preview did not show or saved too early")
-    local text = Captions()
+    local text, regions = Captions()
     assert(#text == 20 and text[1] == "Rarity odds" and text[5] == "Spells / cache jewelry", "compact table changed")
     assert(text[6] == "14.0%" and text[7] == "7.3%" and text[8] == "2.4%")
     assert(text[10] == "16.7%" and text[14] == "18.9%" and text[18] == "20.5%")
+    assert(
+        regions[6]:GetWidth() >= 45 and regions[7]:GetWidth() >= 45 and regions[8]:GetWidth() >= 56,
+        "compact odds columns lost their percentage width"
+    )
     local art = {}
     for _, object in ipairs(context.objects) do
         if object.kind == "Texture" and object.parent == panel then table.insert(art, object:GetTexture()) end
     end
     assert(#art == 4 and string.find(art[1], "guardians\\Header.blp", 1, true))
     assert(string.find(art[2], "guardians\\Header_2.blp", 1, true), "the second header strip was not reused")
+    assert(panel:GetWidth() == 240 and panel.scale == 0.85 and panel.point[1] == "RIGHT")
+    assert(env.T.NearlyEqual(panel.point[4] * panel.scale, -1.2), "odds were not aligned with the tracker")
+    assert(env.T.NearlyEqual(panel.point[5] * panel.scale, 287.3), "odds were not centered in the default gap")
+    env.UIParent:SetHeight(640)
+    layout.Place("rarityOdds")
+    assert(env.T.NearlyEqual(panel.point[4] * panel.scale, -213.2), "short viewport overlapped the right HUD stack")
+    placed = true
+    local customPoint = panel.point
+    env.DFRL.RefreshRarityOddsPlacement()
+    assert(panel.point == customPoint, "a tracker reflow moved confirmed rarity odds geometry")
+    placed = false
+    env.UIParent:SetHeight(768)
+    layout.Place("rarityOdds")
     display.FinishEdit(false)
     assert(not panel:IsShown() and not reader:GetScript("OnUpdate"), "Cancel retained the preview")
     display.BeginEdit()

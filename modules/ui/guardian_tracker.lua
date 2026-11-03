@@ -27,6 +27,9 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local TITLE_LEFT = 44
     local TITLE_PADDING = TITLE_LEFT + ROW_INSET
     local WIDTH, ROW_HEIGHT = 128 + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, 26
+    -- The health pill's right edge aligns with the default minimap edge.
+    local defaults = { top = 252, right = minimapDefaults.right + (ROW_INSET - HEALTH_RIGHT_OFFSET) * DEFAULT_SCALE }
+    DFRL.guardianTrackerDefaults = defaults
     local visibleRows, rowOffset = DFRL.display.Get("guardianRows"), 0
     local preferredStatusWidth, headerHeight = 128, WIDTH / 8
     local width, statusWidth = 240, 128
@@ -429,7 +432,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
         end
         RetireRows(used)
         local height = headerHeight + 12 + (visibleRows > 0 and visibleRows or used) * ROW_HEIGHT
-        if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
+        if not T.NearlyEqual(frame:GetHeight(), height) then
+            frame:SetHeight(height)
+            if DFRL.RefreshRarityOddsPlacement then DFRL.RefreshRarityOddsPlacement() end
+        end
     end
     local function ScrollRows(direction)
         if visibleRows == 0 then return end
@@ -441,10 +447,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end
     frame:SetScript("OnMouseWheel", function() ScrollRows(arg1) end)
     DFRL.layout.Register("guardianTracker", frame, function()
-        -- Match the health pill's right edge to the default minimap right edge.
-        local right = minimapDefaults.right / DEFAULT_SCALE + ROW_INSET - HEALTH_RIGHT_OFFSET
         frame:ClearAllPoints()
-        frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", right, -252 / DEFAULT_SCALE)
+        frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", defaults.right / DEFAULT_SCALE, -defaults.top / DEFAULT_SCALE)
     end, {
         labelAbove = true,
         refreshDefault = true,
