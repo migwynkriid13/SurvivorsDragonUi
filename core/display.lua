@@ -325,9 +325,9 @@ DFRL:NewMod("Display", 0, function()
     end
 
     function display.Get(key) return Read(draft or _G.SurvivorsDragonUiDisplay, key) end
-    function display.BossIcon() return bossArt[display.Get("bossIconStyle")] end
+    function display.BossIcon() return bossArt[DFRL.display.Get("bossIconStyle")] end
     function display.GuardianIcon()
-        return display.Get("guardianIconStyle") == "original" and originalCrest
+        return DFRL.display.Get("guardianIconStyle") == "original" and originalCrest
             or tex .. "waypoint\\GuardianFloating.blp"
     end
     function display.Copy(source) return Normalize(source) end
