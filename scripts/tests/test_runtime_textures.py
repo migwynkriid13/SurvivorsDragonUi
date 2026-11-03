@@ -53,37 +53,39 @@ class RuntimeTextureTests(unittest.TestCase):
         width, height, levels = blp_bgra_levels((directory / "Frame.blp").read_bytes())
         self.assertEqual((source_width, source_height), (128, 128))
         self.assertEqual((width, height), (512, 128))
-        empty, retired = bytearray(), bytearray()
+        empty = bytearray()
         for row in range(128):
             left = (row * width + 256) * 4
             empty.extend(levels[0][left:left + 128 * 4])
-            left = (row * width + 384) * 4
-            retired.extend(levels[0][left:left + 128 * 4])
         self.assertEqual(empty, source_levels[0], "empty slots received equipped brightness or another crop")
-        self.assertFalse(any(retired), "retired full-housing brightness cell still contains pixels")
 
         width, height, gemmed = blp_bgra_levels((directory / "GemmedRunecarver.blp").read_bytes())
         self.assertEqual((width, height, len(gemmed)), (512, 128, 1))
 
-        def pixel(cell, x, y):
+        def pixel(pixels, cell, x, y):
             offset = (y * width + cell * 128 + x) * 4
-            blue, green, red, alpha = gemmed[0][offset:offset + 4]
+            blue, green, red, alpha = pixels[offset:offset + 4]
             return red, green, blue, alpha
 
-        for cell, dominant_channel in enumerate((1, 2, 2, 0)):
-            with self.subTest(cell=cell):
+        crops = [(levels[0], 3, None)]
+        crops.extend((gemmed[0], cell, channel) for cell, channel in enumerate((1, 2, 2, 0)))
+        for pixels, cell, dominant_channel in crops:
+            with self.subTest(cell=cell, dominant_channel=dominant_channel):
                 for x, y in ((64, 17), (21, 64), (95, 34), (95, 94), (64, 6)):
-                    rgb = pixel(cell, x, y)
+                    rgb = pixel(pixels, cell, x, y)
                     self.assertGreater(rgb[3], 0)
-                    self.assertEqual(rgb[dominant_channel], max(rgb[:3]))
-                self.assertEqual(pixel(cell, 64, 64)[3], empty[(64 * 128 + 64) * 4 + 3])
-                self.assertEqual(pixel(cell, 0, 64)[3], empty[(64 * 128) * 4 + 3])
+                    if dominant_channel is None:
+                        self.assertLessEqual(max(rgb[:3]) - min(rgb[:3]), 2)
+                    else:
+                        self.assertEqual(rgb[dominant_channel], max(rgb[:3]))
+                self.assertEqual(pixel(pixels, cell, 64, 64)[3], empty[(64 * 128 + 64) * 4 + 3])
+                self.assertEqual(pixel(pixels, cell, 0, 64)[3], empty[(64 * 128) * 4 + 3])
                 # The selected metal sample is solid and outside every gem.
                 offset = (64 * 128 + 110) * 4
                 blue, green, red, alpha = empty[offset:offset + 4]
                 self.assertEqual(alpha, 255)
-                self.assertEqual(pixel(cell, 110, 64), (red, green, blue, alpha))
-        self.assertNotEqual(pixel(1, 64, 6), pixel(2, 64, 6), "blue and purple share the same halo")
+                self.assertEqual(pixel(pixels, cell, 110, 64), (red, green, blue, alpha))
+        self.assertNotEqual(pixel(gemmed[0], 1, 64, 6), pixel(gemmed[0], 2, 64, 6), "blue and purple share the same halo")
 
     def test_every_shipped_texture_fits_the_native_device_size_gate(self):
         manifest = json.loads((ROOT / "packaging/runtime-files.json").read_text())

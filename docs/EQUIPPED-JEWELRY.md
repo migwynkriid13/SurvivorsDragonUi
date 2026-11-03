@@ -1,6 +1,6 @@
 # Equipped jewelry
 
-The Runecarver artwork uses grey-metal housings matched to the action bar. Runecarver supplies the surround: the old circle is removed from the top and sides, while attached jewelry keeps the small bottom arch that joins the bar. Uncommon through legendary items add a crown gem, three socket stones and a soft outer halo in their rarity color. The row meets the original straight action-bar edge, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
+The Runecarver artwork uses grey-metal housings matched to the action bar. Runecarver supplies the surround: the old circle is removed from the top and sides, while attached jewelry keeps the small bottom arch that joins the bar. Equipped items add a crown gem, three socket stones and a soft outer halo in their rarity color. The row meets the original straight action-bar edge, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
 
 ## Settings and placement
 
@@ -33,9 +33,10 @@ table supplies RGB. Missing, failed or invalid metadata keeps the existing
 green hover-text fallback while the normal equipment refresh retries. It never
 keeps a removed item's color. Empty slots have no hover card.
 
-Green, blue, purple and orange gems and halos follow the native item quality.
-Empty slots, poor/common items and unavailable or unsupported qualities use
-the original grey housing. Effects-only hover text uses native rarity RGB.
+Silver, green, blue, purple and orange gems and halos follow native item
+quality. Poor and common items share silver. Empty slots and unavailable or
+unsupported qualities use the original grey housing. Effects-only hover
+text uses native rarity RGB.
 Both Performance Mode states and layout editing share the static artwork.
 Sources and preparation are recorded in
 [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md).

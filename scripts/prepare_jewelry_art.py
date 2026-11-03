@@ -13,6 +13,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 from prepare_client_textures import image_from_bytes
+from prepare_jewelry_runecarver import SILVER_PALETTE, gemmed_housing
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -40,9 +41,9 @@ def prepare(sources, output):
     for index in range(5):
         canvas.alpha_composite(rim, (98 + index * 88, 50))
     prepare_pet_rim(canvas)
-    # The retired neutral-rim runtime cell holds the shared original housing.
     housing = rgba(ROOT / "media/tex/jewelry/Runecarver.tga")
     canvas.paste(housing, (896, 0))
+    canvas.paste(gemmed_housing(housing, SILVER_PALETTE), (896, 128))
     output.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(output, compression=None)
 

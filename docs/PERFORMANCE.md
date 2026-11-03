@@ -338,19 +338,19 @@ This removes five allocated regions and old circle pixels, without a new
 reader, event, updater or setting. No live rendering or FPS result is claimed.
 
 The original `Runecarver.tga` supplies the neutral crop at x=256–384 in
-`Frame.blp`. `GemmedRunecarver.blp` adds four 128-square crops, each baking
-the same grey housing, crown gem, three socket stones and rarity halo.
-The former bright cell in `Frame.blp` is clear. The new atlas is 512 × 128
-and occupies 263,316 bytes in the runtime payload.
+`Frame.blp`. The neighbouring x=384–512 cell contains the silver version
+for poor and common items. `GemmedRunecarver.blp` contains the other four
+rarity crops. Each rarity crop bakes the grey housing, crown gem, three
+socket stones and halo into one 128-square image. Both atlases are 512 × 128.
 
 The existing five-Hz reader paints one housing region per slot. It switches
-texture only between neutral and gemmed artwork and updates UVs only when
+texture only when switching atlases and updates UVs only when
 the displayed crop changes. Settled slots skip rarity preparation. The
 reader defers hidden painting, retries failed bindings and uses the neutral
 crop while gemmed artwork is unavailable. Both Performance Mode states and
 editing share the static artwork.
 
-CI cases cover the four crops, the unchanged neutral pixels, native tooltip
+CI cases cover the five rarity crops, the original neutral pixels, native tooltip
 RGB, changed-only writes, failed bindings and hidden recovery. In-game
 appearance and FPS remain unverified.
 

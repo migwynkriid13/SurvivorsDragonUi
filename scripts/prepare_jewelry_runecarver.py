@@ -22,6 +22,7 @@ SOURCE_SHA256 = "8df6e6c889eda1e100b9550762b573a647730b0435a6702ae194b55b830f124
 FRAME_RECT = (451, 1135, 899, 1589)
 GLOW_RECT = (1, 1135, 449, 1589)
 SOURCE_SATURATION = 0.05
+SILVER_PALETTE = ("#c8c8c8", "#f9f9f9", "#737373")
 # Uncommon through legendary, in the order used by the runtime UVs.
 GEM_PALETTES = (
     ("#57e734", "#d8ffbd", "#237212"),
@@ -32,14 +33,14 @@ GEM_PALETTES = (
 
 
 def runtime_housing(path, housing):
-    """Keep the original housing and clear the retired brightness cell."""
+    """Keep the original housing and fill its neighbouring silver cell."""
     data = bytearray(path.read_bytes())
     width, height, levels = blp_bgra_levels(data)
     if (width, height) != (512, 128) or data[8] != 3 or len(levels) != 1:
         raise ValueError("Expected the existing single-level Raw3 jewelry atlas")
     offset = struct.unpack_from("<I", data, 20)[0]
     stride = 128 * 4
-    for left, image in ((256, housing), (384, Image.new("RGBA", (128, 128)))):
+    for left, image in ((256, housing), (384, gemmed_housing(housing, SILVER_PALETTE))):
         pixels = image.tobytes("raw", "BGRA")
         for row in range(128):
             start = offset + (row * width + left) * 4
@@ -131,7 +132,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, help="Prepare the neutral input from the pinned Blizzard sheet")
     parser.add_argument("--output", type=Path, default=ROOT / "media/tex/jewelry/Runecarver.tga")
-    parser.add_argument("--runtime", type=Path, help="Refresh the shared neutral crop and clear the retired cell")
+    parser.add_argument("--runtime", type=Path, help="Refresh the shared neutral and silver crops")
     parser.add_argument("--rarity", type=Path, help="Build the equipped gem and halo atlas")
     options = parser.parse_args()
     if not (options.source or options.runtime or options.rarity):

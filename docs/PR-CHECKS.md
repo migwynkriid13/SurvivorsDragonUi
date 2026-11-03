@@ -178,10 +178,10 @@ local work is artwork preparation, source review and pinned formatting, with
 no local tests, standalone validation or addon/game execution.
 
 Jewelry rarity cases extract the production quality, artwork and retirement
-helpers. They cover ranks 2–5, neutral fallback, raw tooltip RGB, changed-only
+helpers. They cover ranks 0–5, the shared silver crop, neutral fallback, raw tooltip RGB, changed-only
 bindings and UVs, mode parity, failed binding retries and hidden slot recovery.
 The fake native boundary rejects extra overlay allocation. Asset cases pin
-the authoring SHA-256 and neutral crop and inspect the four gem and halo cells,
+the authoring SHA-256 and neutral crop and inspect the five gem and halo cells,
 their clear opening and a shared solid metal pixel. These cases run in CI only.
 
 Jewelry cache cases use the exact production reader/cache/compositor functions

@@ -1,9 +1,10 @@
 -- Five equipped jewelry sockets, attached by default and optionally independent.
 --[[
 Selected 03 Runecarver housings use grey metal matching the action-bar surround.
-Uncommon through legendary use a crown gem, three socket stones and a static
-outer halo baked over the original grey housing. Effects-only hover text keeps
-the native rarity color. Empty slots and other qualities use the neutral crop.
+Known poor through legendary items use a crown gem, three socket stones and
+a static outer halo baked over the original grey housing. Poor and common
+share the silver treatment. Effects-only hover text keeps native rarity RGB.
+Empty slots and unavailable or unsupported qualities use the neutral crop.
 Five housing regions inherit the overlay's visibility and scale in both modes.
 SocketRail BLP strips retain the straight bar edge and small bottom arch with
 clear item openings, using pixels from the existing HDActionBar.tga. Only its
@@ -99,7 +100,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local socketBounds = math.max(socketSize, carvingSize)
     local ANIMATION_INTERVAL = 1 / 30
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
-    local NEUTRAL_CARVING = texturePath .. "Frame.blp"
+    local SHARED_CARVING = texturePath .. "Frame.blp"
     local GEMMED_CARVING = texturePath .. "GemmedRunecarver.blp"
     local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
     local EMPTY_TEXTURES = {
@@ -580,15 +581,15 @@ DFRL:NewMod("Jewelry", 4, function()
         local previous = slot.carvingQuality
         if previous == quality then return true end
         local carving = slot.carving
-        if previous == nil or (previous == 0) ~= (quality == 0) then
-            local path = quality == 0 and NEUTRAL_CARVING or GEMMED_CARVING
+        if previous == nil or (previous < 2) ~= (quality < 2) then
+            local path = quality < 2 and SHARED_CARVING or GEMMED_CARVING
             local loaded = carving:SetTexture(path)
             if not T.TextureAssigned(loaded, carving:GetTexture(), path) then
                 slot.carvingQuality = nil
                 return false
             end
         end
-        local left = quality == 0 and 256 or (quality - 2) * 128
+        local left = quality < 2 and (256 + quality * 128) or (quality - 2) * 128
         carving:SetTexCoord(left / 512, (left + 128) / 512, 0, 1)
         slot.carvingQuality = quality
         return true
@@ -598,8 +599,9 @@ DFRL:NewMod("Jewelry", 4, function()
             slot.carvingPending = true
             return
         end
-        local quality = slot.texture and slot.qualityR and slot.quality or 0
-        if quality < 2 or quality > 5 then quality = 0 end
+        local rank = slot.texture and slot.qualityR and slot.quality
+        -- Crop 0 is the unadorned housing. Poor and common share crop 1.
+        local quality = rank and rank <= 5 and math.max(1, rank) or 0
         local ready = PaintCarving(slot, quality)
         local shown = ready or (quality ~= 0 and PaintCarving(slot, 0))
         if shown and not slot.carving:IsShown() then

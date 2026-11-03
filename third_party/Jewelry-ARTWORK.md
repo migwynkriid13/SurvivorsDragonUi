@@ -13,27 +13,27 @@ Selected **03 — Cold-lit runes** uses static Runecarver metal and rune accents
 
 `scripts/prepare_jewelry_runecarver.py --source /path/to/RuneCarvingUI.PNG` accepts only the pinned source bytes. It clears the original inner crafting controls with an antialiased normalized-radius 0.33 cut, resizes the remaining lit frame to 118 × 120 and places it at `(5,4)` on a transparent 128 × 128 canvas. The original halo resizes to 124 × 126 at `(2,1)`, with source alpha multiplied by 0.32, below the frame. The completed cell blends 95% grayscale with 5% source RGB, retaining the original shading and alpha. This original empty-slot housing remains the unchanged `media/tex/jewelry/Runecarver.tga` authoring input. CI pins its original SHA-256 and exact runtime pixels.
 
-Empty slots, poor/common items and unavailable or unsupported rarities use the
-original grey housing. Native ranks 2–5 use the approved gem and halo palette
-in order: green `57E734`, blue `278DF4`, purple `B44DF2` and orange `FF891E`.
+Empty slots and unavailable or unsupported rarities use the original grey
+housing. Poor and common items share silver `C8C8C8`. Native ranks 2–5 use
+green `57E734`, blue `278DF4`, purple `B44DF2` and orange `FF891E` in order.
 Effects-only hover text uses native RGB.
 
 `--runtime media/tex/jewelry/Frame.blp` writes the original neutral cell
-`(256,0)-(384,128)` and clears the former bright cell at x=384–512. It
-preserves the atlas header, stock gold and shared pet/meter artwork.
+`(256,0)-(384,128)` and the silver cell `(384,0)-(512,128)`. It preserves
+the atlas header, stock gold and shared pet/meter artwork.
 
-For a full rebuild, `prepare_jewelry_art.py` places the original input at
-`(896,0)-(1024,128)` in its authoring canvas. The client-texture repacker
-copies it to x=256 in the **512 × 128** `Frame.blp`.
+For a full rebuild, `prepare_jewelry_art.py` places the neutral and silver
+cells at `(896,0)` and `(896,128)` in its authoring canvas. The client-texture
+repacker copies them to x=256 and x=384 in the **512 × 128** `Frame.blp`.
 
-Build the equipped atlas from the retained neutral input with
+Build the four-color atlas from the retained neutral input with
 `python3 scripts/prepare_jewelry_runecarver.py --rarity media/tex/jewelry/GemmedRunecarver.blp`.
 Each 128-square cell composites a radial rarity halo behind the original
 housing and four faceted stones above it. The halo uses 20% more opacity than
 the approved preview and blends its color 7% toward white. It fades to
 transparent by radius 61 and clears the item opening. The crown sits at `(64,17.5)`,
 and the smaller stones sit at `(21,64)`, `(95,34)` and `(95,94)`.
-The generated geometry uses the same grey bezels for all four palettes.
+The generated geometry uses the same grey bezels for all five palettes.
 
 Each static `BORDER` region is centered on its icon at local size
 `43 * 128 / 108`. The visible reader caches the successful texture and crop.

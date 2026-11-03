@@ -2,7 +2,7 @@
 assert(_VERSION == "Lua 5.1", "jewelry rarity fixtures require CI Lua 5.1")
 local env = setmetatable({}, { __index = _G })
 env._G = env
-env.NEUTRAL_CARVING, env.GEMMED_CARVING = "Frame.blp", "GemmedRunecarver.blp"
+env.SHARED_CARVING, env.GEMMED_CARVING = "Frame.blp", "GemmedRunecarver.blp"
 local visible, unavailable = true, nil
 local writes = { texture = 0, uv = 0, visibility = 0 }
 local methods = {}
@@ -53,16 +53,23 @@ local function Housing(path, left)
     assert(region.uv[3] == 0 and region.uv[4] == 1)
 end
 api.Clear(slot)
-Housing(env.NEUTRAL_CARVING, 256)
+Housing(env.SHARED_CARVING, 256)
 slot.texture, slot.empty = "native:item", nil
-for _, rank in ipairs({ 0, 1, 6 }) do
+local bindings, crops = writes.texture, writes.uv
+for rank = 0, 1 do
     quality = rank
     api.Quality(slot)
     api.Update(slot)
-    Housing(env.NEUTRAL_CARVING, 256)
-    assert(slot.quality == rank and slot.qualityR == red, "neutral artwork lost native tooltip metadata")
+    Housing(env.SHARED_CARVING, 384)
+    assert(slot.quality == rank and slot.qualityR == red, "silver artwork lost native tooltip metadata")
 end
-local bindings, crops = writes.texture, writes.uv
+assert(writes.texture == bindings and writes.uv == crops + 1, "poor and common should share one silver crop")
+quality = 6
+api.Quality(slot)
+api.Update(slot)
+Housing(env.SHARED_CARVING, 256)
+assert(slot.quality == 6 and slot.qualityR == red, "neutral artwork lost native tooltip metadata")
+bindings, crops = writes.texture, writes.uv
 for rank = 2, 5 do
     quality = rank
     api.Quality(slot)
@@ -85,13 +92,13 @@ quality, red = 4, 2
 api.Quality(slot)
 api.Update(slot)
 assert(not slot.qualityR)
-Housing(env.NEUTRAL_CARVING, 256)
+Housing(env.SHARED_CARVING, 256)
 
 quality, red, unavailable = 4, 0.64, env.GEMMED_CARVING
 api.Quality(slot)
 api.Update(slot)
 assert(slot.carvingPending, "failed gemmed artwork must retry")
-Housing(env.NEUTRAL_CARVING, 256)
+Housing(env.SHARED_CARVING, 256)
 unavailable = nil
 api.Update(slot)
 assert(not slot.carvingPending)
@@ -105,7 +112,7 @@ assert(slot.carvingPending and not slot.qualityR and not slot.texture)
 assert(writes.texture == bindings and writes.uv == crops and writes.visibility == visibility)
 visible = true
 api.Clear(slot)
-Housing(env.NEUTRAL_CARVING, 256)
+Housing(env.SHARED_CARVING, 256)
 bindings, crops = writes.texture, writes.uv
 api.Clear(slot)
 assert(writes.texture == bindings and writes.uv == crops, "settled empty slot repeated artwork writes")
@@ -114,11 +121,11 @@ slot.texture, slot.empty = "native:return", nil
 api.Quality(slot)
 api.Update(slot)
 Housing(env.GEMMED_CARVING, 256)
-unavailable = env.NEUTRAL_CARVING
+unavailable = env.SHARED_CARVING
 api.Clear(slot)
 assert(not slot.carving.shown and slot.carvingPending, "failed neutral return showed stale gemmed artwork")
 unavailable = nil
 api.Clear(slot)
-Housing(env.NEUTRAL_CARVING, 256)
+Housing(env.SHARED_CARVING, 256)
 print("PASS Runecarver quality selects the approved gem and halo artwork through one reused housing region")
 print("PASS rarity keeps native tooltip RGB, changed-only writes, neutral fallback and hidden recovery")
