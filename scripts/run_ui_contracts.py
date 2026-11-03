@@ -31,9 +31,9 @@ def main():
         jewelry_cache = extract_source("modules/ui/jewelry.lua", [
             "ICON_SIZE", "ICON_ART_SIZE", "ICON_ZOOM", "iconSpan", "iconInset", "PrepareIconParts", "Number",
             "InvalidateEffects", "ReadEffects", "SetPlaceholderShown", "ClearSlot", "PaintIcons",
-            "Clear", "PaintCooldowns", "Refresh",
+            "Clear", "Refresh",
         ])
-        jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons, PrepareIconParts = PrepareIconParts, Clear = Clear, Cooldowns = PaintCooldowns, Refresh = Refresh }\n"
+        jewelry_cache = jewelry_cache.rsplit("\nreturn ", 1)[0] + "\nreturn { InvalidateEffects = InvalidateEffects, ReadEffects = ReadEffects, ClearSlot = ClearSlot, PaintIcons = PaintIcons, PrepareIconParts = PrepareIconParts, Clear = Clear, Refresh = Refresh }\n"
         jewelry_rarity = extract_source("modules/ui/jewelry.lua", [
             "Number", "PaintCarving", "UpdateRarity", "SetQuality", "UpdateQuality",
             "SetPlaceholderShown", "ClearSlot",

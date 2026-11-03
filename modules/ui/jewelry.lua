@@ -26,7 +26,7 @@ Empty-slot artwork: Gethe/wow-ui-textures, commit
 e80e3278cc833c89e1f3fc79557b68315d750935, PaperDoll/UI-PaperDoll-Slot-
 Finger.PNG, -Neck.PNG and -Trinket.PNG. World of Warcraft artwork remains
 copyright Blizzard Entertainment, distinct from the software license below.
-The cooldown atlas, gems and rarity halo are original generated artwork.
+The gems and rarity halo are original generated artwork.
 
 Applicable source notices (Blizzard artwork is distinct from MIT software):
 MIT License
@@ -98,7 +98,6 @@ DFRL:NewMod("Jewelry", 4, function()
     local socketSize = RIM_SIZE * 40 / 36
     local carvingSize = RIM_SIZE * 128 / 108
     local socketBounds = math.max(socketSize, carvingSize)
-    local ANIMATION_INTERVAL = 1 / 30
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SHARED_CARVING = texturePath .. "Frame.blp"
     local GEMMED_CARVING = texturePath .. "GemmedRunecarver.blp"
@@ -111,8 +110,7 @@ DFRL:NewMod("Jewelry", 4, function()
         "EmptyTrinket.blp",
     }
     local slots, slotsReady = {}, false
-    local inWorld, editing, attached, elapsed, animationElapsed = true, false, false, 0, 0
-    local cooldownsActive = false
+    local inWorld, editing, attached, elapsed = true, false, false, 0
     local shownWanted, wantedDocked, SyncUpdates, cleared = false, nil, nil, true
     local displayGeometry = {}
     local function Docked()
@@ -550,13 +548,6 @@ DFRL:NewMod("Jewelry", 4, function()
         placeholder:Hide()
         slot.placeholder = placeholder
         slot.placeholderShown = false
-        local cooldown = button:CreateTexture(nil, "OVERLAY")
-        cooldown:SetTexture(texturePath .. "Cooldown.blp")
-        cooldown:SetWidth(ICON_ART_SIZE)
-        cooldown:SetHeight(ICON_ART_SIZE)
-        cooldown:SetPoint("CENTER", button, "CENTER", 0, 0)
-        cooldown:Hide()
-        slot.cooldown = cooldown
         button:SetScript("OnEnter", function() ShowTooltip(slot) end)
         button:SetScript("OnLeave", function() HideTooltip(slot) end)
         button:SetScript("OnHide", function() HideTooltip(slot) end)
@@ -681,8 +672,6 @@ DFRL:NewMod("Jewelry", 4, function()
         SetPlaceholderShown(slot, placeholderShown)
         if slot.texture or slot.artTexture then iconsDirty = true end
         slot.texture, slot.artTexture = nil, nil
-        if slot.painted then slot.cooldown:Hide() end
-        slot.start, slot.duration, slot.painted = nil, nil, nil
         SetQuality(slot)
         UpdateRarity(slot)
         HideTooltip(slot)
@@ -693,7 +682,6 @@ DFRL:NewMod("Jewelry", 4, function()
         cleared = true
         shownWanted, wantedDocked = false, nil
         formattedCache, cacheSize = {}, 0
-        cooldownsActive = false
         for _, slot in ipairs(slots) do
             ClearSlot(slot)
         end
@@ -709,7 +697,7 @@ DFRL:NewMod("Jewelry", 4, function()
         end
     end)
     hud:SetScript("OnShow", function()
-        elapsed, animationElapsed = INTERVAL, ANIMATION_INTERVAL
+        elapsed = INTERVAL
         if SyncUpdates then SyncUpdates() end
         if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(Docked()) end
     end)
@@ -727,51 +715,6 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         slotsReady = true
         return true
-    end
-    local function UpdateCooldown(slot)
-        if type(GetInventoryItemCooldown) ~= "function" then
-            slot.start, slot.duration = nil, nil
-            return
-        end
-        local ok, start, duration, enabled = pcall(GetInventoryItemCooldown, "player", slot.id)
-        if
-            not ok
-            or not Number(start)
-            or not Number(duration)
-            or not Number(enabled)
-            or start <= 0
-            or duration <= 0
-            or enabled <= 0
-        then
-            slot.start, slot.duration = nil, nil
-            return
-        end
-        slot.start, slot.duration = start, duration
-    end
-    local function PaintCooldowns()
-        if not cooldownsActive or not hud:IsVisible() then return end
-        local now = type(GetTime) == "function" and GetTime() or nil
-        local active = false
-        for _, slot in ipairs(slots) do
-            local frame
-            if slot.texture and Number(now) and slot.start and slot.duration then
-                local remaining = slot.duration - (now - slot.start)
-                if remaining > 0 then frame = math.ceil(math.min(1, remaining / slot.duration) * 63) end
-            end
-            if frame then
-                if frame ~= slot.painted then
-                    local column, row = math.mod(frame, 8), math.floor(frame / 8)
-                    slot.cooldown:SetTexCoord(column / 8, (column + 1) / 8, row / 8, (row + 1) / 8)
-                    if not slot.painted then slot.cooldown:Show() end
-                    slot.painted = frame
-                end
-            elseif slot.painted then
-                slot.cooldown:Hide()
-                slot.painted = nil
-            end
-            if slot.start or slot.painted then active = true end
-        end
-        cooldownsActive = active
     end
     local function CanPaint()
         local docked = Docked()
@@ -809,7 +752,6 @@ DFRL:NewMod("Jewelry", 4, function()
             Clear()
             return
         end
-        cooldownsActive = false
         for _, slot in ipairs(slots) do
             local ok, texture = pcall(GetInventoryItemTexture, "player", slot.id)
             if ok and type(texture) == "string" and texture ~= "" then
@@ -817,12 +759,10 @@ DFRL:NewMod("Jewelry", 4, function()
                 if slot.texture ~= texture then SetIcon(slot, texture) end
                 local qualityChanged = UpdateQuality(slot)
                 if qualityChanged or slot.carvingPending then UpdateRarity(slot) end
-                UpdateCooldown(slot)
                 if hoveredSlot == slot then ShowTooltip(slot) end
             else
                 ClearSlot(slot, ok and (texture == nil or texture == ""))
             end
-            if slot.start or slot.painted then cooldownsActive = true end
         end
         if iconsDirty then PaintIcons() end
     end
@@ -885,7 +825,6 @@ DFRL:NewMod("Jewelry", 4, function()
             DFRL.SetActionBarJewelryTop(top)
         end
         Refresh()
-        PaintCooldowns()
         if SyncUpdates then SyncUpdates() end
         if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(docked and hud:IsVisible() and true or false) end
     end
@@ -919,21 +858,19 @@ DFRL:NewMod("Jewelry", 4, function()
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
     controller:RegisterEvent("PLAYER_LOGOUT")
     controller:RegisterEvent("UNIT_INVENTORY_CHANGED")
-    controller:RegisterEvent("BAG_UPDATE_COOLDOWN")
     controller:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
-            elapsed, animationElapsed = 0, 0
+            elapsed = 0
             Clear()
         elseif event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
-            elapsed, animationElapsed = 0, 0
+            elapsed = 0
             Clear()
             PlaceSlots()
             Refresh()
-            PaintCooldowns()
-        elseif event ~= "UNIT_INVENTORY_CHANGED" or arg1 == "player" then
-            if event == "UNIT_INVENTORY_CHANGED" then InvalidateEffects() end
+        elseif arg1 == "player" then
+            InvalidateEffects()
             elapsed = INTERVAL
         end
     end)
@@ -943,15 +880,9 @@ DFRL:NewMod("Jewelry", 4, function()
             PlaceEffectTooltip(hoveredSlot)
         end
         elapsed = elapsed + arg1
-        animationElapsed = animationElapsed + arg1
         if elapsed >= INTERVAL then
             elapsed = 0
             Refresh()
-            animationElapsed = ANIMATION_INTERVAL
-        end
-        if animationElapsed >= ANIMATION_INTERVAL then
-            animationElapsed = 0
-            if cooldownsActive then PaintCooldowns() end
         end
     end
     SyncUpdates = function()
@@ -959,7 +890,7 @@ DFRL:NewMod("Jewelry", 4, function()
         controller:SetScript("OnUpdate", visible and Tick or nil)
     end
     local function VisibilityChanged()
-        elapsed, animationElapsed = INTERVAL, ANIMATION_INTERVAL
+        elapsed = INTERVAL
         SyncUpdates()
     end
     DFRL.layout.ListenVisibility("actionBar", VisibilityChanged)

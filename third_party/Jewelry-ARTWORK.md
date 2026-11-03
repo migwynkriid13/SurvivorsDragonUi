@@ -58,7 +58,7 @@ Original World of Warcraft artwork remains copyright Blizzard Entertainment. The
 
 Native item hover frames remain 32 by 32 at local vertical center 46.5.
 The rendered item uses a centered artwork box set by `ICON_ART_SIZE` (currently 33.897596 units), shared by empty-slot
-pictures and cooldown shade geometry. At reference 36-unit buttons this is
+pictures. At reference 36-unit buttons this is
 about 28.38 UI units, fitting inside the unchanged Runecarver opening. The
 sixteen source bands keep the original fourteen interior UV windows, while
 midpoint widths restore nonzero top and bottom caps. Uniform inset scaling
@@ -69,8 +69,6 @@ Parts carry their scaled height of `ICON_ART_SIZE / 16` local units. A full five
 and hidden/world retirement. No icon getter, clock, worker, frame, extra border
 or saved value is added. This fit correction supersedes the earlier exact
 fourteen-band geometry requirement; native rendering remains unverified.
-
-`media/tex/jewelry/Cooldown.tga` is original generated geometry: an 8-by-8 atlas of 64 circular shade states, each 64 by 64 pixels on a transparent 512-by-512 canvas. State zero is clear, and states 1–63 cover increasing clockwise fractions of the circle, with transparent cell padding. The runtime selects a state from native inventory cooldown values and the native `GetTime` clock; it does not advance a private gameplay timer. The shade remains inside the icon circle and Runecarver housing.
 
 Pet frames use the runtime 72-by-72 crop `(129,1)-(201,73)`, from
 authoring rectangle `(576,56)-(648,128)`. `prepare_pet_rim` copies the original first rim's
@@ -120,7 +118,7 @@ The old `SocketDetached.tga` / `SocketDetached.blp` drew a second silver circle
 behind every detached Runecarver housing. Both files and their runtime-manifest
 entry are removed. Jewelry no longer creates those five backing regions or
 shows/hides them when attachment changes. Runecarver, item icons, empty-slot
-pictures, cooldowns, hover frames and the original detached placement remain.
+pictures, hover frames and the original detached placement remain.
 
 ## Original WoW empty-slot pictures
 
@@ -136,7 +134,7 @@ The painted pictures receive an additional 20% brightness increase after their o
 
 The script writes the existing uncompressed RGBA `EmptyNeck.tga`, `EmptyRing.tga` and `EmptyTrinket.tga` preparation inputs. Run `scripts/prepare_client_textures.py` afterwards to produce their existing **BLP2 Raw3** runtime files with the required palette block. Conversion preserves all prepared pixels; TGA inputs, original PNGs, the generator and optional contact sheet stay outside the runtime manifest. No new runtime filename is needed.
 
-The full 64-by-64 image maps to the existing 32-by-32 placeholder frame, independently of the equipped item’s 5% zoom and cropped strips. Both rings share the ring picture and both trinkets share the trinket picture. Attached and detached rows retain their original rims, dimensions and placement; no native reads, tooltip/cooldown state, layout lifecycle, setting or saved value changes. Only static artwork preparation and previews were performed; game-side rendering remains unverified.
+The full 64-by-64 image maps to the existing 32-by-32 placeholder frame, independently of the equipped item’s 5% zoom and cropped strips. Both rings share the ring picture and both trinkets share the trinket picture. Attached and detached rows retain their original rims, dimensions and placement; no native reads, tooltip state, layout lifecycle, setting or saved value changes. Only static artwork preparation and previews were performed; game-side rendering remains unverified.
 
 The following historical static preview shows the original placeholder preparation with the former gold rim. That extra rim is no longer drawn by jewelry; the current Runecarver-only preview is above. It is artwork evidence, not an in-game capture. The preview is outside the runtime manifest.
 

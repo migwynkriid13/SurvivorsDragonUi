@@ -173,9 +173,11 @@ validation or addon/game execution. Native appearance and FPS remain unverified.
 ## Jewelry, guardian roster, Layout and counters — 2026-11-03
 
 Both Performance Mode states skip settled jewelry rarity preparation, icon
-composition and repeated empty-slot retirement. Native inventory, rarity,
-cooldown and hovered metadata reads keep their existing five-Hz recovery;
-active cooldown shades retain thirty-Hz painting. No artwork or region changes.
+composition and repeated empty-slot retirement. Native inventory, rarity and
+hovered metadata reads keep their five-Hz recovery. Removing the jewelry
+cooldown shade also removes five texture regions, up to 25 native cooldown
+reads per second at the regular equipment cadence, the 30 Hz painting pass and
+the 525,460-byte runtime atlas.
 
 Guardian snapshots copy accepted lair metadata and recompute roster counts only
 when their revision/generation changes or a retired snapshot recovers. Native
@@ -296,11 +298,10 @@ The screenshot exposed flat top/bottom cuts after the old inner rim was removed.
 The old outer-edge circle formula made the first and last two-unit bands
 zero-width, so only fourteen bands rendered. Both caps now sample their band
 midpoint. The original fourteen interior source windows and 5% source zoom are
-retained; sixteen bands cover the complete selected UV height. Images,
-empty-slot pictures and cooldown shades share the current centered artwork box
-centered on the unchanged 32-unit hover frame, leaving clearance inside the existing
-Runecarver aperture. Slot centers, spacing, artwork, attachment and tooltip
-anchors remain unchanged.
+retained; sixteen bands cover the complete selected UV height. Item icons and
+empty-slot pictures share an artwork box centered on the 32-unit hover frame,
+leaving clearance inside the Runecarver opening. Slot centers, spacing, artwork,
+attachment and tooltip anchors stay in place.
 
 The two restored bands add two pooled texture regions per occupied icon:
 16 per icon, or 80 across five populated slots, ten more than before. They use
@@ -333,7 +334,7 @@ same. Detached jewelry no longer creates five hidden/visible backing-circle
 textures or updates their visibility on display changes. `SocketDetached.blp`
 and its authoring copy are retired from the repository and runtime manifest.
 The same five Runecarver housings supply the complete surround in both modes;
-item, placeholder, cooldown, hover and saved-placement behavior remain.
+item, placeholder, hover and saved-placement behavior remain.
 This removes five allocated regions and old circle pixels, without a new
 reader, event, updater or setting. No live rendering or FPS result is claimed.
 
@@ -386,29 +387,25 @@ hover still checks the link at the existing five-Hz equipment cadence but skips
 the private tooltip build, row reads and concatenation. Inventory changes,
 language changes, slot retirement and world cleanup invalidate those entries.
 Missing/throwing links, pending native items and empty effect rows stay uncached
-and retry at the existing cadence. Rarity, cooldowns and live tooltip placement
+and retry at the existing cadence. Rarity and live tooltip placement
 keep their separate readers and changed-only presentation.
 
 Jewelry placeholder visibility now records its own shown state on the existing
 slot. Refresh chooses the final empty/pending/occupied state once, so an empty
 picture is not hidden and reshown during every equipment read. Clear/disable,
 missing player and world cleanup retire that same state; inherited parent
-hiding leaves it intact for recovery. Cooldown visibility reuses the existing
-painted-frame state: Show occurs only when a shade first becomes active, and
-Hide occurs only when an active shade expires or its item retires. Changed
-cooldown frames still write the original UVs at the original painting cadence.
+hiding leaves it intact for recovery.
 
 At the regular five-Hz cadence, five settled occupied slots avoid 25 redundant
 placeholder Hide calls per second. Five settled empty slots avoid 50 placeholder
-Show/Hide calls and 25 already-hidden cooldown Hide calls per second. Native
-equipment/quality/cooldown reads, missing-data retries, hover behavior and both
-Performance Mode paths retain their existing cadence and ownership. The sixteen
+Show/Hide calls per second. Native equipment and quality reads, missing-data
+retries and hover behavior retain their cadence in both Performance Mode
+states. The sixteen
 icon bands, native textures, housing/glow passes, rarity RGB, alpha, layers,
 geometry and final visibility are unchanged. This reduces recurring native
 visibility writes and empty-picture layout churn, not persistent visible
 regions or measured GPU cost. CI-only cases cover occupied/empty transitions,
-failed/malformed inventory, hidden recovery, active/expired cooldowns and
-player/world/disable retirement without executing the addon locally.
+failed/malformed inventory, hidden recovery and player/world/disable retirement.
 
 Jewelry composition now reuses at most five grouping records, their slot lists
 and one texture-key lookup. Equipment changes clear old references before reuse;
@@ -1666,9 +1663,8 @@ Changing the mode clears or settles currently active effects immediately. Turnin
 it off restores the saved individual choices from current native state, without
 replaying old XP or damage-loss effects. Hidden presentation stays deferred;
 notification expiry, data gates, native HUD ownership and cleanup stay active.
-Navigation direction, custom combat-text travel, meaningful native cooldown
-swipes and jewelry cooldown progress retain their functional motion. This mode
-does not change native gameplay values, incoming combat feedback or game effects.
+Navigation direction, custom combat-text travel and native ability cooldown
+swipes retain their functional motion.
 
 Ability-ready suppression wraps only the seven existing cooldown Models'
 `OnUpdateModel` handlers, using their native timing fields to hide at completion
@@ -1902,8 +1898,8 @@ performance.
   dirty-driven; received timer presentation reuses publication identity while
   unhovered. Native phase/clock validation and owned decimal hover reads retain
   ten Hz, with static/paused/hidden retirement.
-- Timer flow/foam/red glints, cache affordability glow, jewelry cooldowns and
-  banner fades remain capped at thirty Hz. Warning gradients remain twenty Hz only while active.
+- Timer flow, foam, red glints, cache affordability glow and banner fades remain
+  capped at thirty Hz. Warning gradients remain twenty Hz while active.
   The resting icon stays static in both modes with event-driven visibility. Its
   compact 64-by-64 texture preserves the original static tile and filter pixels;
   the full animation BLP/TGA sheets are removed, reducing the runtime file from
@@ -1980,7 +1976,7 @@ has an active visual, native-data, ownership or readiness purpose:
 | Health-loss and XP effects                         | Frame updates exist only for active loss/gain/fade animation and detach on completion. Target health and XP reads are coalesced next-frame native/event work, not additional idle pollers.                                                                                                                           |
 | Resources, absorbs and pets                        | Ten-Hz native phase/current values/readiness; power events and feed receipts can refresh earlier. Hidden views retain retirement while skipping presentation/timer-only reads. Unreported native changes and failed icon/style readiness still need fallback.                                                        |
 | Native buffs/received timers                       | Native anchor repair follows native resets; timing uses the official getter at ten Hz while active. Hovered tooltips display tenths, so their required timing refresh stays. Paused/static/hidden timers already stop or defer work.                                                                                 |
-| Jewelry                                            | Five-Hz native equipment/cooldown and metadata readiness; active exact 64-cell cooldown painting at thirty Hz, cursor placement only while hovered. Sixteen-band inset sampling and the Runecarver housings remain.                                                                                                  |
+| Jewelry                                            | Five-Hz equipment and metadata recovery, with cursor placement only while hovered. Uses sixteen-band inset sampling and Runecarver housings.                                                                                                                                                                         |
 | Loot                                               | Service/readiness/native ownership and bounded queue delivery run every 1.5 seconds in both modes. Populated card fades/expiry and bounded five-Hz item-metadata retry keep their separate timing. Hidden cards must expire and free capacity; empty cosmetic pools already detach.                                  |
 | Banners                                            | Five-Hz registration/ownership/readiness, next-frame pending native errors and original thirty-Hz fade/expiry/promotion. Settled disabled/faulted cleanup already detaches.                                                                                                                                          |
 | Damage meter                                       | One-Hz regular native/legacy reads, readiness/ownership and rates; user actions prime next-frame reads. Off detaches; hidden views skip rows/rates/icon work. Accepted counter processing already has publication caches.                                                                                            |
@@ -3089,7 +3085,7 @@ kept separately so normal native state can resume on showing.
 | `bossBars`          | Hidden health/debuff text, icon allocation, timing getters and reflow stop. Existing hovers/debuff rows clear once on Hide. Native encounter validation, row retirement and takeover remain, including a valid empty boss list; Show requests fresh rows.                                                                                                                         |
 | `runTally`          | Hidden counter formatting/measurement and glow preparation stop. Native counter validation/takeover and attachment metadata remain; Show requests fresh presentation.                                                                                                                                                                                                             |
 | `xpBar`             | Native XP/level events still coalesce the latest tuple. Hidden gain animation stops and detaches, final private bar writes defer, and requested visibility changes only on transitions. Show restores the latest fraction and schedules a fresh instant read.                                                                                                                     |
-| `jewelryBar`        | Its existing polling controller detaches behind the active hidden Layout owner. Hidden inventory/cooldown reads, icon composition and cosmetic cooldown painting stop; visible recovery retries metadata. Attachment changes and world cleanup remain. The sixteen-band inset image fit is shared.                                                                                |
+| `jewelryBar`        | Its existing polling controller detaches behind the active hidden Layout owner. Hidden inventory reads and icon composition stop. Visible recovery retries metadata. Attachment changes and world cleanup remain. The sixteen-band inset image fit is shared.                                                                                                                     |
 | `minimap`           | Clock painting stops with its hidden parent. The glyph launcher stops its active drag and clears its hover; square-edge button projection/reflow stops until shown. Custom pins skip hidden styling/projection/facing work, while required native guardian-flag ownership/restoration continues at the existing lifecycle poll. The addon creates no full world-map presentation. |
 | `cacheWaypoint`     | Hidden guide interpolation, distance formatting, arrow rotation and facing samples stop. Native destination acceptance/selection, world cleanup and independently visible minimap markers remain.                                                                                                                                                                                 |
 | `guardianWaypoint`  | Same visibility boundary as cache guidance; accepted lairs still feed the guardian data foundation independently of this HUD's visibility.                                                                                                                                                                                                                                        |
@@ -3134,7 +3130,7 @@ must not be silently promoted to shipped optimizations.
 | `d1025bf`                                                          | Shared unchanged text/font guards; receipt-based run schedules and waypoint copies; changed-only nameplate styling; reusable guardian views; exact unit-event routing; completed player fades; hidden cosmetic suppression; retained full chat archive without repeated whole-history copying. |
 | `005687c`                                                          | Restore the original fourteen jewelry bands. A visually tempting central-band merge could change cropped-UV filtering at fractional scales. Appearance parity takes precedence over a smaller region count.                                                                                    |
 | `c9aadcb`                                                          | Group equal jewelry textures without changing their icon windows; assemble fixed timer backgrounds exactly; keep eight skull-glow copies but replace repeated clear/reanchor work with anchored geometric frames. Material/UV-clamp state and global ordering matter.                          |
-| `633a6f2`                                                          | Unchanged jewelry layout stays put and idle cooldowns skip paint traversal. Keep five-Hz native equipment/cooldown retries and active cosmetic cadence.                                                                                                                                        |
+| `633a6f2`                                                          | The jewelry layout stays put while its geometry matches. This change also gated the former cooldown painter.                                                                                                                                                                                   |
 | `a8bce4b`, `6bbde53`                                               | Alternative jewelry alias/repeat/subdivision proposals remain investigations. Exact rational identities and CPU float models do not establish identical rendered pixels or a net performance gain. Five distinct jewelry icons remain unresolved.                                              |
 | `aef95e3`                                                          | Revive stops completed fade writes; Level Up caches text bounds and requested visibility; class resources rebind changed styles with failed attempts retryable; loot caches icons/colors/placement; native primary-pet styling compares actual state after native resets.                      |
 | `5912dfd`                                                          | Character updates coalesce into one deferred callback, stop while hidden, reuse text/row/header measurements and repair actual native geometry. Quality-rim passes compare current RGB/visibility instead of hide/repaint cycles.                                                              |
@@ -3156,7 +3152,7 @@ remain in place; this is not a claim that every remaining cost is eliminated.
 | Frame group                                             | Owners and preserved performance boundary                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Pet summons and native primary pet                      | `modules/unit/pets.lua`, `modules/unit/mini.lua`: native cached circles, receipt/roster reuse, visible timer reads and actual native-state repair.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| Equipped jewelry                                        | `modules/ui/jewelry.lua`: original fourteen-strip UVs, grouped texture order, unchanged layout, idle cooldown gating and metadata retries.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| Equipped jewelry                                        | `modules/ui/jewelry.lua`: sixteen-band inset sampling, grouped texture order, unchanged layout and metadata retries.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | Run/boss/tally, guardian tracker                        | `modules/ui/run.lua`, `modules/ui/guardians.lua`, `modules/ui/guardian_tracker.lua`: receipt-based schedules/copies, pooled rows, hidden cosmetic guards, fixed pill backgrounds, retained marker/foam/glow equations and edge-to-edge bezel joins.                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Player/target/party, resources and portraits            | `modules/unit/player.lua`, `target.lua`, `mini.lua`, `resources.lua`, `portraits.lua`, `core/widgets.lua`: shared styling, completed fades, changed styles, exact native-unit routing, native health and model-paint evidence.                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Character and equipment                                 | `modules/ui/character.lua`: coalesced deferred work, measurement/discovery caches, actual native anchor repair and the three authored quality-rim passes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -3810,7 +3806,7 @@ by exact texture path, then strip, then slot. Equal images with the same UV
 window are adjacent for native batching. Their slot-relative anchors, dimensions,
 crop and order within each icon stay the same. The icons cannot overlap: their
 32-unit canvases have at least 43 units between centers, including while detached.
-Cooldowns retain their original layer; the Runecarver housing replaces the extra circular rim.
+The Runecarver housing replaces the extra circular rim.
 
 Equipped rarity retains one optional inventory-quality read per populated slot
 at the existing five-Hz equipment refresh. Native color lookup retries missing
@@ -3875,10 +3871,8 @@ remains unresolved; this PR does not present these candidates as a shipped fix.
 
 The follow-up nevertheless removes redundant work for every equipment
 combination: unrelated display previews retain unchanged row anchors and edit
-bounds, and inactive cooldowns skip their thirty-Hz paint traversal. Native
-equipment/cooldown retries remain at five Hz, and active cooldown painting keeps
-its original cadence and final clearing pass. These are update/layout savings,
-separate from the unresolved drawing cost.
+bounds. Native equipment retries run at five Hz. Skipping unchanged layout work
+reduces updates separately from the unresolved drawing cost.
 
 ## Timer rendering
 

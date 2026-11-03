@@ -39,13 +39,12 @@ env.HideTooltip = function(slot) slot.hidden = true end
 for _, slot in ipairs(env.slots) do
     slot.placeholderShown = false
     slot.placeholder = { Hide = function() end }
-    slot.cooldown = { Hide = function() end }
 end
 local chunk = assert(loadfile(arg[1]))
 setfenv(chunk, env)
 local api = chunk()
 -- Actual production geometry must include both caps and retain the full
--- selected UV height, with equal inset for items, placeholders and cooldowns.
+-- selected UV height, with equal inset for items and placeholders.
 local prepared = api.PrepareIconParts()
 assert(#prepared == 16, "jewelry lost a top/bottom cap")
 local firstEdge = prepared[1].top

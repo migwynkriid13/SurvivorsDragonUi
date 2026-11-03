@@ -126,7 +126,7 @@ message coalescing, wheel history and native expiry. These are CI-only cases,
 authored without local execution, and do not prove client appearance or FPS.
 
 The first shared cadence pass covers jewelry's changed-only rarity preparation
-and empty-slot cleanup while retaining five-Hz inventory/cooldown retries;
+and empty-slot cleanup while retaining five-Hz inventory retries;
 guardian snapshot-copy and revision-filter reuse with fresh native health and
 countdowns; unchanged gameplay Layout bypass with unannounced viewport recovery;
 shared stored-level scale sampling; and unchanged tally integer formatting in
@@ -189,11 +189,10 @@ over fake native tooltip and texture boundaries. They cover unchanged successful
 reads, same-icon item replacement, inventory/language invalidation, missing or
 throwing links/items, empty-row retries, slot retirement and reusable grouping
 records/regions with unchanged supplied crops. Jewelry visibility cases exercise
-the production refresh, retirement and cooldown painter in both Performance Mode
-states. Settled occupied and empty slots make no placeholder/cooldown visibility
-writes while native reads and failed-inventory retries continue. Empty pictures
-change only on the final native inventory state; active cooldowns keep the same
-atlas frames/expiry and Show only once. Hidden recovery, missing player, world
+the production refresh and retirement in both Performance Mode states. Settled
+occupied and empty slots make no placeholder visibility writes while native
+reads and failed-inventory retries continue. Empty pictures change only on the
+final native inventory state. Hidden recovery, missing player, world
 leave and disable retire/recover the existing regions without changing artwork,
 color, alpha or geometry. Pet-controller cases cover
 Layout-hidden sleep, deferred SCT icon learning, choice/run recovery and fresh

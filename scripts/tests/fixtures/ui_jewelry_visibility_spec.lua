@@ -5,7 +5,7 @@ local function Run(performanceMode)
     local env = setmetatable({}, { __index = _G })
     env._G = env
     env.performanceMode = performanceMode
-    local writes = { show = 0, hide = 0, uv = 0 }
+    local writes = { show = 0, hide = 0 }
     local methods = {}
     local function Region() return setmetatable({ shown = false }, { __index = methods }) end
     function methods:Show()
@@ -16,12 +16,8 @@ local function Run(performanceMode)
         writes.hide = writes.hide + 1
         self.shown = false
     end
-    function methods:SetTexCoord(...)
-        writes.uv = writes.uv + 1
-        self.uv = { ... }
-    end
-    local enabled, visible, player, now = true, true, true, 10
-    local textures, cooldowns, reads, qualityReads, cooldownReads = {}, {}, 0, 0, 0
+    local enabled, visible, player = true, true, true
+    local textures, reads, qualityReads = {}, 0, 0
     local rarityUpdates, retirements = 0, 0
     env.slots = {}
     for index = 1, 5 do
@@ -30,7 +26,6 @@ local function Run(performanceMode)
             id = index,
             placeholder = Region(),
             placeholderShown = false,
-            cooldown = Region(),
             carvingPending = true,
         }
     end
@@ -58,16 +53,10 @@ local function Run(performanceMode)
         if textures[id] == "throw" then error("native inventory pending") end
         return textures[id]
     end
-    env.GetTime = function() return now end
     env.SetIcon = function(slot, texture)
         slot.texture, slot.artTexture, env.iconsDirty = texture, texture, true
     end
     env.UpdateQuality = function() qualityReads = qualityReads + 1 end
-    env.UpdateCooldown = function(slot)
-        cooldownReads = cooldownReads + 1
-        local value = cooldowns[slot.id]
-        slot.start, slot.duration = value and value.start, value and value.duration
-    end
     env.SetQuality = function() retirements = retirements + 1 end
     env.UpdateRarity = function(slot)
         rarityUpdates = rarityUpdates + 1
@@ -83,9 +72,9 @@ local function Run(performanceMode)
     for _ = 1, 10 do
         api.Refresh()
     end
-    assert(reads == 50 and qualityReads == 50 and cooldownReads == 50, "native reads lost their refresh cadence")
+    assert(reads == 50 and qualityReads == 50, "native reads lost their refresh cadence")
     assert(rarityUpdates == 5, "unchanged occupied slots repeated rarity preparation")
-    assert(writes.show == 0 and writes.hide == 0 and writes.uv == 0, "occupied slots repeated visibility writes")
+    assert(writes.show == 0 and writes.hide == 0, "occupied slots repeated visibility writes")
     for index = 1, 5 do
         textures[index] = nil
     end
@@ -95,7 +84,7 @@ local function Run(performanceMode)
         api.Refresh()
     end
     assert(writes.show == 5 and writes.hide == 0 and reads == 105, "settled empty slots toggled or stopped retrying")
-    assert(qualityReads == 50 and cooldownReads == 50, "empty slots read unavailable item metadata")
+    assert(qualityReads == 50, "empty slots read unavailable item metadata")
     assert(retirements == 5 and rarityUpdates == 10, "settled empty slots repeated retirement or rarity work")
 
     local slot = env.slots[1]
@@ -113,46 +102,21 @@ local function Run(performanceMode)
     assert(not slot.placeholder.shown and writes.hide == 2, "malformed inventory kept placeholder art")
 
     textures[1] = "native:returned"
-    cooldowns[1] = { start = 10, duration = 4 }
     api.Refresh()
-    api.Cooldowns()
-    assert(slot.cooldown.shown and slot.painted == 63 and writes.show == 7)
-    local shows, hides, uvs = writes.show, writes.hide, writes.uv
-    api.Cooldowns()
-    assert(writes.uv == uvs and writes.show == shows and writes.hide == hides, "unchanged cooldown repeated painting")
-    now = 10.1
-    api.Cooldowns()
-    assert(slot.painted == 62 and writes.uv == uvs + 1, "cooldown sampling or atlas frame changed")
-    assert(writes.show == shows and writes.hide == hides, "moving cooldown repeated Show")
-    now = 14
-    api.Cooldowns()
-    api.Cooldowns()
-    assert(
-        not slot.cooldown.shown and not slot.painted and writes.hide == hides + 1,
-        "cooldown expiry did not hide once"
-    )
-    cooldowns[1] = { start = 20, duration = 4 }
-    now = 20
-    api.Refresh()
-    api.Cooldowns()
-    shows, hides = writes.show, writes.hide
+    assert(slot.texture == "native:returned" and not slot.placeholder.shown)
+    local shows, hides = writes.show, writes.hide
     textures[1] = nil
     api.Refresh()
     api.Refresh()
-    assert(slot.placeholder.shown and not slot.cooldown.shown and not slot.painted and not slot.start)
-    assert(
-        writes.show == shows + 1 and writes.hide == hides + 1,
-        "item removal repeated placeholder/cooldown transitions"
-    )
+    assert(slot.placeholder.shown and not slot.texture)
+    assert(writes.show == shows + 1 and writes.hide == hides, "item removal repeated placeholder transitions")
 
     visible, textures[1] = false, "native:hidden-change"
     local beforeReads = reads
-    shows, hides, uvs = writes.show, writes.hide, writes.uv
+    shows, hides = writes.show, writes.hide
     api.Refresh()
-    api.Cooldowns()
-    assert(reads == beforeReads and writes.show == shows and writes.hide == hides and writes.uv == uvs)
+    assert(reads == beforeReads and writes.show == shows and writes.hide == hides)
     visible = true
-    cooldowns[1] = nil
     api.Refresh()
     assert(reads == beforeReads + 5 and not slot.placeholder.shown, "hidden recovery retained stale placeholder state")
 
@@ -164,7 +128,7 @@ local function Run(performanceMode)
         hides = writes.hide
         api.Refresh()
         for _, entry in ipairs(env.slots) do
-            assert(not entry.placeholder.shown and not entry.placeholderShown and not entry.cooldown.shown)
+            assert(not entry.placeholder.shown and not entry.placeholderShown and not entry.texture)
         end
         assert(writes.hide == hides, "retired jewelry repeated visibility writes")
         player, env.inWorld, enabled = true, true, true
@@ -178,5 +142,5 @@ end
 
 Run(false)
 Run(true)
-print("PASS jewelry visibility changes once across occupied/empty/pending inventory and unchanged cooldown frames")
-print("PASS jewelry keeps cooldown sampling, expiry, hidden deferral and retirement/recovery in both modes")
+print("PASS jewelry changes visibility once across occupied/empty/pending inventory in both modes")
+print("PASS jewelry defers hidden work and recovers native equipment after retirement")

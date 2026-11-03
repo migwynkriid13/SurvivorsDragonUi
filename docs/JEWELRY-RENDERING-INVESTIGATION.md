@@ -117,4 +117,4 @@ the exact-arithmetic identity alone as a pixel-parity result.
 
 No prepared native item images, alternate renderer, client changes or game
 execution are included. The five-different-icons rendering request remains
-open. The existing universal layout/cooldown savings are separate improvements.
+open. Skipping unchanged layout work is a separate improvement.
