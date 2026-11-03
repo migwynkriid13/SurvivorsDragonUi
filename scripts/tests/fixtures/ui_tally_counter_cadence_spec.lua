@@ -110,6 +110,18 @@ Values(11, 201, 301)
 api.Update()
 assert(Value("kills") == "11" and Value("gold") == "201" and Value("chest") == "301")
 assert(not context.reads.clock and context.reads.formats == 6, "normal mode acquired a counter throttle")
+context:ResetCounts()
+for _ = 1, 10 do
+    api.Update()
+end
+assert(not context.reads.formats, "unchanged normal-mode counters repeated integer formatting")
+assert(context.reads.ownership == 10 and context.reads.fit == 30, "counter reuse skipped ownership or font retries")
+env.tallyFields[1].text.text = "native reset"
+api.Update()
+assert(Value("kills") == "11" and not context.reads.formats, "cached integer text lost actual-state repair")
+Values(11.9, 201.9, 301.9)
+api.Update()
+assert(not context.reads.formats, "equal final integers were formatted again")
 
 context.now = 10
 Mode(true)
@@ -127,10 +139,14 @@ assert(context.reads.fit == 3 and context.reads.ownership == 1, "counter throttl
 context.now = 15
 api.Update()
 assert(Value("kills") == "21" and Value("gold") == "401", "exact five-second deadline did not sample current counters")
+context.now = 20
+context:ResetCounts()
+api.Update()
+assert(not context.reads.formats, "unchanged Performance Mode samples reformatted cached integers")
 
 -- Ordinary mode notifications and style/attachment Hide/Show must not reset
 -- the same active sampling window and expose more frequent numeric changes.
-context.now = 16
+context.now = 21
 Mode(true)
 env.tally:Hide()
 env.tally:Show()
@@ -142,7 +158,7 @@ context:ResetCounts()
 api.Update()
 assert(Value("kills") == "22" and Value("gold") == "402", "leaving Performance Mode retained held numbers")
 assert(not context.reads.clock, "normal-mode restoration still sampled the throttle clock")
-context.now = 16.5
+context.now = 21.5
 Mode(true)
 Values(23, 403, 603)
 api.Update()

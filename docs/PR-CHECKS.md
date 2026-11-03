@@ -48,9 +48,10 @@ tests, standalone validation or addon/game execution were run. Native popup
 timing remains unverified.
 
 Stored-level Artisan cases cover all five source strips, fixed corners and
-central crests, matching five-part halo crops/anchors, caption-width fitting,
-region reuse, unchanged idle writes and the static panel with all six pulse
-textures disabled in Performance Mode and restored on Show. They use
+central crests, caption-width fitting, eight static texture regions, region
+reuse and unchanged idle writes. Both Performance Mode states retain the same
+panel, class-icon rim and count through Hide/Show and mode changes, with no
+cosmetic updater, pulse-only hover handlers or halo/highlight allocation. They use
 the existing complete-controller fixture, remain CI-only and do not establish
 native filtering, text metrics or artwork appearance.
 
@@ -113,6 +114,16 @@ An explicit Bash shell enables `pipefail`, so piping fixture/model output into
 `tee` cannot hide a failing check.
 
 ## UI work and cleanup tests
+
+The first shared cadence pass covers jewelry's changed-only rarity preparation
+and empty-slot cleanup while retaining five-Hz inventory/cooldown retries;
+guardian snapshot-copy and revision-filter reuse with fresh native health and
+countdowns; unchanged gameplay Layout bypass with unannounced viewport recovery;
+shared stored-level scale sampling; and unchanged tally integer formatting in
+both modes. Existing fixtures retain native handoff, hidden/world cleanup,
+pool reuse and Performance Mode's five-second kills/gold deadlines. These cases
+are authored for CI only and were not executed locally. They do not establish
+native publication timing, appearance or measured FPS improvement.
 
 Boss-row cases cover equal halves/thirds/quarters and larger counts, one/zero
 boss recovery, group resizing, native order and row reuse, independent health
@@ -726,7 +737,13 @@ The assertions cover:
   text-free, borderless talent/jewelry timer icons filling their existing buttons
   with positive and zero remaining time, stable received
   order at either anchor without ready/waiting movement, retained timer tooltips
-  and unchanged regular native aura handling. Separate Debuffs cases retain
+  and unchanged regular native aura handling. Publication cases require zero
+  repeated full-list reads for unhovered unchanged icons while phase/clock
+  validation continues. They cover ordinary run delivery, same-table/same-stamp
+  timer receipts, packet replacement, fresh hover entry, decimal updates,
+  foreign tooltip ownership, malformed/native-clock failure, ready-worker sleep,
+  hidden recovery and stale-packet rejection across phase/world retirement in
+  both modes. Separate Debuffs cases retain
   native button IDs/handlers, independent roots and slots, below-Buffs defaults,
   six-column wrapping, both flip directions, anchor repair, independently hidden
   groups, pending hidden reflow and pool reuse in both Performance Mode states.
@@ -738,6 +755,15 @@ The assertions cover:
   Shared Layout continues to own position/scale/visibility transactions, profiles
   and resets. These authored cases remain
   CI-only and were not run locally; native appearance remains unverified.
+- Chat frame cases require settled panes to skip traversal and opacity-wrapper
+  calls while native visibility/opacity repair remains immediate. The full
+  production owner covers level/stat coalescing, pending text on inactive panes,
+  future slides, wheel reveal/hold/expiry, hidden delivery deferral and mode/Show
+  recovery without view allocation. Nameplate cases require Performance Mode to
+  skip first shadow allocation, actually hide retained shadows, preserve names
+  and health, defer hidden preparation and reuse shadows through names-only and
+  normal recovery. These authored cases remain CI-only and do not prove FPS or
+  packaged-client appearance.
 - Extracted production unit-border transitions actually hide inactive party and
   portrait variants, restore the retained artwork on option changes and skip
   unchanged writes. These assertions distinguish shown state from alpha; they

@@ -127,6 +127,11 @@ The caption is present in all fourteen source/runtime catalogs. This adds no ass
 
 ## Editor refresh work
 
+During settled gameplay, an unchanged viewport returns before editor and
+restoration comparisons. The native width, height and scale still sample at
+ten Hz in both Performance Mode states, preserving recovery from unannounced
+changes. Unresolved defaults, world restoration and editing bypass this shortcut.
+
 Settled handle sizes and the grid are checked at most ten times per second, rather than once per rendered frame. Existing show/hide requests, new registrations, numeric Apply, profile loading, drag completion, editor entry and viewport changes request a refresh on the next frame. Shift-drag transitions also refresh the grid immediately. Native anchors keep handle positions attached to their regions; an active resize updates its own outline on every changed pointer sample. The bounded refresh still detects HUD size changes made outside the editor without adding native geometry hooks or another updater.
 
 The visible Layout page retains its ten-Hz coordinate sampling and protects focused or unapplied input. It caches the selected entry, geometry, hidden state and language. Unchanged samples skip formatting and widget writes; changed samples use the shared text helper and write the checkbox or height-field visibility only when necessary. Explicit selection, Apply, discard and page-show refreshes bypass the sample cache so edited text can always be restored.

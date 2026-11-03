@@ -3784,6 +3784,7 @@ DFRL:NewMod("RunTimers", 5, function()
             tallyAttachment.SetShown(false)
         end
         for _, field in ipairs(tallyFields) do
+            field.counterValue, field.counterText = nil, nil
             T.SetTextIfChanged(field.text, "")
         end
         SetGoldHighlight(false)
@@ -3828,7 +3829,11 @@ DFRL:NewMod("RunTimers", 5, function()
             local refreshCounters = TallyCountersDue()
             for _, field in ipairs(tallyFields) do
                 if refreshCounters or (field.key ~= "kills" and field.key ~= "gold") then
-                    T.SetTextIfChanged(field.text, tostring(math.floor(state[field.key])))
+                    local value = math.floor(state[field.key])
+                    if field.counterValue ~= value then
+                        field.counterValue, field.counterText = value, tostring(value)
+                    end
+                    T.SetTextIfChanged(field.text, field.counterText)
                 end
                 FitTallyField(field)
             end

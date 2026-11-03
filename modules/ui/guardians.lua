@@ -186,11 +186,12 @@ DFRL:NewMod("GuardianRoster", 2, function()
     -- No UI clock advances gameplay.
     function roster.GetSnapshot(snapshot)
         snapshot = snapshot or { rows = {}, counts = {} }
+        local changed = snapshot.revision ~= revision or snapshot.generation ~= generation or snapshot.status ~= "ready"
         snapshot.revision, snapshot.generation, snapshot.status = revision, generation, "inactive"
         local counts = snapshot.counts
-        counts.total, counts.living, counts.asleep, counts.fighting = 0, 0, 0, 0
-        counts.returning, counts.due, counts.empty = 0, 0, 0
         if not Active() then
+            counts.total, counts.living, counts.asleep, counts.fighting = 0, 0, 0, 0
+            counts.returning, counts.due, counts.empty = 0, 0, 0
             for index in ipairs(snapshot.rows) do
                 snapshot.rows[index] = nil
             end
@@ -200,6 +201,8 @@ DFRL:NewMod("GuardianRoster", 2, function()
         end
         snapshot.status = ready and "ready" or "unavailable"
         if not ready then
+            counts.total, counts.living, counts.asleep, counts.fighting = 0, 0, 0, 0
+            counts.returning, counts.due, counts.empty = 0, 0, 0
             for index in ipairs(snapshot.rows) do
                 snapshot.rows[index] = nil
             end
@@ -207,16 +210,45 @@ DFRL:NewMod("GuardianRoster", 2, function()
             snapshot.zone = nil
             return snapshot
         end
-        snapshot.zone = zone and Copy(zone, snapshot.zone) or nil
+        -- Only accepted lair publications change roster identity, status and
+        -- counts. Health and native remaining time still read every snapshot.
+        if changed then
+            counts.total, counts.living, counts.asleep, counts.fighting = 0, 0, 0, 0
+            counts.returning, counts.due, counts.empty = 0, 0, 0
+        end
+        if not zone then
+            snapshot.zone = nil
+        elseif
+            not snapshot.zone
+            or snapshot.zone.key ~= zone.key
+            or snapshot.zone.name ~= zone.name
+            or snapshot.zone.map ~= zone.map
+        then
+            snapshot.zone = Copy(zone, snapshot.zone)
+        end
         local health
         local now, clockRead
         for index, entry in ipairs(lairs) do
-            local row = Copy(entry, snapshot.rows[index])
-            counts.total = counts.total + 1
+            local row = snapshot.rows[index]
+            if changed then
+                row = Copy(entry, row)
+                counts.total = counts.total + 1
+                if Living(row) then
+                    row.status = row.state == "awake" and "fighting" or "asleep"
+                    counts.living = counts.living + 1
+                elseif Number(row.left) and row.left > 0 then
+                    row.status = "returning"
+                elseif row.left == 0 then
+                    row.status = "due"
+                else
+                    row.status = "empty"
+                end
+                counts[row.status] = counts[row.status] + 1
+                snapshot.rows[index] = row
+            end
             if Living(row) then
                 if not health then health = Health() end
-                row.status = row.state == "awake" and "fighting" or "asleep"
-                counts.living = counts.living + 1
+                row.hp, row.maximum, row.healthFraction = nil, nil, nil
                 local unit = health[row.id]
                 if unit then
                     row.hp, row.maximum = unit.hp, unit.maximum
@@ -226,22 +258,19 @@ DFRL:NewMod("GuardianRoster", 2, function()
                 if not clockRead then
                     now, clockRead = Native("AZS_GetRunTime"), true
                 end
-                row.status = "returning"
                 row.remaining = roster.Remaining(row.left, now)
             elseif row.left == 0 then
                 -- Due is confirmed by the native snapshot. A cosmetic zero
                 -- above never invents a return, spawn, or state transition.
-                row.status, row.remaining = "due", 0
-            else
-                row.status = "empty"
+                row.remaining = 0
             end
-            counts[row.status] = counts[row.status] + 1
-            snapshot.rows[index] = row
         end
-        for index = table.getn(lairs) + 1, table.getn(snapshot.rows) do
-            snapshot.rows[index] = nil
+        if changed then
+            for index = table.getn(lairs) + 1, table.getn(snapshot.rows) do
+                snapshot.rows[index] = nil
+            end
+            table.setn(snapshot.rows, table.getn(lairs))
         end
-        table.setn(snapshot.rows, table.getn(lairs))
         return snapshot
     end
 

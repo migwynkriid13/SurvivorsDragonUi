@@ -213,7 +213,7 @@ local function AuraOwner(performance)
     state.remaining[7], state.remaining[3], state.remaining[11], state.remaining[33] = 30, 0, 0.1, 20
     native.AZS_GetPhase = function()
         state.phaseReads = (state.phaseReads or 0) + 1
-        return "playing"
+        return state.phase or "playing"
     end
     native.AZS_GetRunTime = function()
         state.runReads = (state.runReads or 0) + 1
@@ -330,6 +330,17 @@ for _, performance in ipairs({ false, true }) do
         end
     end
     assert(#buttons == 3, "API timers did not enter the existing aura pool")
+    local phaseSamples, clockSamples, listSamples = state.phaseReads, state.runReads, state.timerReads
+    current:ResetCounts()
+    for _ = 1, 20 do
+        current:Tick()
+    end
+    assert(state.phaseReads == phaseSamples + 20 and state.runReads == clockSamples + 20)
+    assert(state.timerReads == listSamples, "unhovered timers kept materializing unchanged native lists")
+    current:NoPresentationWrites()
+    current:Event(current.controller, "CHAT_MSG_ADDON", "AZSRUN")
+    current:Tick()
+    assert(state.timerReads == listSamples, "ordinary run-clock delivery rebuilt unchanged timer presentation")
     for index, button in ipairs(buttons) do
         assert(button:IsShown())
         TimerIcon(current, button)
@@ -387,6 +398,20 @@ for _, performance in ipairs({ false, true }) do
     current:Call(buttons[2], "OnEnter")
     assert(HasLine(native.GameTooltip, "Cooldown") and HasLine(native.GameTooltip, "Remaining: 5.0 sec"))
     assert(HasLine(native.GameTooltip, "Full wait: 20.0 sec"))
+    listSamples = state.timerReads
+    state.timers[2].remaining = 4.4
+    current:Tick()
+    assert(state.timerReads == listSamples + 1 and HasLine(native.GameTooltip, "Remaining: 4.4 sec"))
+    native.GameTooltip:SetOwner(current.debuff)
+    native.GameTooltip:SetText("Foreign tooltip")
+    listSamples = state.timerReads
+    current:Tick()
+    assert(state.timerReads == listSamples and native.GameTooltip:GetText() == "Foreign tooltip")
+    current:Call(buttons[2], "OnLeave")
+    assert(native.GameTooltip:IsShown() and native.GameTooltip:IsOwned(current.debuff))
+    state.timers[2].remaining = 3.2
+    current:Call(buttons[2], "OnEnter")
+    assert(state.timerReads == listSamples + 1 and HasLine(native.GameTooltip, "Remaining: 3.2 sec"))
     current:SetSetting("flipBuffs", true)
     At(current.debuff, 0, true, current.debuffRoot)
     for index, button in ipairs(buttons) do
@@ -397,8 +422,11 @@ for _, performance in ipairs({ false, true }) do
     At(current.weapon, 6, true, current.root)
     state.timers[1].remaining, state.timers[1].ready = 8, false
     state.timers[2].remaining, state.timers[2].ready = 0, true
+    listSamples = state.timerReads
     current:Event(current.controller, "CHAT_MSG_ADDON", "AZSTIMERS")
+    assert(state.timerReads == listSamples, "timer receipt read before the native parser finished")
     current:Tick()
+    assert(state.timerReads == listSamples + 1, "same-table/same-stamp timer delivery reused stale rows")
     assert(HasLine(native.GameTooltip, "Ready") and not HasLine(native.GameTooltip, "Remaining: 5.0 sec"))
     current:Call(buttons[2], "OnLeave")
     for index, button in ipairs(buttons) do
@@ -487,6 +515,70 @@ for _, performance in ipairs({ false, true }) do
     local restored = { current.debuffRoot:GetPoint() }
     assert(restored[1] == "TOPRIGHT" and restored[2] == current.root and restored[3] == "BOTTOMRIGHT")
 end
+
+for _, performance in ipairs({ false, true }) do
+    local current, state, native = AuraOwner(performance)
+    current:Tick()
+    local button
+    for _, object in ipairs(current.objects) do
+        if state.registered[object] and not object:GetName() and object:GetParent() == current.root then
+            button = object
+            break
+        end
+    end
+    local allocated, samples = #current.objects, state.timerReads
+    native.AZS_TIMERS = {}
+    current:Tick()
+    assert(state.timerReads == samples + 1, "new timer packet identity reused old presentation")
+    state.phase = "ready"
+    current:Tick()
+    assert(not button:IsShown() and not current.controller:GetScript("OnUpdate"))
+    state.phase = "playing"
+    current:Event(current.controller, "CHAT_MSG_ADDON", "AZSRUN")
+    current:Tick()
+    assert(not button:IsShown(), "retired packets repopulated timers after a phase change")
+    native.AZS_RUN, native.AZS_RUN_UPDATED = {}, current.now
+    native.AZS_TIMERS, native.AZS_TIMERS_UPDATED = {}, current.now
+    current:Event(current.controller, "CHAT_MSG_ADDON", "AZSTIMERS")
+    current:Tick()
+    assert(button:IsShown() and #current.objects == allocated)
+    local clock = native.AZS_GetRunTime
+    native.AZS_GetRunTime = function() return nil end
+    current:Tick()
+    assert(not button:IsShown(), "cached icons survived an invalid native clock")
+    native.AZS_GetRunTime = clock
+    current:Event(current.controller, "CHAT_MSG_ADDON", "AZSRUN")
+    current:Tick()
+    assert(button:IsShown(), "valid native timing did not recover the retained pool")
+    state.timers[2].ready = true -- Deliberately inconsistent with positive remaining time.
+    current:Event(current.controller, "CHAT_MSG_ADDON", "AZSTIMERS")
+    current:Tick()
+    assert(not button:IsShown(), "malformed native timers reused accepted presentation")
+    state.timers[2].ready = false
+    current:Event(current.controller, "CHAT_MSG_ADDON", "AZSTIMERS")
+    current:Tick()
+    current:Call(button, "OnEnter")
+    current:Event(current.controller, "PLAYER_LEAVING_WORLD")
+    assert(not button:IsShown() and not native.GameTooltip:IsShown() and not current.controller:GetScript("OnUpdate"))
+    current:Event(current.controller, "PLAYER_ENTERING_WORLD")
+    current:Tick()
+    assert(not button:IsShown(), "world entry accepted a retired timer/run packet")
+    native.AZS_RUN, native.AZS_RUN_UPDATED = {}, current.now
+    native.AZS_TIMERS, native.AZS_TIMERS_UPDATED = {}, current.now
+    current:Event(current.controller, "CHAT_MSG_ADDON", "AZSTIMERS")
+    current:Tick()
+    assert(button:IsShown() and #current.objects == allocated)
+    for _, timer in ipairs(state.timers) do
+        timer.remaining, timer.ready = 0, true
+    end
+    current:Event(current.controller, "CHAT_MSG_ADDON", "AZSTIMERS")
+    current:Tick()
+    assert(not current.controller:GetScript("OnUpdate"), "a fully ready native sample kept its worker")
+    state.timers[1].remaining, state.timers[1].ready = 1.2, false
+    current:Call(button, "OnEnter")
+    assert(HasLine(native.GameTooltip, "Remaining: 1.2 sec") and current.controller:GetScript("OnUpdate"))
+end
+print("PASS timer publication reuse preserves fresh owned hover, strict validation, retirement and native recovery")
 print(
     "PASS API timer icons stay bright without text, retain received order and tooltips, and reuse their hidden pool in both modes"
 )

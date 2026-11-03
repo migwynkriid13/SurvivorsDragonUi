@@ -313,6 +313,43 @@ context:Tick(0.21)
 assert(#context.objects == allocated and guardian.health:IsVisible(), "normal mode did not reuse the pooled skin")
 print("PASS names-only transitions hide actual regions and reuse lazily allocated bars")
 
+do
+    local current = Plates(function(owner)
+        owner.settings.nameplatesNamesOnly = false
+        owner.settings.nameplatesBossGuardiansOnly = false
+        owner.settings.performanceMode = true
+    end)
+    current:Tick(0.21)
+    local skin = current.guardian.fixture.style
+    assert(skin.health:IsVisible() and not skin.shadow, "Performance Mode prepared a decorative plate shadow")
+    current.guardian:Hide()
+    current:SetSetting("performanceMode", false)
+    current:Tick(0.21)
+    assert(not skin.shadow, "hidden plate allocated its deferred shadow")
+    current:SetSetting("performanceMode", true)
+    current.guardian:Show()
+    current:Tick(0.21)
+    assert(skin.health:IsVisible() and not skin.shadow, "Performance Mode Show prepared a plate shadow")
+    current:SetSetting("performanceMode", false)
+    current:Tick(0.21)
+    local shadow, prepared = skin.shadow, #current.objects
+    assert(shadow:IsVisible(), "normal presentation did not prepare its missing shadow")
+    current:SetSetting("performanceMode", true)
+    current:Tick(0.21)
+    assert(not shadow:IsShown() and skin.health:IsVisible() and skin.name:IsVisible())
+    current:ResetCounts()
+    current:Tick(0.21)
+    current:NoPresentationWrites()
+    current:SetSetting("nameplatesNamesOnly", true)
+    current:SetSetting("performanceMode", false)
+    current:Tick(0.21)
+    assert(not shadow:IsShown() and not skin.health:IsShown() and skin.name:IsVisible())
+    current:SetSetting("nameplatesNamesOnly", false)
+    current:Tick(0.21)
+    assert(skin.shadow == shadow and shadow:IsVisible() and #current.objects == prepared)
+end
+print("PASS Performance Mode hides pooled plate shadows, defers their first allocation and retains names/health")
+
 local entries = Entries()
 entries[2].id = entries[1].id
 context:Publish(entries)

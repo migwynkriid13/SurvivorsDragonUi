@@ -710,7 +710,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 PlateRange(data, sample)
                 PlateValue(data, sample)
             end
-            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize, sample)
+            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize, sample, groupWindow ~= nil)
         end
         if not IsShownEnemy(plate, data, sample) then
             RetirePlate(plate)

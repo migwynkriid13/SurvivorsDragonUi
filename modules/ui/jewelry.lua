@@ -453,6 +453,7 @@ DFRL:NewMod("Jewelry", 4, function()
     iconProbe:Hide()
     local iconParts, iconPool, iconGroups, iconByTexture, iconsDirty = PrepareIconParts(), {}, {}, {}, false
     local function SetIcon(slot, texture)
+        slot.empty = nil
         -- A failed native texture assignment keeps the preceding slot artwork.
         -- Probe from empty so a retained image cannot masquerade as success.
         iconProbe:SetTexture(nil)
@@ -601,7 +602,12 @@ DFRL:NewMod("Jewelry", 4, function()
         end
     end
     local function SetQuality(slot, quality, red, green, blue)
+        local changed = slot.quality ~= quality
+            or slot.qualityR ~= red
+            or slot.qualityG ~= green
+            or slot.qualityB ~= blue
         slot.quality, slot.qualityR, slot.qualityG, slot.qualityB = quality, red, green, blue
+        return changed
     end
     local function UpdateQuality(slot)
         if type(GetInventoryItemQuality) == "function" then
@@ -629,14 +635,13 @@ DFRL:NewMod("Jewelry", 4, function()
                     and blue >= 0
                     and blue <= 1
                 then
-                    SetQuality(slot, quality, red, green, blue)
-                    return
+                    return SetQuality(slot, quality, red, green, blue)
                 end
             end
         end
         -- Unavailable metadata retries at the existing equipment cadence.
         -- Never retain another item's rarity or suppress an otherwise valid icon.
-        SetQuality(slot)
+        return SetQuality(slot)
     end
     local function SetPlaceholderShown(slot, shown)
         shown = shown and true or false
@@ -649,6 +654,17 @@ DFRL:NewMod("Jewelry", 4, function()
         slot.placeholderShown = shown
     end
     local function ClearSlot(slot, placeholderShown)
+        -- Empty slots still read native inventory at five Hz. Their already
+        -- retired artwork and metadata need no repeated cleanup behind it.
+        if
+            slot.empty
+            and not slot.texture
+            and not slot.artTexture
+            and not slot.effectDescription
+            and slot.placeholderShown == (placeholderShown and true or false)
+        then
+            return
+        end
         slot.effectLink, slot.effectLanguage, slot.effectDescription = nil, nil, nil
         SetPlaceholderShown(slot, placeholderShown)
         if slot.texture or slot.artTexture then iconsDirty = true end
@@ -658,6 +674,7 @@ DFRL:NewMod("Jewelry", 4, function()
         SetQuality(slot)
         UpdateRarity(slot)
         HideTooltip(slot)
+        slot.empty = true
     end
     local function Clear()
         if cleared then return end
@@ -784,10 +801,10 @@ DFRL:NewMod("Jewelry", 4, function()
         for _, slot in ipairs(slots) do
             local ok, texture = pcall(GetInventoryItemTexture, "player", slot.id)
             if ok and type(texture) == "string" and texture ~= "" then
-                SetPlaceholderShown(slot, false)
+                if slot.placeholderShown ~= false then SetPlaceholderShown(slot, false) end
                 if slot.texture ~= texture then SetIcon(slot, texture) end
-                UpdateQuality(slot)
-                UpdateRarity(slot)
+                local qualityChanged = UpdateQuality(slot)
+                if qualityChanged or slot.carvingR == nil then UpdateRarity(slot) end
                 UpdateCooldown(slot)
                 if hoveredSlot == slot then ShowTooltip(slot) end
             else
@@ -795,7 +812,7 @@ DFRL:NewMod("Jewelry", 4, function()
             end
             if slot.start or slot.painted then cooldownsActive = true end
         end
-        PaintIcons()
+        if iconsDirty then PaintIcons() end
     end
     local function PlaceSlots()
         if not inWorld or not attached or not DFRL.display.Get("equippedJewelry") then return end

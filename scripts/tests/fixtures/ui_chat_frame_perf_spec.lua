@@ -1,15 +1,19 @@
 -- CI only: actual chat frame callback over explicit native boundaries.
 assert(_VERSION == "Lua 5.1")
-local now, reads, alphaCalls, layouts = 10, 0, 0, 0
+local now, reads, alphaCalls, layouts, panePasses = 10, 0, 0, 0, 0
 local selected = { native = {}, visualAlpha = 1 }
+function selected.native:GetAlpha() return self.alpha or 1 end
 function selected.native:SetAlpha(value)
-    assert(value == 1)
     alphaCalls = alphaCalls + 1
+    self.alpha = value
 end
-function selected.native:IsShown() return true end
+selected.nativeSetAlpha = selected.native.SetAlpha
+function selected.native:IsShown() return self.shown ~= false end
+function selected.native:Show() self.shown = true end
 local env = setmetatable({
     root = { IsVisible = function() return true end },
     states = { selected },
+    activeStates = {},
     selected = selected,
     refresh = 0,
     GetTime = function()
@@ -28,6 +32,10 @@ local env = setmetatable({
     SLIDE = 0.35,
     FADE = 0.6,
 }, { __index = _G })
+env.pairs = function(list)
+    if list == env.states then panePasses = panePasses + 1 end
+    return pairs(list)
+end
 local chunk = assert(loadfile(assert(arg[1])))
 setfenv(chunk, env)
 local update = chunk()
@@ -35,12 +43,16 @@ env.arg1 = 0.01
 for _ = 1, 20 do
     update()
 end
-assert(reads == 0 and alphaCalls == 20, "idle chat read native time or skipped native alpha repair")
+assert(reads == 0 and alphaCalls == 0 and panePasses == 0, "idle chat read time, visited panes or reapplied opacity")
+selected.native.alpha, selected.native.shown = 0.3, false
+update()
+assert(alphaCalls == 1 and selected.native.alpha == 1 and selected.native.shown, "idle native repair was skipped")
 env.arg1 = 0.81
 update()
 assert(reads == 1 and layouts == 1, "one-second repair did not take a fresh native time sample")
 selected.slideStart, selected.revealStart = now, now
 selected.pendingLevel = { deadline = now + 0.1 }
+env.activeStates[selected] = true
 local delivered = 0
 function selected.FlushLevel()
     delivered = delivered + 1
@@ -58,5 +70,105 @@ update()
 assert(selected.revealStart == nil and selected.visualAlpha == 1, "reveal did not complete")
 reads = 0
 update()
-assert(reads == 0, "settled effects retained native clock reads")
-print("PASS idle chat skips native time reads; active animation, batching, alpha repair and geometry stay current")
+assert(reads == 0 and next(env.activeStates) == nil, "settled effects retained frame work")
+print(
+    "PASS idle chat skips pane traversal and opacity calls; native repair, animation and pending delivery stay current"
+)
+
+-- Exercise scheduling through real AddMessage, wheel, mode and visibility owners.
+local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
+for _, performance in ipairs({ false, true }) do
+    local current = H.New()
+    local native = current.env
+    current.settings.performanceMode = performance
+    local create = current.Object
+    function current:Object(...)
+        local object = create(self, ...)
+        function object:SetParent(parent) self.parent = parent end
+        function object:GetNumPoints() return self.point and 1 or 0 end
+        function object:GetPoint() return unpack(self.point or {}) end
+        function object:ClearAllPoints() self.point = nil end
+        function object:SetPoint(...) self.point = { ... } end
+        function object:GetRegions() return end
+        function object:EnableMouseWheel() end
+        function object:SetResizable() end
+        function object:SetSpacing() end
+        function object:SetIndentedWordWrap() end
+        function object:SetBackdrop() end
+        return object
+    end
+    native.NUM_CHAT_WINDOWS = 2
+    native.T.SetChatFont = function() end
+    native.DFRL.locale.Bind = function() end
+    native.IsShiftKeyDown = function() return false end
+    native.DFRL.CleanerChat = {
+        PrettifyMessage = function(text)
+            if text == "Level" then return text, "level" end
+            if text == "Stats" then return text, "level_stats" end
+            return text
+        end,
+    }
+    local delivered = {}
+    for index = 1, 2 do
+        local pane = native.CreateFrame("ScrollingMessageFrame", "ChatFrame" .. index, native.UIParent)
+        function pane:SetTimeVisible(value) self.hold = value end
+        function pane:SetFadeDuration(value) self.duration = value end
+        function pane:SetFading(value) self.fading = value end
+        function pane:AtBottom() return not self.scrolled end
+        function pane:ScrollUp() self.scrolled = true end
+        function pane:ScrollDown() self.scrolled = false end
+        function pane:AddMessage(text) table.insert(delivered, { pane = self, text = text }) end
+    end
+    current:Load("modules/chat/chat.lua", "Chat")
+    local root, pane, other = native.SurvivorsDragonUiChat, native.ChatFrame1, native.ChatFrame2
+    local function Tick(elapsed)
+        current.now = current.now + elapsed
+        current:Call(root, "OnUpdate", elapsed)
+    end
+    local allocated = #current.objects
+    pane:SetAlpha(0)
+    other:SetAlpha(1)
+    assert(pane:GetAlpha() == 1 and other:GetAlpha() == 0, "native opacity requests bypassed selected-pane ownership")
+    pane:AddMessage("Level")
+    assert(#delivered == 0, "level message bypassed its original coalescing window")
+    Tick(0.1)
+    pane:AddMessage("Stats")
+    assert(#delivered == 1 and delivered[1].text == "Level: Stats", "active scheduling lost stat coalescing")
+    other:AddMessage("Level")
+    Tick(0.26)
+    assert(#delivered == 2 and delivered[2].pane == other, "inactive pane lost pending delivery")
+    pane:AddMessage("Normal")
+    Tick(0.1)
+    local _, _, _, _, y = pane:GetPoint()
+    assert((performance and y == -5) or (not performance and y < -5), "message slide changed with idle scheduling")
+    Tick(0.7)
+    current:ResetCounts()
+    for _ = 1, 10 do
+        Tick(0.01)
+    end
+    assert((current.writes.SetAlpha or 0) == 0, "settled chat kept writing opacity")
+    pane.alpha, pane.shown = 0.2, false
+    Tick(0.01)
+    assert(pane:GetAlpha() == 1 and pane:IsShown(), "native visibility/opacity repair was lost")
+    current.now = current.now + 20
+    current:Call(root, "OnMouseWheel", 1)
+    Tick(0.1)
+    assert(pane.fading == false, "wheel navigation stopped holding native history")
+    assert((performance and pane:GetAlpha() == 1) or (not performance and pane:GetAlpha() < 1))
+    Tick(0.7)
+    assert(pane:GetAlpha() == 1, "history reveal did not settle")
+    current:Call(root, "OnMouseWheel", -1)
+    Tick(0.01)
+    assert(pane.fading == true, "returning to the bottom did not restore native expiry")
+    pane:AddMessage("Level")
+    root:Hide()
+    Tick(0.3)
+    assert(#delivered == 3, "hidden chat delivered pending text early")
+    current:SetSetting("performanceMode", not performance)
+    root:Show()
+    Tick(0.01)
+    assert(#delivered == 4 and delivered[4].text == "Level", "Show/mode change discarded pending delivery")
+    Tick(0.7)
+    assert(pane:GetAlpha() == 1 and #current.objects == allocated, "mode recovery replayed opacity or allocated views")
+end
+print("PASS real chat schedules both panes, coalesces messages and retains wheel, mode, hidden and pooled recovery")

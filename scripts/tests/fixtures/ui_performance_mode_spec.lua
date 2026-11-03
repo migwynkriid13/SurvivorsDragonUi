@@ -374,6 +374,7 @@ do
     function native:ScrollDown() scrolls = scrolls + 1 end
     env.selected = { native = native, visualAlpha = 0.2, slideStart = context.now, revealStart = context.now }
     env.states = { env.selected }
+    env.activeStates = { [env.selected] = true }
     env.rootWidth, env.rootHeight = 520, 340
     env.Flag = function(value) return value == true or value == 1 end
     env.Clamp = function(value, low, high) return math.max(low, math.min(high, value)) end

@@ -15,6 +15,7 @@ DFRL:NewMod("Chat", 1, function()
         local FOOTER_HEIGHT = 32
         local HOLD, FADE, SLIDE = 14, 0.6, 0.35
         local states, selected = {}, nil
+        local activeStates = {}
         local input = _G.ChatFrameEditBox or _G.ChatFrame1EditBox or ChatFrame1.editBox
         local RefreshFrames, SelectChat, PositionInput, UpdateIndicator
         local focused = false
@@ -171,6 +172,7 @@ DFRL:NewMod("Chat", 1, function()
                 local lastVisible = math.max(state.lastActivity or 0, state.lastReveal or 0)
                 if not performanceMode and now - lastVisible >= HOLD + FADE then
                     state.revealStart, state.visualAlpha = now, 0
+                    activeStates[state] = true
                 end
                 state.lastReveal = now
                 Rearm(state)
@@ -269,6 +271,7 @@ DFRL:NewMod("Chat", 1, function()
             local now = GetTime()
             state.lastActivity = now
             state.slideStart = not performanceMode and state == selected and root:IsVisible() and now or nil
+            if state.slideStart then activeStates[state] = true end
             if state ~= selected or not AtBottom(state) then state.unread = true end
             if UpdateIndicator then UpdateIndicator() end
         end
@@ -338,11 +341,11 @@ DFRL:NewMod("Chat", 1, function()
             native:EnableMouse(state == selected)
             native:EnableMouseWheel(state == selected)
             native:SetScript("OnMouseWheel", function() Scroll(state, arg1 or 0) end)
-            local setAlpha = native.SetAlpha
+            state.nativeSetAlpha = native.SetAlpha
             native.SetAlpha = function(frame)
                 if not root:IsVisible() then return end
                 local alpha = state == selected and (state.visualAlpha or 1) or 0
-                if frame:GetAlpha() ~= alpha then setAlpha(frame, alpha) end
+                if frame:GetAlpha() ~= alpha then state.nativeSetAlpha(frame, alpha) end
             end
             native:SetAlpha(1)
             local addMessage = native.AddMessage
@@ -408,6 +411,7 @@ DFRL:NewMod("Chat", 1, function()
                         addToStart = addToStart,
                         deadline = GetTime() + 0.25,
                     }
+                    activeStates[state] = true
                     return
                 end
                 local pending = state.pendingLevel
@@ -512,6 +516,7 @@ DFRL:NewMod("Chat", 1, function()
                 other.native:EnableMouse(other == selected)
                 other.native:EnableMouseWheel(other == selected)
                 PositionNative(other, now, true)
+                FadeSettings(other, other == selected and not AtBottom(other))
             end
             state.native:Show()
             if FCF_StopAlertFlash then FCF_StopAlertFlash(state.native) end
@@ -572,8 +577,9 @@ DFRL:NewMod("Chat", 1, function()
             -- Only wheel navigation uncovers retained history. Hover and input
             -- focus never rearm lines or hold their fading.
             local atBottom = not selected or AtBottom(selected)
-            local held = not atBottom
-            for _, state in pairs(states) do
+            -- Settled panes have no animation or pending delivery to visit.
+            -- Scroll/visibility repair below still follows the selected pane.
+            for state in pairs(activeStates) do
                 if state.pendingLevel or state.revealStart or state.slideStart then now = now or GetTime() end
                 if state.pendingLevel and now >= state.pendingLevel.deadline then
                     state.FlushLevel()
@@ -589,16 +595,20 @@ DFRL:NewMod("Chat", 1, function()
                     if state == selected then PositionNative(state, now) end
                     if now - state.slideStart >= SLIDE then state.slideStart = nil end
                 end
-                FadeSettings(state, state == selected and held)
+                if not state.pendingLevel and not state.revealStart and not state.slideStart then
+                    activeStates[state] = nil
+                end
             end
             if selected then
-                selected.native:SetAlpha(1)
+                local alpha = selected.visualAlpha or 1
+                if selected.native:GetAlpha() ~= alpha then selected.nativeSetAlpha(selected.native, alpha) end
                 if not Flag(selected.native:IsShown()) then
                     selected.native:Show()
                     atBottom = nil
                 end
                 if atBottom == nil then atBottom = AtBottom(selected) end
                 if atBottom then selected.unread = false end
+                FadeSettings(selected, not atBottom)
             end
             UpdateIndicator(atBottom)
             refresh = refresh + elapsed
@@ -610,6 +620,7 @@ DFRL:NewMod("Chat", 1, function()
                 RefreshFrames()
                 for _, state in pairs(states) do
                     PositionNative(state, now, true)
+                    FadeSettings(state, state == selected and not atBottom)
                 end
             end
         end
@@ -620,6 +631,7 @@ DFRL:NewMod("Chat", 1, function()
             performanceMode = enabled
             for _, state in pairs(states) do
                 state.slideStart, state.revealStart = nil, nil
+                activeStates[state] = state.pendingLevel and true or nil
                 state.visualAlpha = 1
                 if root:IsVisible() then
                     state.native:SetAlpha(1)
@@ -631,6 +643,7 @@ DFRL:NewMod("Chat", 1, function()
         HookScript(root, "OnHide", function()
             for _, state in pairs(states) do
                 state.slideStart, state.revealStart = nil, nil
+                activeStates[state] = state.pendingLevel and true or nil
             end
         end)
         HookScript(root, "OnShow", function()
@@ -639,6 +652,7 @@ DFRL:NewMod("Chat", 1, function()
                 state.visualAlpha = 1
                 state.native:SetAlpha(1)
                 PositionNative(state, GetTime(), true)
+                FadeSettings(state, state == selected and not AtBottom(state))
             end
             UpdateIndicator()
         end)

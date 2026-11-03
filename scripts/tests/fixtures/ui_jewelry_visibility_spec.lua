@@ -22,6 +22,7 @@ local function Run(performanceMode)
     end
     local enabled, visible, player, now = true, true, true, 10
     local textures, cooldowns, reads, qualityReads, cooldownReads = {}, {}, 0, 0, 0
+    local rarityUpdates, retirements = 0, 0
     env.slots = {}
     for index = 1, 5 do
         textures[index] = "native:item:" .. index
@@ -66,7 +67,12 @@ local function Run(performanceMode)
         local value = cooldowns[slot.id]
         slot.start, slot.duration = value and value.start, value and value.duration
     end
-    env.SetQuality, env.UpdateRarity, env.HideTooltip = function() end, function() end, function() end
+    env.SetQuality = function() retirements = retirements + 1 end
+    env.UpdateRarity = function(slot)
+        rarityUpdates = rarityUpdates + 1
+        slot.carvingR = 1
+    end
+    env.HideTooltip = function() end
     -- Icon geometry, actual rarity and tooltip rendering have separate production fixtures.
     env.iconGroups, env.iconByTexture, env.iconPool, env.iconParts, env.iconsDirty = {}, {}, {}, {}, false
     local chunk = assert(loadfile(arg[1]))
@@ -77,6 +83,7 @@ local function Run(performanceMode)
         api.Refresh()
     end
     assert(reads == 50 and qualityReads == 50 and cooldownReads == 50, "native reads lost their refresh cadence")
+    assert(rarityUpdates == 5, "unchanged occupied slots repeated rarity preparation")
     assert(writes.show == 0 and writes.hide == 0 and writes.uv == 0, "occupied slots repeated visibility writes")
     for index = 1, 5 do
         textures[index] = nil
@@ -88,6 +95,7 @@ local function Run(performanceMode)
     end
     assert(writes.show == 5 and writes.hide == 0 and reads == 105, "settled empty slots toggled or stopped retrying")
     assert(qualityReads == 50 and cooldownReads == 50, "empty slots read unavailable item metadata")
+    assert(retirements == 5 and rarityUpdates == 10, "settled empty slots repeated retirement or rarity work")
 
     local slot = env.slots[1]
     textures[1] = "throw"

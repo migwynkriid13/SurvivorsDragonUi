@@ -70,9 +70,22 @@ required. Remaining time is not clamped to duration.
 `CHAT_MSG_ADDON` prefixes `AZSTIMERS` and `AZSRUN` schedule a deferred read,
 after the native API frame has parsed them. `AZS_TIMERS_UPDATED` is a receipt
 timestamp rather than a custom event or an expiry deadline. Visible running
-waits sample the native getter at most ten times per second. Static, paused,
-empty and hidden views stop their updater until relevant delivery or visibility
-wakes it. No private cooldown deadline or wall-clock countdown is calculated.
+waits retain the existing ten-Hz native phase, receipt and run-clock validation.
+Unhovered icons reuse their copied presentation between timer publications,
+including ordinary run-clock deliveries. New packet identity, stamp or timer
+receipt, a phase change or provider replacement requests the full validated
+list. Same-table/same-stamp deliveries remain distinct through the receipt
+counter; getter result tables are never retained.
+
+Entering a timer reads fresh native timing before opening its tooltip. Only an
+owned visible hover continues full timer-list reads at ten Hz for decimal
+remaining time; a foreign tooltip is neither refreshed nor reclaimed. A native
+sample with no running waits, a paused/empty view or hiding stops the worker
+until relevant delivery or visibility wakes it. A previously waiting sample can
+retain lightweight phase/clock checks until the next full native sample; no
+private cooldown deadline or wall-clock countdown is calculated. Clear, reset,
+hidden/world/zone retirement and fresh Show invalidate presentation reuse. Both
+Performance Mode states share these gates.
 
 New zones and world leave/logout/reload clear the pooled display and retire
 both the timer and run cache identities. Old packets cannot repopulate the view

@@ -157,8 +157,9 @@ DFRL:NewMod("Player Auras", 2, function()
     local controller = CreateFrame("Frame")
     local blockedPacket, blockedStamp, blockedReceived
     local blockedRun, blockedRunStamp
+    local publication = {}
     local phases = { playing = true, choosing = true, paused = true, victory = true }
-    local Tick
+    local Tick, RefreshTimers
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Native(getter)
@@ -197,9 +198,10 @@ DFRL:NewMod("Player Auras", 2, function()
         entry.icon:SetAlpha(1)
         SizeButton(entry)
         button:SetScript("OnEnter", function()
-            if editing then return end
+            if editing or not inWorld then return end
             hovered = entry
-            Tooltip(entry)
+            if RefreshTimers(true) then controller:SetScript("OnUpdate", Tick) end
+            if hovered == entry then Tooltip(entry) end
         end)
         button:SetScript("OnLeave", HideHover)
         button:SetScript("OnShow", function() buffGroup.dirty = true end)
@@ -219,6 +221,8 @@ DFRL:NewMod("Player Auras", 2, function()
         entry.name, entry.kind, entry.wait, entry.remaining, entry.ready, entry.texture = nil, nil, nil, nil, nil, nil
     end
     local function ClearTimers()
+        publication.packet, publication.stamp, publication.received = nil, nil, nil
+        publication.phase, publication.ticking, publication.getter, publication.clock = nil, nil, nil, nil
         HideHover()
         for _, entry in ipairs(timers) do
             HideTimer(entry)
@@ -237,7 +241,7 @@ DFRL:NewMod("Player Auras", 2, function()
         if not string.find(value, "[/\\]") then return "Interface\\Icons\\" .. value end
         return value
     end
-    local function RefreshTimers()
+    RefreshTimers = function(force)
         if not inWorld then return end
         -- Read phase before retained caches; the getter itself has no world guard.
         local phase = Native(_G.AZS_GetPhase)
@@ -257,8 +261,33 @@ DFRL:NewMod("Player Auras", 2, function()
             return
         end
         if not container:IsVisible() then return end
-        local now = Native(_G.AZS_GetRunTime)
-        local list = Number(now) and now >= 0 and Native(_G.AZS_GetTimers)
+        local getter, clock = _G.AZS_GetTimers, _G.AZS_GetRunTime
+        if type(getter) ~= "function" or type(clock) ~= "function" then
+            ClearTimers()
+            return
+        end
+        local now = Native(clock)
+        if not Number(now) or now < 0 then
+            ClearTimers()
+            return
+        end
+        local ownsHover = hovered and GameTooltip and GameTooltip:IsOwned(hovered.button) and GameTooltip:IsShown()
+        -- These buttons have no countdown or ready-state artwork. Reuse their
+        -- copied presentation between publications; only an owned hover needs
+        -- fresh native remaining time. Keep phase, receipt and clock validation.
+        if
+            not force
+            and not ownsHover
+            and publication.packet == packet
+            and publication.stamp == stamp
+            and publication.received == received
+            and publication.phase == phase
+            and publication.getter == getter
+            and publication.clock == clock
+        then
+            return phase == "playing" and publication.ticking
+        end
+        local list = Native(getter)
         if type(list) ~= "table" then
             ClearTimers()
             return
@@ -299,6 +328,9 @@ DFRL:NewMod("Player Auras", 2, function()
             HideTimer(timers[index])
         end
         Layout(false)
+        if not container:IsVisible() then return end
+        publication.packet, publication.stamp, publication.received = packet, stamp, received
+        publication.phase, publication.ticking, publication.getter, publication.clock = phase, ticking, getter, clock
         if hovered and GameTooltip and GameTooltip:IsOwned(hovered.button) and GameTooltip:IsShown() then
             Tooltip(hovered)
         end

@@ -67,31 +67,28 @@ centered within the same multilingual Layout owner, at the existing 0.7 visual
 scale. Confirmed position, scale, counts, native action and ownership are not
 rewritten.
 
-The halo uses the same five source x boundaries and is anchored directly to the
-corresponding five panel strips. It follows the beveled corners and central
-crests at every caption width. The former single stretched rounded rectangle
-produced the visibly detached white outline in the supplied client screenshot.
-The icon highlight already shares the icon rim's exact crop and bounds.
+The current runtime binds only the static panel and original icon rim from this
+atlas. Both Performance Mode states show the same eight textures: five panel
+strips, the class icon, silver rim and gold badge. The former five halo strips
+and duplicated icon highlight are removed, along with their pulse math, hover
+state, mode listener and per-frame cosmetic callback. The retained atlas's lower
+halo cells are no longer bound or displayed; its dimensions and static source
+pixels are unchanged.
 
-The existing visible 1.8-second pulse drives the five silver halo strips and
-duplicated silver icon rim. Text and panel remain steady. Performance Mode hides
-all six pulse textures and detaches that same cosmetic worker, retaining the
-complete static panel, count and native click. Hiding, zero count and world/reload
-retirement retain their existing cleanup. No event, frame, updater, setting or
-saved state is added. The fitted halo adds four texture regions over the first
-Artisan iteration, **fourteen textures total**, eight more than the original
-soft-background design. While the visible cosmetic pulse runs, its existing
-callback makes six alpha writes instead of two; it adds no idle work. These
-counts do not establish native draw calls, memory use or FPS.
+Hiding, zero count and world/reload retirement retain their existing cleanup.
+The ten-Hz native state reader still owns counts and HUD handoff, and Show primes
+that reader. Removing the pulse drops six texture regions and its per-frame
+alpha writes without adding an event, frame, updater, setting or saved state.
+These counts do not establish native draw calls, memory use or FPS.
 
 Only `Artisan.blp` and `CountBadge.blp` ship for this component. The retired
 `Backdrop.blp`, `Glow.blp` and `IconFrameGold.blp` are removed from the runtime
 manifest and installed tree. The full downloaded sheet and inspection output
 are temporary, and the authoring TGA and selected preview stay outside the
 payload. Local work uses artwork preparation, source review and pinned
-formatting. CI-only cases cover fixed corners/crests, matching halo crops and
-strip anchors, caption fitting and reuse, all six pulse textures' suppression
-and restoration, and the existing hidden/native lifecycle. No local
+formatting. CI-only cases cover fixed corners/crests and strip anchors, caption
+fitting/reuse, eight static regions and no cosmetic updater through both mode
+states and Hide/Show, plus the existing hidden/native lifecycle. No local
 tests, standalone validation or addon/game execution were performed.
 
 ## Retained earlier design sources

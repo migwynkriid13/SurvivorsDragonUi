@@ -66,6 +66,17 @@ total lifetime. Wheel-scrolled history still pauses expiry; returning to the
 bottom resumes it. Native history, links and input remain intact. The mode also
 settles slides and reveals immediately. Disabling it restores the 14-second
 hold and 0.6-second fade through the shared settings preview/discard listener.
+
+In both modes, the frame callback visits only panes with active slides, history
+reveals or pending level/stat delivery. Completed effects leave that reused work
+set. The selected pane keeps per-frame scroll/unread and actual native
+visibility/opacity repair, skipping the opacity wrapper when already correct.
+Selection, native events, Show and the existing one-second geometry pass repair
+fade ownership. Hidden and mode transitions settle visual work without dropping
+pending messages, changing native history or replaying old effects. These are
+source-level call reductions with CI-only lifecycle coverage; no local tests or
+addon/game execution were run, and FPS/input appearance remain unverified.
+
 The existing fade owner caches the effective duration, defers hidden changes
 and retries failed configuration writes; no timer, frame, event, updater,
 message copy or saved state is added.

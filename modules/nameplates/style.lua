@@ -34,16 +34,21 @@ DFRL:NewMod("NameplateStyle", 5, function()
         return label
     end
 
-    local function EnsureHealth(style)
-        if style.health then return end
-        local visual, overlay = style.visual, style.overlay
+    local function EnsureShadow(style)
+        if style.shadow then return end
+        local visual = style.visual
         local shadow = visual:CreateTexture(nil, "BACKGROUND")
         shadow:SetTexture(path .. "kui_frame_glow.blp")
         shadow:SetTexCoord(0, 0.469, 0, 0.625)
         shadow:SetPoint("TOPLEFT", visual, "TOPLEFT", -GLOW_OFFSET, GLOW_OFFSET)
         shadow:SetPoint("BOTTOMRIGHT", visual, "BOTTOMRIGHT", GLOW_OFFSET, -GLOW_OFFSET)
         shadow:SetVertexColor(0, 0, 0, 0.85)
+        style.shadow = shadow
+    end
 
+    local function EnsureHealth(style)
+        if style.health then return end
+        local visual, overlay = style.visual, style.overlay
         local background = visual:CreateTexture(nil, "ARTWORK")
         background:SetTexture("Interface\\Buttons\\WHITE8X8")
         background:SetAllPoints(visual)
@@ -61,7 +66,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
         raid:SetWidth(30)
         raid:SetHeight(30)
         raid:Hide()
-        style.shadow, style.background, style.health, style.raid = shadow, background, health, raid
+        style.background, style.health, style.raid = background, health, raid
     end
 
     local function Attach(plate, data)
@@ -113,7 +118,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
         end
     end
 
-    local function Update(plate, data, namesOnly, fontSize, sample)
+    local function Update(plate, data, namesOnly, fontSize, sample, performanceMode)
         if not plate:IsShown() then return end
         local style = data.style
         if not style then return end
@@ -143,21 +148,29 @@ DFRL:NewMod("NameplateStyle", 5, function()
         local nativeTexture = not data.nativeLayersSuppressed and data.bar:GetStatusBarTexture()
         if nativeTexture and nativeTexture.SetAlpha and nativeTexture:GetAlpha() ~= 0 then nativeTexture:SetAlpha(0) end
 
-        if style.namesOnly ~= namesOnly then
+        if style.namesOnly ~= namesOnly or style.performanceMode ~= performanceMode then
             if namesOnly then
                 if style.health then
-                    if style.shadow:IsShown() then style.shadow:Hide() end
                     if style.background:IsShown() then style.background:Hide() end
                     if style.health:IsShown() then style.health:Hide() end
                     if style.raid:IsShown() then style.raid:Hide() end
                 end
             else
                 EnsureHealth(style)
-                if not style.shadow:IsShown() then style.shadow:Show() end
+                if not performanceMode then EnsureShadow(style) end
                 if not style.background:IsShown() then style.background:Show() end
                 if not style.health:IsShown() then style.health:Show() end
             end
+            if style.shadow then
+                local show = not namesOnly and not performanceMode
+                if show and not style.shadow:IsShown() then
+                    style.shadow:Show()
+                elseif not show and style.shadow:IsShown() then
+                    style.shadow:Hide()
+                end
+            end
             style.namesOnly = namesOnly
+            style.performanceMode = performanceMode
         end
 
         local red, green, blue

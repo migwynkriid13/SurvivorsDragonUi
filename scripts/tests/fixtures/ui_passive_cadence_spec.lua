@@ -29,6 +29,24 @@ do
     assert(snapshot.rows[1].hp == 50 and snapshot.rows[1].healthFraction == 0.5)
     assert(context.reads.guardians == 1, "living guardians lost native health sampling")
     assert(snapshot.rows[2].status == "due" and snapshot.rows[2].remaining == 0)
+    -- Count the actual production copy traversal, while native health keeps
+    -- changing without a new lair publication or receipt.
+    local nativePairs, copies = env.pairs, 0
+    env.pairs = function(value)
+        if value == snapshot.rows[1] or value == snapshot.rows[2] then copies = copies + 1 end
+        return nativePairs(value)
+    end
+    for _, performance in ipairs({ false, true }) do
+        context.settings.performanceMode = performance
+        env.AZS_GetGuardians = function() return { { id = 7, hp = 40, hpm = 100 } } end
+        snapshot = roster.GetSnapshot(snapshot)
+        assert(snapshot.rows[1].hp == 40 and snapshot.rows[1].healthFraction == 0.4)
+        assert(copies == 0 and snapshot.counts.total == 2 and snapshot.counts.living == 1)
+        env.AZS_GetGuardians = function() return {} end
+        snapshot = roster.GetSnapshot(snapshot)
+        assert(not snapshot.rows[1].hp and not snapshot.rows[1].healthFraction, "missing native health stayed cached")
+    end
+    env.pairs = nativePairs
     roster.AcceptLairs({
         { index = 1, id = 0, state = "empty", left = 20 },
         { index = 2, id = 0, state = "empty", left = 30 },
@@ -169,29 +187,26 @@ do
         assert(crop[1] == left and crop[2] == right and crop[3] == top and crop[4] == bottom, "stale class artwork")
         assert(not context.reads.characterClass, "stored levels queried the character-selection class")
     end
-    local pieces, halos, rim = {}, {}, nil
+    local pieces, rim = {}, nil
+    local textures, atlasPieces = 0, 0
     for _, object in ipairs(context.objects) do
+        if object.kind == "Texture" then textures = textures + 1 end
         if object.texture == "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\levelup\\Artisan.blp" then
+            atlasPieces = atlasPieces + 1
             local crop = object.crop
             if crop[3] == 0 and crop[4] == 90 / 256 then
                 pieces[crop[1] * 512] = object
-            elseif crop[3] == 0.5 then
-                assert(crop[4] == 218 / 256, "Artisan halo retained the generic rectangle crop")
-                halos[crop[1] * 512] = object
             elseif crop[1] == 272 / 512 then
+                assert(not rim, "stored-level panel allocated a duplicate icon highlight")
                 rim = object
+            else
+                error("stored-level panel prepared retired pulse artwork")
             end
         end
     end
     assert(pieces[0] and pieces[20] and pieces[106] and pieces[154] and pieces[240], "Artisan panel lost a strip")
     assert(rim, "Artisan panel lost its silver icon rim")
-    local haloCount = 0
-    for left, piece in pairs(pieces) do
-        local halo = halos[left]
-        assert(halo and halo.allPoints == piece, "Artisan halo does not follow its matching panel strip")
-        haloCount = haloCount + 1
-    end
-    assert(haloCount == 5, "Artisan halo lost a border strip")
+    assert(textures == 8 and atlasPieces == 6, "static stored-level panel retained pulse textures")
     local function ArtisanCaps()
         assert(pieces[0]:GetWidth() == 16 and pieces[240]:GetWidth() == 16, "translated text stretched the corners")
         assert(pieces[106]:GetWidth() == 38.4 and pieces[106]:GetHeight() == 72, "translated text stretched the crests")
@@ -199,15 +214,12 @@ do
         assert(pieces[20].anchors.BOTTOMRIGHT[1] == pieces[106] and pieces[20].anchors.BOTTOMRIGHT[2] == "BOTTOMLEFT")
         assert(pieces[154].anchors.TOPLEFT[1] == pieces[106] and pieces[154].anchors.TOPLEFT[2] == "TOPRIGHT")
         assert(pieces[154].anchors.BOTTOMRIGHT[1] == pieces[240] and pieces[154].anchors.BOTTOMRIGHT[2] == "BOTTOMLEFT")
-        for left, piece in pairs(pieces) do
-            assert(halos[left].allPoints == piece, "caption fitting detached an Artisan halo strip")
-        end
     end
     ArtisanCaps()
     Crop(0.25, 0.5, 0, 0.25)
     assert(label and button:IsVisible() and context.nativeShown == false)
     assert(context.reads.hud == 2, "initial takeover did not read back the setter")
-    assert(button:GetScript("OnUpdate"), "normal stored-level pulse did not start")
+    assert(not button:GetScript("OnUpdate"), "static stored-level panel installed a cosmetic updater")
     local function OriginalBadge()
         local face, size, flags = label:GetFont()
         local _, _, _, alpha = label:GetShadowColor()
@@ -258,32 +270,40 @@ do
     OriginalBadge()
     display.Reset()
     OriginalBadge()
-    context:SetSetting("performanceMode", true)
-    assert(button:IsVisible() and label:GetText() == "3", "Performance Mode hid the stored-level information")
-    assert(not button:GetScript("OnUpdate"), "Performance Mode retained the stored-level pulse")
-    assert(not rim:IsShown(), "Performance Mode retained the Artisan icon pulse")
-    for left, piece in pairs(pieces) do
-        assert(not halos[left]:IsShown(), "Performance Mode retained an Artisan border pulse")
-        assert(piece:IsVisible(), "Performance Mode hid the static Artisan panel")
+    local function StaticPanel()
+        assert(button:IsVisible() and label:GetText() == "3", "static stored-level panel lost its native information")
+        assert(not button:GetScript("OnUpdate"), "static stored-level panel installed a cosmetic updater")
+        assert(not button:GetScript("OnEnter") and not button:GetScript("OnLeave"), "retired pulse hover state remains")
+        assert(rim:IsVisible() and rim:GetAlpha() == 1, "static stored-level icon rim changed")
+        for _, piece in pairs(pieces) do
+            assert(piece:IsVisible() and piece:GetAlpha() == 1, "static Artisan panel changed")
+        end
     end
-    context:ResetCounts()
-    context:Call(button, "OnUpdate", 0.5)
-    context:NoPresentationWrites()
-    context:SetLayoutHidden(true)
-    context:SetSetting("performanceMode", false)
-    assert(not button:GetScript("OnUpdate"), "hidden mode exit restarted the stored-level pulse")
-    context:SetLayoutHidden(false)
-    assert(button:GetScript("OnUpdate"), "Show did not restore the configured stored-level pulse")
-    assert(rim:IsShown(), "Show did not restore the Artisan icon pulse")
-    for _, halo in pairs(halos) do
-        assert(halo:IsShown(), "Show did not restore an Artisan border pulse")
+    for _, performance in ipairs({ false, true }) do
+        context:SetSetting("performanceMode", performance)
+        StaticPanel()
+        context:ResetCounts()
+        context:Call(button, "OnUpdate", 0.5)
+        context:NoPresentationWrites()
+        context:SetLayoutHidden(true)
+        context:SetSetting("performanceMode", not performance)
+        assert(not button:GetScript("OnUpdate"), "hidden mode change installed a cosmetic updater")
+        context:SetLayoutHidden(false)
+        StaticPanel()
     end
     local function Tick() context:Call(controller, "OnUpdate", 0.1) end
+    local visual = pieces[0]:GetParent():GetParent()
+    local effectiveScale = visual.GetEffectiveScale
+    function visual:GetEffectiveScale()
+        context.reads.scaleSamples = (context.reads.scaleSamples or 0) + 1
+        return effectiveScale(self)
+    end
     context:ResetCounts()
     for _ = 1, 10 do
         Tick()
     end
     assert(context.reads.phase == 10 and context.reads.levels == 10, "native state polling changed")
+    assert(context.reads.scaleSamples == 10, "stored-level captions did not share one scale sample per refresh")
     assert(context.reads.hud == 10 and not context.writes.hud, "settled ownership repeated its readback")
     assert(not context.reads.formats, "unchanged stored-level counts were formatted repeatedly")
     assert(not context.reads.metrics, "unchanged stored-level labels were measured repeatedly")

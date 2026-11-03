@@ -65,6 +65,13 @@ presentation, visibility, language and relevant option changes clear that cache;
 actual label comparisons still repair changed or failed native text writes.
 Health formatting, native countdowns, row order and update cadence stay intact.
 
+Reused snapshots copy lair metadata and count statuses only when the accepted
+roster revision or generation changes. Health and remaining-time values still
+refresh on every request, so missing health clears an old fill immediately.
+The view keeps its filtered list until that roster, Show dead or visibility
+changes; health, countdowns, actual caption repair and measurement retries keep
+their ten-Hz refresh in both Performance Mode states. Coverage remains CI-only.
+
 The separate boss-health group shows only bosses by default. Enable
 **Guardians in boss bar** in `/sdui` → **Boss bars** to include fighting guardians. This
 does not change target health, the tracker, guidance or map markers.

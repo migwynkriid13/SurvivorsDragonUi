@@ -149,6 +149,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         rowOffset = 0
         presentation.healthLabels, healthWidth, dirty = nil, 0, true
         presentation.filteredCount = 0
+        presentation.filterRevision, presentation.filterGeneration, presentation.filterRows = nil, nil, nil
         if presentation.filtered then
             for index in ipairs(presentation.filtered) do
                 presentation.filtered[index] = nil
@@ -333,17 +334,29 @@ DFRL:NewMod("GuardianTracker", 4, function()
         T.SetTextIfChanged(title, DFRL.locale.Text("GUARDIANS"))
         local filtered, count = presentation.filtered or {}, 0
         presentation.filtered = filtered
-        for _, entry in ipairs(snapshot.rows) do
-            if showDead or entry.state == "asleep" or entry.state == "awake" then
-                count = count + 1
-                filtered[count] = entry
+        if
+            not Number(snapshot.revision)
+            or presentation.filterRevision ~= snapshot.revision
+            or presentation.filterGeneration ~= snapshot.generation
+            or presentation.filterRows ~= snapshot.rows
+            or presentation.filterShowDead ~= showDead
+        then
+            for _, entry in ipairs(snapshot.rows) do
+                if showDead or entry.state == "asleep" or entry.state == "awake" then
+                    count = count + 1
+                    filtered[count] = entry
+                end
             end
+            for index = count + 1, table.getn(filtered) do
+                filtered[index] = nil
+            end
+            table.setn(filtered, count)
+            presentation.filteredCount = count
+            presentation.filterRevision, presentation.filterGeneration = snapshot.revision, snapshot.generation
+            presentation.filterRows, presentation.filterShowDead = snapshot.rows, showDead
+        else
+            count = presentation.filteredCount
         end
-        for index = count + 1, table.getn(filtered) do
-            filtered[index] = nil
-        end
-        table.setn(filtered, count)
-        presentation.filteredCount = count
         local capacity = visibleRows > 0 and visibleRows or count
         rowOffset = math.max(0, math.min(rowOffset, count - capacity))
         local used = 0
@@ -512,6 +525,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end)
     DFRL.layout.ListenVisibility("guardianTracker", function(permitted)
         ClearStatuses()
+        presentation.filterRevision, presentation.filterGeneration, presentation.filterRows = nil, nil, nil
         dirty, age = true, 0.1
         SyncUpdates()
         if permitted then Refresh() end

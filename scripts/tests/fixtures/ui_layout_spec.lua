@@ -98,6 +98,26 @@ local registered = #context.objects
 Tick()
 assert(#context.objects == registered and #Handles() == 0, "gameplay prepared editor handles")
 assert(not first:IsShown() and layout.IsHidden("first"), "lazy handles changed saved visibility")
+local nearlyEqual, comparisons = env.T.NearlyEqual, 0
+env.T.NearlyEqual = function(...)
+    comparisons = comparisons + 1
+    return nearlyEqual(...)
+end
+for _, performance in ipairs({ false, true }) do
+    context.settings.performanceMode = performance
+    context:ResetCounts()
+    comparisons = 0
+    Tick()
+    assert(comparisons == 0, "settled gameplay continued Layout/editor comparison work")
+    context:NoPresentationWrites()
+    local previousWidth = env.UIParent.width
+    env.UIParent.width = previousWidth + 100
+    Tick()
+    assert(comparisons > 0, "an unannounced viewport change waited behind the settled shortcut")
+    env.UIParent.width = previousWidth
+    Tick()
+end
+env.T.NearlyEqual = nearlyEqual
 layout.BeginEdit()
 assert(#Handles() == 0, "editor entry bypassed the normal preparation refresh")
 Tick()

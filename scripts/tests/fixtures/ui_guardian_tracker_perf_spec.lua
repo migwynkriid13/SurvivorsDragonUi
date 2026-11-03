@@ -16,6 +16,7 @@ local function Tracker()
         GetSnapshot = function(snapshot)
             context.reads.snapshot = (context.reads.snapshot or 0) + 1
             snapshot.status, snapshot.rows = "ready", context.entries
+            snapshot.revision, snapshot.generation = context.revision, context.generation
             return snapshot
         end,
     }
@@ -98,6 +99,44 @@ local function Tracker()
     context:ResetCounts()
     return context, context:Row()
 end
+
+for _, performance in ipairs({ false, true }) do
+    local context, row = Tracker()
+    local env = context.env
+    context.settings.performanceMode = performance
+    context.revision, context.generation = 1, 1
+    context:Tick()
+    local nativeTable, listUpdates = env.table, 0
+    env.table = {}
+    for name, value in pairs(nativeTable) do
+        env.table[name] = value
+    end
+    env.table.setn = function(list, count)
+        listUpdates = listUpdates + 1
+        return nativeTable.setn(list, count)
+    end
+    context.entry.remaining = 60
+    context:Tick()
+    assert(
+        listUpdates == 0 and row.status:GetText() == "Respawns in 1:00",
+        "roster reuse held countdowns or refiltered"
+    )
+    context.entries[2] = { key = "2:8", index = 2, id = 8, name = "New guardian", state = "asleep", status = "asleep" }
+    context.revision = 2
+    context:Tick()
+    assert(listUpdates == 1, "a new roster publication did not rebuild the visible list")
+    context.generation = 2
+    context:Tick()
+    assert(listUpdates == 2, "roster generation recovery reused an old filter")
+    context:SetHidden(true)
+    local hiddenUpdates = listUpdates
+    context:Tick()
+    assert(listUpdates == hiddenUpdates, "hidden tracker kept rebuilding the roster filter")
+    context:SetHidden(false)
+    context:Tick()
+    assert(listUpdates > hiddenUpdates, "visible recovery failed to rebuild its retired filter")
+end
+print("PASS guardian filters reuse accepted revisions while countdowns, publications and hidden recovery stay live")
 
 do
     local context, row = Tracker()

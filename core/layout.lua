@@ -2025,6 +2025,19 @@ DFRL:NewMod("Layout", 0, function()
         if not width then return end
         local sampleElapsed = viewportAge
         viewportAge = 0
+        -- Keep the same native sample and recovery latency. An unchanged
+        -- gameplay viewport needs no editor/restoration work or comparisons.
+        if
+            not enabled
+            and not activeDrag
+            and not needsRestore
+            and not needsDefaultPosition
+            and width == lastWidth
+            and height == lastHeight
+            and scale == lastScale
+        then
+            return
+        end
         if
             not lastWidth
             or not T.NearlyEqual(width, lastWidth)

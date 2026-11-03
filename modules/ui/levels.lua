@@ -7,13 +7,13 @@ and slot-frame crops are documented by that source's build 12.0.5.67451 data.
 This shared retail artwork is not established as Midnight-original.
 World of Warcraft artwork remains copyright Blizzard Entertainment; the
 source mirror provides no separate artwork license. Artisan.blp contains
-only the selected panel/rim pixels and a silver halo derived from that border.
+the selected panel/rim pixels; the former halo cells are no longer displayed.
 CountBadge.blp retains the existing original gold disk.
 No source-addon Lua is imported.
 Full provenance and preparation: third_party/LevelUp-ARTWORK.md.
 ]]
 DFRL:NewMod("StoredLevels", 5, function()
-    local HEIGHT, INTERVAL, VISUAL_SCALE, PULSE_PERIOD = 72, 0.1, 0.7, 1.8
+    local HEIGHT, INTERVAL, VISUAL_SCALE = 72, 0.1, 0.7
     local TEXT_LEFT, PANEL_PADDING, ICON_SIZE, RIM_SIZE = 60, 10, 40, 44
     local texturePath = DFRL:GetInfoOrCons("tex") .. "levelup\\"
     local CLASS_ICONS = {
@@ -47,11 +47,10 @@ DFRL:NewMod("StoredLevels", 5, function()
     panel:SetHeight(HEIGHT)
     panel:SetPoint("CENTER", visual, "CENTER", 0, 0)
     panel:EnableMouse(false)
-    local function PanelPiece(left, right, layer, top)
-        top = top or 0
-        local piece = panel:CreateTexture(nil, layer or "BACKGROUND")
+    local function PanelPiece(left, right)
+        local piece = panel:CreateTexture(nil, "BACKGROUND")
         piece:SetTexture(texturePath .. "Artisan.blp")
-        piece:SetTexCoord(left / 512, right / 512, top / 256, (top + 90) / 256)
+        piece:SetTexCoord(left / 512, right / 512, 0, 90 / 256)
         return piece
     end
     local panelLeft, panelMiddle, panelRight = PanelPiece(0, 20), PanelPiece(106, 154), PanelPiece(240, 260)
@@ -69,29 +68,6 @@ DFRL:NewMod("StoredLevels", 5, function()
     panelSpanLeft:SetPoint("BOTTOMRIGHT", panelMiddle, "BOTTOMLEFT", 0, 0)
     panelSpanRight:SetPoint("TOPLEFT", panelMiddle, "TOPRIGHT", 0, 0)
     panelSpanRight:SetPoint("BOTTOMRIGHT", panelRight, "BOTTOMLEFT", 0, 0)
-    local glows = {}
-    local function AddGlow(base, left, right)
-        local glow = PanelPiece(left, right, "BORDER", 128)
-        glow:SetAllPoints(base)
-        glow:SetBlendMode("ADD")
-        glow:Hide()
-        table.insert(glows, glow)
-    end
-    AddGlow(panelLeft, 0, 20)
-    AddGlow(panelSpanLeft, 20, 106)
-    AddGlow(panelMiddle, 106, 154)
-    AddGlow(panelSpanRight, 154, 240)
-    AddGlow(panelRight, 240, 260)
-    local function PaintGlow(alpha)
-        for index = 1, 5 do
-            glows[index]:SetAlpha(alpha)
-        end
-    end
-    local function HideGlow()
-        for index = 1, 5 do
-            if glows[index]:IsShown() then glows[index]:Hide() end
-        end
-    end
     local content = CreateFrame("Frame", nil, panel)
     content:SetHeight(HEIGHT)
     content:SetPoint("CENTER", panel, "CENTER", 0, 0)
@@ -125,10 +101,10 @@ DFRL:NewMod("StoredLevels", 5, function()
     title:SetHeight(30)
 
     local titleMetrics, badgeMetrics = {}, {}
-    local function TextWidth(label, metrics, force)
+    local function TextWidth(label, metrics, force, scale)
         local text = label:GetText()
         local face, size, flags = label:GetFont()
-        local scale = label:GetParent():GetEffectiveScale()
+        scale = scale or label:GetParent():GetEffectiveScale()
         if
             not force
             and metrics.text == text
@@ -146,10 +122,10 @@ DFRL:NewMod("StoredLevels", 5, function()
         metrics.scale, metrics.width = scale, measured
         return measured, true
     end
-    local function AlignContent(force)
+    local function AlignContent(force, scale)
         -- Keep the active panel and its edit region centered inside the stable
         -- multilingual layout owner, without moving confirmed coordinates.
-        local measured, changed = TextWidth(title, titleMetrics, force)
+        local measured, changed = TextWidth(title, titleMetrics, force, scale)
         if not measured or not changed then return end
         local textWidth = math.ceil(measured) + 4
         local contentWidth = TEXT_LEFT + textWidth
@@ -173,58 +149,7 @@ DFRL:NewMod("StoredLevels", 5, function()
     countText:SetTextColor(0.1, 0.05, 0)
     countText:SetPoint("CENTER", badge, "CENTER", 0, 0)
 
-    local highlight = content:CreateTexture(nil, "OVERLAY")
-    highlight:SetTexture(texturePath .. "Artisan.blp")
-    highlight:SetTexCoord(272 / 512, 312 / 512, 0, 40 / 256)
-    highlight:SetAllPoints(bezel)
-    highlight:SetBlendMode("ADD")
-    highlight:Hide()
-    local pulseElapsed, hovered = 0, false
-    local performanceMode = DFRL.display.Get("performanceMode")
-    local function AnimatePulse()
-        if not button:IsVisible() then return end
-        pulseElapsed = pulseElapsed + math.min(tonumber(arg1) or 0, 0.1)
-        if pulseElapsed >= PULSE_PERIOD then pulseElapsed = pulseElapsed - PULSE_PERIOD end
-        local pulse = 0.5 - 0.5 * math.cos(pulseElapsed * 2 * math.pi / PULSE_PERIOD)
-        PaintGlow(0.25 + 0.65 * pulse)
-        highlight:SetAlpha((hovered and 0.3 or 0.1) + 0.4 * pulse)
-    end
-    local function RefreshEffects()
-        pulseElapsed = 0
-        if performanceMode or not button:IsVisible() then
-            button:SetScript("OnUpdate", nil)
-            HideGlow()
-            if highlight:IsShown() then highlight:Hide() end
-            return
-        end
-        PaintGlow(0.25)
-        highlight:SetAlpha(0.1)
-        for index = 1, 5 do
-            glows[index]:Show()
-        end
-        highlight:Show()
-        button:SetScript("OnUpdate", AnimatePulse)
-    end
-    button:SetScript("OnEnter", function()
-        if not editing then hovered = true end
-    end)
-    button:SetScript("OnLeave", function() hovered = false end)
-    button:SetScript("OnShow", function()
-        elapsed = INTERVAL
-        RefreshEffects()
-    end)
-    button:SetScript("OnHide", function()
-        pulseElapsed, hovered = 0, false
-        button:SetScript("OnUpdate", nil)
-        HideGlow()
-        highlight:Hide()
-    end)
-    DFRL.display.Listen(function()
-        local enabled = DFRL.display.Get("performanceMode")
-        if performanceMode == enabled then return end
-        performanceMode = enabled
-        RefreshEffects()
-    end)
+    button:SetScript("OnShow", function() elapsed = INTERVAL end)
 
     local function PositiveInteger(value)
         return type(value) == "number" and value > 0 and value - value == 0 and math.floor(value) == value
@@ -284,7 +209,6 @@ DFRL:NewMod("StoredLevels", 5, function()
         if displayed or button:IsShown() then button:Hide() end
         displayed = false
         displayedCount, displayedText = nil, nil
-        if highlight:IsShown() then highlight:Hide() end
         T.SetTextIfChanged(countText, "")
         if icon:IsShown() then icon:Hide() end
         RestoreNative()
@@ -315,13 +239,16 @@ DFRL:NewMod("StoredLevels", 5, function()
                 displayedText, displayedCount = tostring(count), count
             end
             T.SetTextIfChanged(countText, displayedText)
-            local measured, changed = TextWidth(countText, badgeMetrics)
+            -- Both captions inherit the same visual scale. Actual text/font
+            -- checks and failed metrics still retry at the original cadence.
+            local scale = visual:GetEffectiveScale()
+            local measured, changed = TextWidth(countText, badgeMetrics, false, scale)
             if changed or not measured then
                 local badgeWidth = math.max(20, math.ceil(measured or 0) + 10)
                 if not T.NearlyEqual(badge:GetWidth(), badgeWidth) then badge:SetWidth(badgeWidth) end
                 if not T.NearlyEqual(countText:GetWidth(), badgeWidth - 8) then countText:SetWidth(badgeWidth - 8) end
             end
-            AlignContent()
+            AlignContent(false, scale)
         end
         if not displayed then button:Show() end
         displayed = true
@@ -344,7 +271,6 @@ DFRL:NewMod("StoredLevels", 5, function()
         labelAbove = true,
         onEdit = function(active)
             editing = active
-            hovered = false
             button:EnableMouse(not active)
             AlignContent(true)
         end,

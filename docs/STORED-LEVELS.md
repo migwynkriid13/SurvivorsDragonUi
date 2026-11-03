@@ -2,7 +2,7 @@
 
 The game's stored-level **Level Up!** button is drawn outside Lua's frame system. Its public addon API supports hiding the original, reading the waiting count and opening the choices. It does not expose the original button's anchors or artwork for direct movement or reskinning.
 
-`modules/ui/levels.lua` supplies an addon-owned replacement using the selected **04 · Artisan metal** design: a dark profession panel, silver corners and small central crests, plus a matching silver rim around the native class icon. The round gold waiting-count badge stays at its upper-right. The single **LEVEL UP** heading centers vertically beside the icon, with no current-level caption. It retains the existing DEFAULT 22 font, shared outline/shadow choices and fourteen-language system. The badge keeps its plain DEFAULT 12 font; the editor label retains DEFAULT. The complete icon/text group and panel fit the active translation with compact side padding, centered inside the multilingual owner. Five static panel strips preserve corner and crest widths while the two plain spans stretch. The existing 1.8-second pulse now uses a neutral silver halo and icon rim; text and panel stay steady. Performance Mode keeps the static panel and hides both pulse layers. Hiding the group, spending its final waiting level or world cleanup stops and resets the same cosmetic worker. See [artwork sources and preparation](../third_party/LevelUp-ARTWORK.md).
+`modules/ui/levels.lua` supplies an addon-owned replacement using the selected **04 · Artisan metal** design: a dark profession panel, silver corners and small central crests, plus a matching silver rim around the native class icon. The round gold waiting-count badge stays at its upper-right. The single **LEVEL UP** heading centers vertically beside the icon, with no current-level caption. It retains the existing DEFAULT 22 font, shared outline/shadow choices and fourteen-language system. The badge keeps its plain DEFAULT 12 font; the editor label retains DEFAULT. The complete icon/text group and panel fit the active translation with compact side padding, centered inside the multilingual owner. Five static panel strips preserve corner and crest widths while the two plain spans stretch. The complete panel stays static in both Performance Mode states, with no halo, duplicated icon highlight or cosmetic updater. See [artwork sources and preparation](../third_party/LevelUp-ARTWORK.md).
 
 ## Native API
 
@@ -29,16 +29,17 @@ available. Spending all waiting levels does not retire the current run's class.
 Returning from dead/victory to playing without leaving the run can reuse that
 same class snapshot. Both Performance Mode states use the existing controller,
 artwork and changed-only crop writes; hidden views defer class validation and
-painting. The selected panel adds four static texture regions over the former
-background; its fitted five-strip halo adds four more optional regions over
-the first Artisan iteration. No frame, event, updater or saved state is added.
+painting. The static panel uses eight texture regions: five panel strips, the
+class icon, silver rim and gold badge. Removing the five halo strips and duplicate
+icon highlight removes six regions and their per-frame cosmetic worker. No
+frame, event, updater or saved state is added.
 
 Unchanged counts and class icons do not repeat text or crop writes. Text-width
 measurements are reused until text, font or effective scale changes; edit entry,
 resizing and language changes still force the compact panel measurement. The
 scale comes from each FontString's owning frame, since the current client does
 not expose `GetEffectiveScale` on FontStrings. The
-existing pulse and native visibility checks retain their cadence. Clearing the
+existing ten-Hz native validity and visibility checks retain their cadence. Clearing the
 count also clears the group's requested visibility while Layout hides it, so
 unhiding cannot restore an expired stored-level button.
 
