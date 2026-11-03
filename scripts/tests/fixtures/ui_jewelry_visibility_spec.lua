@@ -66,8 +66,7 @@ local function Run(performanceMode)
         local value = cooldowns[slot.id]
         slot.start, slot.duration = value and value.start, value and value.duration
     end
-    env.SetQuality, env.UpdateRarity, env.HideTooltip, env.HideGlows =
-        function() end, function() end, function() end, function() end
+    env.SetQuality, env.UpdateRarity, env.HideTooltip = function() end, function() end, function() end
     -- Icon geometry, actual rarity and tooltip rendering have separate production fixtures.
     env.iconGroups, env.iconByTexture, env.iconPool, env.iconParts, env.iconsDirty = {}, {}, {}, {}, false
     local chunk = assert(loadfile(arg[1]))

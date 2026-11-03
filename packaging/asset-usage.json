@@ -34,7 +34,7 @@
   "source_assets": {
     "media/tex/jewelry/Runecarver.tga": {
       "output": "media/tex/jewelry/Frame.blp",
-      "reason": "Original empty-slot Blizzard Runecarver housing retained for scripts/prepare_jewelry_art.py and its derived equipped-only brightness; source and preparation are recorded in third_party/Jewelry-ARTWORK.md."
+      "reason": "Original shared empty/equipped Blizzard Runecarver housing retained for scripts/prepare_jewelry_art.py; source and preparation are recorded in third_party/Jewelry-ARTWORK.md."
     },
     "media/tex/timer/HeroicNumerals.tga": {
       "output": "media/tex/timer/HeroicNumerals.blp",

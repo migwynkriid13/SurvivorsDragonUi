@@ -2,8 +2,7 @@
 
 The original pinned sheet is supplied with --source; its source, atlas members
 and redistribution boundaries are recorded in third_party/Jewelry-ARTWORK.md.
-The original 128-square grey cell is retained as the empty-slot authoring input;
-equipped-slot brightness is derived from it without changing that default.
+The original 128-square grey cell is shared by empty and equipped slots.
 """
 
 import argparse
@@ -22,30 +21,17 @@ SOURCE_SHA256 = "8df6e6c889eda1e100b9550762b573a647730b0435a6702ae194b55b830f124
 FRAME_RECT = (451, 1135, 899, 1589)
 GLOW_RECT = (1, 1135, 449, 1589)
 SOURCE_SATURATION = 0.05
-HOUSING_GAMMA = 0.55
-HOUSING_BRIGHTNESS = 0.8
-
-
-def brightened_housing(housing):
-    """Derive equipped-only brightness while retaining the original coverage."""
-    curve = [
-        round(round(255 * (value / 255) ** HOUSING_GAMMA) * HOUSING_BRIGHTNESS)
-        for value in range(256)
-    ]
-    bright = housing.convert("RGB").point(curve * 3).convert("RGBA")
-    bright.putalpha(housing.getchannel("A"))
-    return bright
 
 
 def runtime_housing(path, housing):
-    """Use the retired neutral-rim cell for the original empty-slot housing."""
+    """Keep the original housing and clear the retired brightness/glow cell."""
     data = bytearray(path.read_bytes())
     width, height, levels = blp_bgra_levels(data)
     if (width, height) != (512, 128) or data[8] != 3 or len(levels) != 1:
         raise ValueError("Expected the existing single-level Raw3 jewelry atlas")
     offset = struct.unpack_from("<I", data, 20)[0]
     stride = 128 * 4
-    for left, image in ((256, housing), (384, brightened_housing(housing))):
+    for left, image in ((256, housing), (384, Image.new("RGBA", (128, 128)))):
         pixels = image.tobytes("raw", "BGRA")
         for row in range(128):
             start = offset + (row * width + left) * 4
@@ -78,11 +64,11 @@ def prepare(source, output, runtime=None):
     grey = ImageOps.grayscale(canvas).convert("RGBA")
     grey.putalpha(canvas.getchannel("A"))
     canvas = Image.blend(grey, canvas, SOURCE_SATURATION)
-    # Retain this original grey input; only the equipped runtime cell is lifted.
+    # Preserve the original grey input byte-for-byte for every equipment state.
     if output.exists():
         with Image.open(output) as retained:
             if retained.size != canvas.size or retained.convert("RGBA").tobytes() != canvas.tobytes():
-                raise ValueError("Equipped brightness must preserve the original empty-slot input")
+                raise ValueError("Housing preparation must preserve the original input")
     runtime_data = runtime_housing(runtime, canvas) if runtime else None
     output.parent.mkdir(parents=True, exist_ok=True)
     if not output.exists():
@@ -95,6 +81,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=ROOT / "media/tex/jewelry/Runecarver.tga")
-    parser.add_argument("--runtime", type=Path, help="Refresh original-empty and bright-equipped housing cells")
+    parser.add_argument("--runtime", type=Path, help="Refresh the shared original housing and clear its retired variant")
     options = parser.parse_args()
     prepare(options.source, options.output, options.runtime)

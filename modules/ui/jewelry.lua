@@ -1,15 +1,14 @@
 -- Five equipped jewelry sockets, attached by default and optionally independent.
 --[[
 Selected 03 Runecarver housings use grey metal matching the action-bar surround.
-Native rarity colors tint the grey carving and its steady additive glow.
+Equipped rarity adds a restrained tint to the original grey carving.
 Rare-blue artwork uses a lighter sky blue; other rarity colors stay native.
 Effects-only hover text keeps the full native rarity color.
 The housing and soft halo are baked together in the existing Frame.blp atlas;
 five static regions inherit the shared overlay's visibility and scale.
-Empty or unknown-quality slots keep the original grey housing; only known
-equipped rarity selects the brighter crop in the same atlas.
-No inner circle is drawn. The glow reuses the same housing artwork without
-animation, hiding while empty, editing or in Performance Mode; the tint remains.
+Empty, unknown-quality and equipped slots share the original housing crop.
+There is no equipped brightness lift, separate glow or inner circle.
+Both Performance Mode states retain the same static metal and rarity tint.
 SocketRail BLP strips retain the straight bar edge and small bottom arch with
 clear item openings, using pixels from the existing HDActionBar.tga. Only its
 narrow top strip switches while this jewelry row is visible. The old circle's
@@ -30,8 +29,8 @@ Empty-slot artwork: Gethe/wow-ui-textures, commit
 e80e3278cc833c89e1f3fc79557b68315d750935, PaperDoll/UI-PaperDoll-Slot-
 Finger.PNG, -Neck.PNG and -Trinket.PNG. World of Warcraft artwork remains
 copyright Blizzard Entertainment, distinct from the software license below.
-The cooldown atlas is original generated geometry; the steady rarity glow
-reuses the prepared Runecarver housing crop and its original alpha.
+The cooldown atlas is original generated geometry. The housing keeps its
+original shading and alpha without an additional rarity drawing layer.
 
 Applicable source notices (Blizzard artwork is distinct from MIT software):
 MIT License
@@ -104,9 +103,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local carvingSize = RIM_SIZE * 128 / 108
     local socketBounds = math.max(socketSize, carvingSize)
     local ANIMATION_INTERVAL = 1 / 30
-    local RARITY_TINT_STRENGTH = 0.9
-    local RARITY_GLOW_ALPHA = 0.52
-    local performanceMode = DFRL.display.Get("performanceMode")
+    local RARITY_TINT_STRENGTH = 0.35
     local texturePath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
     local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
     local EMPTY_TEXTURES = {
@@ -583,18 +580,9 @@ DFRL:NewMod("Jewelry", 4, function()
         carving:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
         carving:SetTexCoord(256 / 512, 384 / 512, 0, 1)
         slot.carving = carving
-        slot.carvingKnown = false
-    end
-    local function HideSlotGlow(slot)
-        if slot.glowShown then slot.glow:Hide() end
-        slot.glowShown = nil
-    end
-    local function HideGlows()
-        for _, slot in ipairs(slots) do
-            HideSlotGlow(slot)
-        end
     end
     local function UpdateRarity(slot)
+        if not hud:IsVisible() then return end
         local known = slot.texture ~= nil and slot.qualityR ~= nil
         local rarityR, rarityG, rarityB = slot.qualityR, slot.qualityG, slot.qualityB
         -- Lighten only rare-blue artwork; keep received RGB for effect text.
@@ -607,42 +595,10 @@ DFRL:NewMod("Jewelry", 4, function()
             green = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * rarityG
             blue = 1 - RARITY_TINT_STRENGTH + RARITY_TINT_STRENGTH * rarityB
         end
-        local visible = hud:IsVisible()
-        if visible and slot.carvingKnown ~= known then
-            local left = known and 384 or 256
-            slot.carving:SetTexCoord(left / 512, (left + 128) / 512, 0, 1)
-            slot.carvingKnown = known
-        end
-        if visible and (slot.carvingR ~= red or slot.carvingG ~= green or slot.carvingB ~= blue) then
+        if slot.carvingR ~= red or slot.carvingG ~= green or slot.carvingB ~= blue then
             slot.carving:SetVertexColor(red, green, blue, 1)
             slot.carvingR, slot.carvingG, slot.carvingB = red, green, blue
         end
-        if not known or not visible or performanceMode or editing then
-            HideSlotGlow(slot)
-            return false
-        end
-        local glow = slot.glow
-        if not glow then
-            glow = overlay:CreateTexture(nil, "OVERLAY")
-            glow:SetTexture(texturePath .. "Frame.blp")
-            glow:SetWidth(carvingSize)
-            glow:SetHeight(carvingSize)
-            glow:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
-            glow:SetTexCoord(384 / 512, 1, 0, 1)
-            glow:SetBlendMode("ADD")
-            glow:SetAlpha(RARITY_GLOW_ALPHA)
-            glow:Hide()
-            slot.glow = glow
-        end
-        if slot.glowR ~= rarityR or slot.glowG ~= rarityG or slot.glowB ~= rarityB then
-            glow:SetVertexColor(rarityR, rarityG, rarityB, 1)
-            slot.glowR, slot.glowG, slot.glowB = rarityR, rarityG, rarityB
-        end
-        if not slot.glowShown then
-            glow:Show()
-            slot.glowShown = true
-        end
-        return true
     end
     local function SetQuality(slot, quality, red, green, blue)
         slot.quality, slot.qualityR, slot.qualityG, slot.qualityB = quality, red, green, blue
@@ -709,7 +665,6 @@ DFRL:NewMod("Jewelry", 4, function()
         shownWanted, wantedDocked = false, nil
         formattedCache, cacheSize = {}, 0
         cooldownsActive = false
-        HideGlows()
         for _, slot in ipairs(slots) do
             ClearSlot(slot)
         end
@@ -718,7 +673,6 @@ DFRL:NewMod("Jewelry", 4, function()
         detached:Hide()
     end
     hud:SetScript("OnHide", function()
-        HideGlows()
         if SyncUpdates then SyncUpdates() end
         if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(false) end
         for _, slot in ipairs(slots) do
@@ -908,11 +862,7 @@ DFRL:NewMod("Jewelry", 4, function()
     end
     function DFRL.SetJewelryEditing(active)
         editing = active
-        if editing then
-            HideGlows()
-        else
-            elapsed = INTERVAL
-        end
+        if not editing then elapsed = INTERVAL end
         if editing then
             for _, slot in ipairs(slots) do
                 HideTooltip(slot)
@@ -977,7 +927,6 @@ DFRL:NewMod("Jewelry", 4, function()
     end
     SyncUpdates = function()
         local visible = CanPaint()
-        if not visible then HideGlows() end
         controller:SetScript("OnUpdate", visible and Tick or nil)
     end
     local function VisibilityChanged()
@@ -987,8 +936,6 @@ DFRL:NewMod("Jewelry", 4, function()
     DFRL.layout.ListenVisibility("actionBar", VisibilityChanged)
     DFRL.layout.ListenVisibility("jewelryBar", VisibilityChanged)
     DFRL.display.Listen(function()
-        performanceMode = DFRL.display.Get("performanceMode")
-        if performanceMode then HideGlows() end
         UpdateDisplay()
         if hoveredSlot and effectPanel and effectPanel:IsShown() then PlaceEffectTooltip(hoveredSlot) end
     end)

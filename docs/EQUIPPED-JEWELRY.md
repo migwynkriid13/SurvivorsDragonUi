@@ -1,6 +1,6 @@
 # Equipped jewelry
 
-The selected **03 — Cold-lit runes** artwork uses grey-metal Runecarver housings matched to the action bar. Runecarver supplies the surround: the old circle is removed from the top and sides, while attached jewelry keeps the small bottom arch that joins the bar. Equipped items give the metal a clear rarity tint and a steady glow in their native rarity color. The row meets the original straight action-bar edge, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
+The selected **03 — Cold-lit runes** artwork uses grey-metal Runecarver housings matched to the action bar. Runecarver supplies the surround: the old circle is removed from the top and sides, while attached jewelry keeps the small bottom arch that joins the bar. Equipped items add a restrained rarity tint to the same default metal housing. The row meets the original straight action-bar edge, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
 
 ## Settings and placement
 
@@ -33,28 +33,20 @@ table supplies RGB. Missing, failed or invalid metadata keeps the existing
 green hover-text fallback while the normal equipment refresh retries. It never
 keeps a removed item's color. Empty slots have no hover card.
 
-There is no separate gold, rarity-colored or replacement inner circle. Empty
-slots and unavailable rarity keep the original grey housing and default empty
-pictures, without any brightness adjustment. A known equipped item selects the
-brighter housing and receives a 90% blend toward its rarity color, retaining
-its carved shading. Blue rarity uses a lighter sky blue for the housing and
-steady glow; other colors and effects-only hover text keep native RGB.
-The prepared housing lifts dark and middle tones, then
-tones that brightness down by 20%, keeping the rarity color visible in both
-Performance Mode states. Only the equipped housing receives this adjustment. Its transparency,
-shape and dimensions stay the same. A steady additive glow brightens that same carved
-artwork in native rarity RGB. It uses the housing's existing crop, size and
-center, without upward movement, pulsing or animated texture frames. Empty
-slots and unavailable rarity metadata stay grey with no glow. Performance
-Mode keeps the static tint without the extra glow; layout editing also hides
-it. Attached and detached modes share the effect, and hidden/off/world cleanup
-hides it. One lazy region per equipped slot is retained for reuse. Its artwork,
-geometry and 52% alpha bind once; only changed visible rarity updates its color.
-Both crops share the existing atlas and housing region, switching only when
-the visible slot changes between known equipped rarity and the original default.
-No new runtime file, region, event, worker, setting or saved state is added. Native quality
-reads and the changed-only hover-text color update retain their cadence.
-Sources and preparation are recorded in
+Empty, unknown-quality and equipped slots use the same original grey housing.
+Equipped items add a 35% rarity tint, leaving 65% of the neutral metal multiplier
+and its original shading. Blue rarity keeps the selected lighter sky-blue accent;
+other artwork colors and effects-only hover text retain native RGB.
+
+There is no equipped brightness lift or extra additive glow. The original
+housing crop stays bound for every slot, so rarity changes only its cached
+vertex color. Empty slots and unavailable metadata use the unchanged neutral
+housing. Both Performance Mode states and layout editing show the same static
+artwork. Hidden/off/world recovery uses the existing equipment reader and parent
+visibility; no new drawing region, event, worker, setting or saved state is added.
+The prepared bright variant and its generator are retired. Native quality reads,
+item geometry, the lower connector, cooldowns and hover behavior retain their
+existing ownership and cadence. Sources and preparation are recorded in
 [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md).
 
 Hover shows only the equipped item's native **Equip**, **Use** and **Chance on hit** effect descriptions. A private `GameTooltipTemplate` under a permanently hidden parent reads `SetInventoryItem("player", id)`; this reader never owns or clears the shared `GameTooltip`, whose visual styling is handled separately by the common hover module. The reader scans at most 64 native rows, skipping the item title and selecting effect rows by the native localized `ITEM_SPELL_TRIGGER_*` prefixes, with English fallback labels only when those globals are missing. The complete matched trigger label and its following whitespace are removed for display, including multiword labels such as Chance on hit. Effect wording, numbers and wrapped text are preserved; no arbitrary first word of a description is removed. Binding, equipment type, requirements, flavor text, sale value and separate cooldown metadata are omitted. No effect values are inferred from the icon or item name. Missing APIs, unavailable descriptions or items without recognized effect rows produce no popup; a hovered slot retries at the existing five-Hz cadence so late native data can appear.

@@ -156,18 +156,16 @@ sockets. These are CI-only data cases;
 local work is artwork preparation, source review and pinned formatting, with
 no local tests, standalone validation or addon/game execution.
 
-Jewelry rarity cases extract the production native-quality and steady-glow
-helpers over fake color/texture boundaries. They cover poor/common quality,
-invalid metadata recovery, grey fallback, stronger housing tint and a stationary
-additive pass using the existing housing crop/geometry at fixed intensity.
-Repeated refreshes retain UVs, alpha, bindings and shown state. Original-empty
-and bright-equipped housing crops switch only for visible validated inventory/
-rarity transitions, including missing metadata, removal and hidden recovery.
-Asset cases pin the unchanged original empty-slot input and compare its exact
-runtime crop and shared alpha with the equipped variant. Hidden, empty,
-editing and Performance Mode hide the glow and reuse its region on recovery;
-Performance Mode keeps the tint without allocating glow regions. These cases
-are authored for CI only and do not establish native appearance or performance.
+Jewelry rarity cases extract the production native-quality and tint helpers.
+They cover poor/common quality, invalid metadata and grey fallback, the 35%
+rarity accent on the unchanged housing, selected rare-blue artwork and retained
+raw tooltip RGB. Settled and hidden states perform no extra writes; empty and
+known items keep the same UV crop in both Performance Mode states and editing.
+The fake native boundary rejects any additional overlay allocation. Asset cases
+pin the original authoring SHA-256 and runtime crop and require the retired
+bright/glow cell to be empty. These cases are authored for CI only; no local
+tests, standalone validation or addon/game execution were run. Native appearance
+and performance remain unverified.
 
 Jewelry cache cases use the exact production reader/cache/compositor functions
 over fake native tooltip and texture boundaries. They cover unchanged successful

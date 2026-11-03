@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class RuntimeTextureTests(unittest.TestCase):
-    def test_empty_jewelry_housing_retains_the_original_input_and_exact_runtime_pixels(self):
+    def test_shared_jewelry_housing_retains_original_pixels_without_the_bright_variant(self):
         source = (ROOT / "media/tex/jewelry/Runecarver.tga").read_bytes()
         self.assertEqual(
             hashlib.sha256(source).hexdigest(),
@@ -27,15 +27,14 @@ class RuntimeTextureTests(unittest.TestCase):
         width, height, levels = blp_bgra_levels((ROOT / "media/tex/jewelry/Frame.blp").read_bytes())
         self.assertEqual((source_width, source_height), (128, 128))
         self.assertEqual((width, height), (512, 128))
-        empty, equipped = bytearray(), bytearray()
+        empty, retired = bytearray(), bytearray()
         for row in range(128):
             left = (row * width + 256) * 4
             empty.extend(levels[0][left:left + 128 * 4])
             left = (row * width + 384) * 4
-            equipped.extend(levels[0][left:left + 128 * 4])
+            retired.extend(levels[0][left:left + 128 * 4])
         self.assertEqual(empty, source_levels[0], "empty slots received equipped brightness or another crop")
-        self.assertEqual(empty[3::4], equipped[3::4], "housing variants changed coverage")
-        self.assertNotEqual(empty, equipped, "equipped housing lost its separate brightness treatment")
+        self.assertFalse(any(retired), "retired bright housing and glow cell still contains pixels")
 
     def test_every_shipped_texture_fits_the_native_device_size_gate(self):
         manifest = json.loads((ROOT / "packaging/runtime-files.json").read_text())
@@ -67,7 +66,7 @@ class RuntimeTextureTests(unittest.TestCase):
                 self.assertFalse(any(alpha(start + 159 - x, y) for x in range(24)), "right crop tab remains exposed")
         # The new upper connector starts beneath solid housing pixels.
         width, _, housing = blp_bgra_levels((ROOT / "media/tex/jewelry/Frame.blp").read_bytes())
-        self.assertGreaterEqual(housing[0][(85 * width + 384 + 25) * 4 + 3], 224)
+        self.assertGreaterEqual(housing[0][(85 * width + 256 + 25) * 4 + 3], 224)
         for center in (264, 432, 600, 768, 936):
             self.assertFalse(any(alpha(center, y) for y in range(104, 134)), "bar crosses an item opening")
         self.assertTrue(any(alpha(348, y) for y in range(104, 152)), "straight bar edge was removed")

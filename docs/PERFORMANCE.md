@@ -81,7 +81,7 @@ review does not prove native pixel coverage or FPS. Earlier fourteen-strip
 batching/repeat experiments remain frozen historical comparisons and do not
 measure this sixteen-band layout.
 
-## Cold-lit Runecarver jewelry and rarity halo — 2026-11-02
+## Neutral Runecarver jewelry and rarity tint — 2026-11-03
 
 The old upper and side socket surround is removed in both attachment modes.
 The three attached `SocketRail` strips retain the small bottom arch joining
@@ -96,64 +96,36 @@ same. Detached jewelry no longer creates five hidden/visible backing-circle
 textures or updates their visibility on display changes. `SocketDetached.blp`
 and its authoring copy are retired from the repository and runtime manifest.
 The same five Runecarver housings supply the complete surround in both modes;
-item, placeholder, cooldown, glow, hover and saved-placement behavior remain.
+item, placeholder, cooldown, hover and saved-placement behavior remain.
 This removes five allocated regions and old circle pixels, without a new
 reader, event, updater or setting. No live rendering or FPS result is claimed.
 
-The original cyan is reduced by 95% during image preparation to match the
-neutral action-bar metal. The original `Runecarver.tga` remains unchanged for
-empty or unavailable-quality slots. Only the equipped variant receives a fixed
-0.55 gamma lift followed by 0.8 RGB gain, retaining the selected reduced
-brightness. Both crops preserve the original alpha, cutout and dimensions.
-Native rarity RGB supplies the 90% color/10% white housing multiplier, except
-received rare rank 3 uses sky blue `66CCFF` for the housing and steady glow.
-This changes only the final artwork color through the existing changed-only
-writes. Empty and unknown-quality slots use white over the original grey
-pixels. Tooltip text keeps full native RGB.
+The original 95%-desaturated `Runecarver.tga` and its exact runtime crop at
+x=256–384 in the 512-by-128 `Frame.blp` now supply every empty and equipped
+housing. Equipped rarity adds only a 35% color multiplier; empty or invalid
+metadata retains white over the original grey pixels. Received rare rank 3
+keeps the selected sky-blue `66CCFF` artwork accent. Tooltip text retains raw
+native RGB. The equipped gamma/gain variant is removed, and its former
+x=384–512 atlas cell is clear. Stock gold, shared pet/meter artwork, original
+housing alpha and all geometry remain unchanged.
 
-The same 512-by-128 `Frame.blp` holds the original housing at x=256–384 and the
-brighter equipped housing at x=384–512. The original crop reuses the retired,
-unreferenced neutral-rim cell. Stock gold and shared pet/meter pixels, file
-size and region count remain unchanged. Each of the same five `BORDER` regions
-starts on the original crop. A visible empty/unknown-to-known-equipped
-transition changes only its UV window and tint; settled or hidden slots do no
-extra UV writes. Missing metadata and item removal return to the original crop.
-The five-Hz reader and both Performance Mode states share this gate, with no
-new getter, source scan, region, runtime file, event or updater.
+Each of the existing five housing regions binds one crop at construction.
+`UpdateRarity` returns before hidden work and changes only a visible final color
+that differs. There is no empty/equipped UV switch or second housing material
+state. The five optional additive glow regions and their allocation, coloring,
+visibility and cleanup paths are removed. Normal and Performance Mode now share
+the same static metal and tint, including while editing. The five-Hz equipment
+reader, tooltips, cooldown shade cadence, icons and parent/world lifecycle remain.
+No new frame, region, getter, event, updater, setting or saved state is added.
 
-Mixed empty/equipped rows can contain two housing UV-clamp states instead of
-one. This is the presentation distinction required to retain the original
-empty default, not an extra drawing layer or a claim of fewer draw calls.
-Texture/geometry bind at construction; the existing Layout edit envelopes,
-rail, icons and confirmed geometry retain their placement. The retained input
-and both atlas recipes reproduce the same two crops without compounding the
-brightness or modifying the default. CI-only asset coverage pins the original
-input and compares its runtime crop, including equal alpha across variants.
-
-Normal mode lazily adds at most five steady glow regions on the existing
-overlay, one per visible equipped slot with valid native rarity RGB. Each
-additive `OVERLAY` region reuses the same `Frame.blp` housing crop, size and
-center, brightening the existing carving at fixed alpha 0.52 (30% stronger than
-the former 0.4 glow). Texture, geometry,
-UVs, blend mode and alpha bind once. Native rarity color and shown state change
-only when needed through the existing five-Hz equipment refresh. No glow clock,
-sprite frames, upward movement or recurring glow painting remains. The retired
-256-square halo atlas, authoring copy and generator are removed; the glow adds
-no runtime file. Cooldown painting retains its existing at-most-30-Hz gate.
-
-Hidden/off, empty, missing rarity, editing and Performance Mode hide the glow;
-retained regions are reused on return. Performance Mode never allocates a glow
-region and retains the static housing tint. No gameplay frame, getter, event,
-setting, saved state or updater is added. Region count stays at most five for
-the effect; persistent additive rendering remains a native cost even though
-Lua no longer advances animation UVs.
-
-CI-only mocks cover native color validation, poor/common qualities, grey
-fallback, matching housing crop/geometry, fixed intensity, unchanged writes
-and lazy reuse across visibility/editing/Performance Mode retirement. Local
-work is source review and pinned formatting; no local tests, standalone
-validation or addon/game execution were performed. Source and payload counts
-do not establish native appearance, rendering cost or FPS.
+The authoring helpers reproduce only the unchanged original housing and clear
+the retired bright cell. CI-only cases pin the original authoring SHA-256 and
+exact runtime pixels, reject retained variant pixels, and cover restrained
+rarity, poor/common quality, invalid metadata, preserved native tooltip RGB,
+changed-only writes, mode parity and hidden/empty recovery without an overlay.
+Local work is source/artwork inspection, preparation and pinned formatting;
+no local tests, standalone validation or addon/game execution were performed.
+Fewer drawing layers and unchanged reads do not establish a live FPS result.
 
 ## Artisan metal LEVEL UP — 2026-11-02
 

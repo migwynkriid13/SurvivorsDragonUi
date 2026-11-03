@@ -13,37 +13,44 @@ Selected **03 — Cold-lit runes** uses static Runecarver metal and rune accents
 
 `scripts/prepare_jewelry_runecarver.py --source /path/to/RuneCarvingUI.PNG` accepts only the pinned source bytes. It clears the original inner crafting controls with an antialiased normalized-radius 0.33 cut, resizes the remaining lit frame to 118 × 120 and places it at `(5,4)` on a transparent 128 × 128 canvas. The original halo resizes to 124 × 126 at `(2,1)`, with source alpha multiplied by 0.32, below the frame. The completed cell blends 95% grayscale with 5% source RGB, retaining the original shading and alpha. This original empty-slot housing remains the unchanged `media/tex/jewelry/Runecarver.tga` authoring input. CI pins its original SHA-256 and exact runtime pixels.
 
-`brightened_housing` derives only the equipped variant from that input, using a fixed 0.55 gamma lift followed by 0.8 RGB gain. Both variants share the original alpha, cutout and dimensions. Empty and unavailable-quality slots never receive this brightness adjustment. The runtime still applies its changed-only 90% native-rarity/10% white multiplier to known equipped housings; effects-only hover text retains native RGB.
+Empty and equipped slots share that unchanged original housing. Known rarity
+adds a 35% color multiplier to the metal, with no gamma/gain lift or additional
+additive texture. The selected rare-blue accent remains `66CCFF`; effects-only
+hover text retains raw native RGB. Missing metadata and empty slots stay neutral.
 
-`--runtime media/tex/jewelry/Frame.blp` refreshes the original-empty cell `(256,0)-(384,128)` and bright-equipped cell `(384,0)-(512,128)`. The original-empty cell replaces the retired neutral-rim crop, which has no remaining runtime consumer. The helper preserves all other atlas bytes, including its header, stock gold and shared pet/meter artwork. An existing retained input must match the original prepared pixels and is left byte-for-byte unchanged. Tone preparation uses Pillow 12.0.0; the original downloaded sheet and temporary dependencies are not retained. Atlas dimensions, byte size, region count and drawing layers do not change.
+`--runtime media/tex/jewelry/Frame.blp` refreshes the shared original cell
+`(256,0)-(384,128)` and clears the retired bright/glow cell at x=384–512. The
+helper preserves the header, stock gold and shared pet/meter artwork. An existing
+retained input must match the original prepared pixels and remains byte-for-byte
+unchanged. Tone preparation uses Pillow 12.0.0; the source sheet and temporary
+dependencies are not retained. Atlas dimensions and byte size are unchanged.
 
-For a full rebuild, `prepare_jewelry_art.py` places the original input at `(896,0)-(1024,128)` and the derived equipped cell at `(768,0)-(896,128)` in its authoring canvas. The client-texture repacker moves these to x=256 and x=384 respectively in the same legal **512 × 128** `Frame.blp`. The retired neutral-rim preparation is removed. No extra authoring input, runtime file or manifest entry is needed.
+For a full rebuild, `prepare_jewelry_art.py` places only the original input at
+`(896,0)-(1024,128)` in its authoring canvas. The client-texture repacker moves
+that cell to x=256 in the legal **512 × 128** `Frame.blp`; the former equipped
+cell stays clear. The brightness function and its caller are removed. No extra
+authoring input, runtime file or manifest entry is needed.
 
-Each of the same five static `BORDER` regions starts at UVs `256/512, 384/512, 0, 1`, centered on its icon at local size `43 * 128 / 108`. Known equipped rarity changes that region to `384/512, 1, 0, 1`; empty or unavailable metadata restores the original crop and neutral multiplier. The visible reader caches that choice and defers hidden writes. Settled rows retain all bindings. Mixed rows may use both UV-clamp states, while preserving the existing layers, geometry and region count. The steady glow described below uses only the equipped crop. Pet/meter crops, cooldown values and source/slot identities are unchanged.
+Each of the existing five static `BORDER` regions binds UVs `256/512, 384/512,
+0, 1` once, centered on its icon at local size `43 * 128 / 108`. Equipment and
+rarity never change that crop. The visible reader caches the final color and
+defers hidden writes. Pet/meter crops, cooldown values and source/slot identities
+are unchanged.
 
-Only the existing Layout edit envelopes grow to include the larger static canvas: attached top clearance becomes 41⅓ units at the reference button size, while the detached region uses the larger of the socket and carving sizes around the same center. This does not move icons, rims, rails, roots or confirmed geometry. The five regions reuse the current overlay, parent visibility and attachment/world cleanup in both Performance Mode states. They add no frame, getter, event, updater, setting or saved state. Carving texture, geometry and UV writes happen at construction; only changed visible rarity updates vertex color. Each crop has its own baked steady halo within that same region. Source/region counts do not establish native rendering or FPS. Only static artwork preparation, source review and pinned formatting were performed, with no local tests, standalone validation or addon/game execution.
+Only the existing Layout edit envelopes grow to include the larger static canvas: attached top clearance becomes 41⅓ units at the reference button size, while the detached region uses the larger of the socket and carving sizes around the same center. This does not move icons, rims, rails, roots or confirmed geometry. The five regions reuse the current overlay, parent visibility and attachment/world cleanup in both Performance Mode states. They add no frame, getter, event, updater, setting or saved state. Carving texture, geometry and UV writes happen at construction; only changed visible rarity updates vertex color. The original neutral baked halo remains within that same region. Source/region counts do not establish native rendering or FPS. Only static artwork preparation, source review and pinned formatting were performed, with no local tests, standalone validation or addon/game execution.
 
 This is original World of Warcraft artwork, copyright Blizzard Entertainment. Public availability and software licenses do not transfer its ownership or supply a blanket art redistribution license. Existing project permission for upstream custom art does not relicense this Blizzard texture; its provenance remains in the shipped jewelry module. No source addon code, fonts or framework is imported.
 
-## Steady rarity glow
+## Restrained rarity tint
 
-One lazy `OVERLAY` region per equipped slot reuses the Runecarver housing crop
-`384/512, 1, 0, 1` in the existing `Frame.blp`. It shares the housing's size,
-center and original alpha, with additive blending, fixed alpha 0.52 and validated
-native rarity RGB, except rare-blue artwork uses the lighter `66CCFF` sky blue.
-The original carved shading and baked halo supply the glow's
-shape; there is no upward movement, pulse or texture animation. Geometry, UVs,
-texture, blend and intensity bind only at construction. Color and visibility
-change only when needed through the existing equipment reader.
-
-Empty or unknown-quality slots have no extra glow. Visibility, editing,
-Performance Mode and world/disabled cleanup hide it while retaining regions
-for reuse; Performance Mode keeps the static housing tint. Icon size, slot
-order, attachment and native cooldown animation are unchanged. The retired
-moving-halo atlas, its authoring copy and preparation helper are removed, so
-this effect adds no runtime file or separate artwork dependency. The reused
-housing retains the Blizzard attribution above. Native appearance remains
-unverified; no addon or game was executed locally.
+The same original housing supplies empty and equipped slots. A 35% rarity
+multiplier keeps the neutral metal recognizable while indicating item quality.
+There is no extra glow region, animation or Performance Mode-specific artwork.
+The former five optional additive overlays, bright housing derivative and
+mode/visibility cleanup paths are retired. Existing native rarity reads and
+changed-only color writes remain; tooltip RGB is unchanged. This reduces the
+drawing layers without establishing native rendering cost or an FPS gain.
+Native appearance remains unverified; no addon or game was executed locally.
 
 ## Shared pet/meter rim source
 
@@ -57,7 +64,7 @@ Original World of Warcraft artwork remains copyright Blizzard Entertainment. The
 
 `scripts/prepare_jewelry_art.py` reads `bagborder2.blp` from a scratch directory supplied with `--sources`. A shared Raw1/Raw3 decoder preserves indexed colors and the separate alpha block; Pillow handles the other source formats. Pillow's own Raw1 path is not used because it omits that alpha block. This tool prepares image assets without loading or executing addon code.
 
-`prepare_jewelry_art.py` retains its 1024-by-256 authoring canvas. The legal runtime `media/tex/jewelry/Frame.blp` is **512 × 128**, with the gold rim at `(1,1)-(73,73)`, pet/meter rim at `(129,1)-(201,73)` and neutral rarity rim at `(257,1)-(329,73)`. The client repacker copies these from the original authoring crops without resampling; see [Client compatibility](../docs/CLIENT-COMPATIBILITY.md). Jewelry no longer binds the old gold or neutral rim cells. Their shared authoring/source records remain for the pet/meter artwork; removing a jewelry drawing region does not alter another consumer's source pixels. All five Runecarver housings use only the fourth cell, centered on their original item and socket positions. The jewelry frame scale remains the native action-button width divided by 43. Native rarity reads also supply the stronger housing tint and separate animated halo below, without restoring a circle region or changing housing UVs.
+`prepare_jewelry_art.py` retains its 1024-by-256 authoring canvas. The legal runtime `media/tex/jewelry/Frame.blp` is **512 × 128**, with the stock gold rim at `(1,1)-(73,73)`, shared pet/meter rim at `(129,1)-(201,73)` and original Runecarver housing at `(256,0)-(384,128)`. The fourth cell is clear. The client repacker copies the retained artwork from its authoring crops without resampling; see [Client compatibility](../docs/CLIENT-COMPATIBILITY.md). Jewelry no longer binds the stock gold rim, and its former neutral rarity-rim cell is replaced by the original Runecarver housing. The shared gold/pet/meter source records remain; removing a jewelry drawing region does not alter another consumer's source pixels. All five Runecarver housings use only the original housing cell at x=256, centered on their original item and socket positions. The jewelry frame scale remains the native action-button width divided by 43. Native rarity reads supply the restrained housing tint without another region or changing housing UVs.
 
 Native item hover frames remain 32 by 32 at local vertical center 46.5.
 The rendered item uses a centered artwork box set by `ICON_ART_SIZE` (currently 33.897596 units), shared by empty-slot
