@@ -23,6 +23,10 @@ SPELL_NAMES_SHA256 = "80ac3217660a02020b3e09f1ce93bfaa6ba89abd9a9d62405b9f70114f
 MARKS_KEYS = ("marks.gained", "marks.earned")
 ACHIEVEMENTS_SHA256 = "6ca5f4ba4eb6b26716e4b7d9e03cbd25ddafe7582dcd8e55333e070a28058afa"
 ACHIEVEMENT_KEYS = ("Achievement earned:", "Achievement earned: {name} (+{n})", "{n} points", "Jeweler's Eye", "Every Bauble")
+ACHIEVEMENT_COLLISION_ICONS = {
+    (10, frozenset({"Overtime"})): "INV_Misc_PocketWatch_01",
+    (25, frozenset({"Never Ending", "Unending"})): "INV_Misc_PocketWatch_02",
+}
 AFFIXES_SHA256 = "08f8c58d6967b94598c56b822a1e6b323a52924a299a6df70ef6055ca839b8cd"
 AFFIX_WARNINGS_SHA256 = "5dd6819d836748ccf809ab76fe6509c9ee793e087939b5d036c430d835a14e63"
 AFFIX_WARNING_KEYS = ("An Explosive Orb appears! Destroy it before it bursts!",)
@@ -144,12 +148,19 @@ def achievement_icon_block(rows, catalog):
     for row in rows:
         name = catalog.get(row["name"], row["name"])
         name = re.sub(r"\{(zone|class)\}", lambda match: catalog[row[match[1]]], name)
-        identity = name + "\n" + str(int(row["points"]))
-        matches.setdefault(identity, set()).add(row["icon"])
+        matches.setdefault((name, int(row["points"])), []).append(row)
     lines = ["        achievementIcons = {\n"]
-    for identity, icons in sorted(matches.items()):
+    for (name, points), group in sorted(matches.items()):
+        icons = {row["icon"] for row in group}
         if len(icons) == 1:
-            lines.append("            [" + lua_string(identity) + "] = " + lua_string(next(iter(icons))) + ",\n")
+            icon = next(iter(icons))
+        else:
+            source_names = frozenset(row["name"] for row in group)
+            icon = ACHIEVEMENT_COLLISION_ICONS.get((points, source_names))
+            if icon not in icons:
+                continue
+        identity = name + "\n" + str(points)
+        lines.append("            [" + lua_string(identity) + "] = " + lua_string(icon) + ",\n")
     lines.append("        },\n")
     return "".join(lines)
 

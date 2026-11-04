@@ -178,15 +178,19 @@ for code in pairs(legacy.env.DFRL.locale.data) do
     languages = languages + 1
 end
 assert(languages == 14, "legacy awards omitted a native language")
-legacy.env.DFRL.locale.Select("en")
+local legacyLocale = legacy.env.DFRL.locale
 for _, award in ipairs({
-    { "Champion of Naxxramas", 25, "INV_Misc_Head_Scourge_01" },
-    { "Champion of Naxxramas", 50, "INV_Misc_Head_Dragon_Black" },
-    { "Overtime", 10, "INV_Misc_QuestionMark" },
-    { "Regular", 50, "INV_Misc_QuestionMark" },
+    { "en", "Champion of Naxxramas", 25, "INV_Misc_Head_Scourge_01" },
+    { "en", "Champion of Naxxramas", 50, "INV_Misc_Head_Dragon_Black" },
+    { "en", "Overtime", 10, "INV_Misc_PocketWatch_01" },
+    { "en", "Never Ending", 25, "Spell_Nature_TimeStop" },
+    { "es", "Interminable", 25, "INV_Misc_PocketWatch_02" },
+    { "en", "Regular", 50, "INV_Misc_QuestionMark" },
 }) do
-    local name, points, icon = unpack(award)
-    legacy.handler({ id = 3, kind = "achievement", text = "Achievement earned: " .. name .. " (+" .. points .. ")" })
+    local code, name, points, icon = unpack(award)
+    legacyLocale.Select(code)
+    local message = legacyLocale.Native("Achievement earned: {name} (+{n})", { name = name, n = points })
+    legacy.handler({ id = 3, kind = "achievement", text = message })
     local card = assert(AchievementCard(legacy, name), "legacy award did not display")
     assert(card.icon:GetTexture() == "Interface\\Icons\\" .. icon, "legacy award picked the wrong icon for " .. name)
     legacy.env.DFRL.banners.Clear()

@@ -26,17 +26,18 @@ This path leaves native banners and chat under game ownership. It needs the
 game to emit the award as a system message. When a notice lacks an icon,
 both paths look up its exact localized title and awarded points. The lookup
 uses the game's 0.141.0 achievement records in all fourteen languages. Missing
-or ambiguous matches use the neutral question mark. A notice without a usable
-title keeps the ordinary text presentation.
+matches and collisions without a chosen fallback use the neutral question mark.
+A notice without a usable title keeps the ordinary text presentation.
 
 The [fallback source table](../localization/achievement-icons.tsv) records
 131 definitions. The native constructor at `0x145e4d620` in the pinned client
 builds the name, points and icon together. For example, the **Regular** record
 binds `INV_Misc_Note_01` at `0x145e55946` and stores 10 points at `0x145e55958`.
 The two **Champion of Naxxramas** rewards differ by points and retain their own
-icons. The two 10-point **Overtime** records have different icons and share one
-legacy lookup key, so the generated lookup omits that key. All selected icon
-paths were found in the installed archives. Regenerate the localized data
+icons. The two 10-point **Overtime** records share the first pocket watch as
+their fallback. Where **Never Ending** and **Unending** share a localized title,
+their 25-point collision uses the second pocket watch. All selected icon paths
+were found in the installed archives. Regenerate the localized data
 with `scripts/generate_localization.py --client <exe> --refresh-achievements-only`.
 
 Achievement cards reuse the same three queue slots, group placement, lifetime
