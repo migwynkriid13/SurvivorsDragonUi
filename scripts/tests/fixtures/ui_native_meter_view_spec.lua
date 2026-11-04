@@ -1814,8 +1814,9 @@ Test("a slow frame paints the pending read before another regular read", functio
     local reads = state.calls.snapshot
     c:Frame(0.3)
     assert(state.calls.snapshot == reads + 1 and second.bar.value == 0.4)
-    -- A new native publication must miss the adapter's exact-capture cache.
-    ChangeSecondAmount(state, 60, "next-slow-frame-read")
+    -- Publish more damage to miss the exact-capture cache without forcing the
+    -- extra history read used when native cumulative damage falls.
+    ChangeSecondAmount(state, 90, "next-slow-frame-read")
     c:Frame(0.3)
     assert(state.calls.snapshot == reads + 1 and second.bar.value == 0.8, "slow frame lost the pending draw")
     c:Frame(0.016)
@@ -1824,7 +1825,7 @@ Test("a slow frame paints the pending read before another regular read", functio
         "drawing discarded elapsed time or painted the next publication early"
     )
     c:Frame(0)
-    assert(state.calls.snapshot == reads + 2 and second.bar.value == 0.6, "the next draw lost the queued publication")
+    assert(state.calls.snapshot == reads + 2 and second.bar.value == 0.9, "the next draw lost the queued publication")
 end)
 
 Test("primed refresh draws in the same frame", function()
