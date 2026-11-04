@@ -25,8 +25,9 @@ a 1024 × 1024 BLP. The downloaded texture is byte-identical in builds
 The four crops retain their decoded pixels and alpha on a transparent
 512 × 128 BLP2 canvas. Runtime UVs address the cropped regions at their retail
 dimensions. The legacy renderer uses ordinary texture regions and anchors for
-the 300 × 101 frame, 52 × 52 icon and title. It uses the shared banner fade and
-placement. The toast contains no screenshot pixels.
+the 300 × 101 frame, 52 × 52 icon and title. The black heading uses the client's
+default font at size 12 with a plain edge and no shadow for legibility on the
+gold strip. The toast uses the shared banner fade and placement.
 
 The artwork remains copyright Blizzard Entertainment. The mirrors, crop and
 format conversion grant no new license. See the project's
