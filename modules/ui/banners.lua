@@ -66,6 +66,7 @@ DFRL:NewMod("RunBanners", 4, function()
     local MAX_ERRORS = 32
     local age, painted = 0, 0
     local performanceMode = DFRL.display.Get("performanceMode")
+    local awardScreen, settleAwardScreens
     local nextPaintAt, lastPaintAt
     local OnBanner, Refresh, Update, SyncUpdates
     local companions = {}
@@ -165,7 +166,7 @@ DFRL:NewMod("RunBanners", 4, function()
             return
         end
         label:SetText("")
-        pool[index] = { label = label }
+        pool[index] = { label = label, index = index }
     end
     SetDiagnostic("stage", "initializing-layout")
 
@@ -177,13 +178,67 @@ DFRL:NewMod("RunBanners", 4, function()
     end
     function banners.IsActive() return active and inWorld and DFRL.display.Get("customBanners") end
     local needsReflow = false
+    local function SetScreenLayer(card, wanted)
+        if (card.aboveScreen == true) == wanted or type(AZS_SetOnTopOfScreens) ~= "function" then return end
+        local ok, applied = pcall(AZS_SetOnTopOfScreens, card, wanted)
+        if ok and applied ~= false then card.aboveScreen = wanted end
+    end
+    local function SyncScreenCards()
+        local shown = root:IsVisible()
+        for index = 1, MAX_VISIBLE do
+            local row = pool[index]
+            if row.card then
+                local screen = row.entry and row.entry.screen
+                SetScreenLayer(
+                    row.card,
+                    (shown and row.presented == row.card and screen and screen == awardScreen) == true
+                )
+            end
+        end
+    end
+    local function ReadAwardScreen()
+        local choosing
+        if type(AZS_GetPhase) == "function" then
+            local ok, phase = pcall(AZS_GetPhase)
+            if ok and (phase == "dead" or phase == "victory") then return "end" end
+            choosing = ok and phase == "choosing"
+        end
+        if type(AZS_GetRunSummary) == "function" then
+            local ok, summary = pcall(AZS_GetRunSummary)
+            local result = ok and type(summary) == "table" and summary.result
+            if result == "defeat" or result == "victory" or result == "left" then return "end" end
+        end
+        if choosing then return "choice" end
+    end
+    local function ObserveAwardScreen()
+        local kind = ReadAwardScreen()
+        if kind ~= (awardScreen and awardScreen.kind) then
+            awardScreen = kind and { kind = kind }
+            SyncScreenCards()
+        end
+        return awardScreen
+    end
+    local function SettleAwardScreens()
+        if not settleAwardScreens then return end
+        settleAwardScreens = false
+        local screen = ObserveAwardScreen() or false
+        for index = 1, visibleCount do
+            local entry = visible[index].entry
+            if entry.screen == nil then entry.screen = screen end
+        end
+        for index = 1, queueCount do
+            local entry = queue[index]
+            if entry.screen == nil then entry.screen = screen end
+        end
+        if screen then SyncScreenCards() end
+    end
     local function AchievementCrop(texture, x, width, height)
         texture:SetWidth(width)
         texture:SetHeight(height)
         texture:SetTexCoord(x / 512, (x + width) / 512, 0, height / 128)
     end
-    local function CreateAchievementCard()
-        local card = CreateFrame("Frame", nil, root)
+    local function CreateAchievementCard(index)
+        local card = CreateFrame("Frame", "DFRLAchievementToast" .. index, root)
         card:SetWidth(300)
         card:SetHeight(101)
         card:EnableMouse(false)
@@ -223,7 +278,7 @@ DFRL:NewMod("RunBanners", 4, function()
         return card
     end
     local function PresentAchievement(row, award)
-        local card = row.card or CreateAchievementCard()
+        local card = row.card or CreateAchievementCard(row.index)
         row.card = card
         if not card.bound then
             local atlas = DFRL:GetInfoOrCons("tex") .. "achievements\\Toast.blp"
@@ -255,6 +310,8 @@ DFRL:NewMod("RunBanners", 4, function()
             card.shield:Hide()
         end
         card.points:SetText(award.points and award.points > 0 and tostring(award.points) or "")
+        local screen = row.entry.screen
+        SetScreenLayer(card, (screen and screen == awardScreen) == true)
         return card
     end
     local function Present(row)
@@ -294,6 +351,7 @@ DFRL:NewMod("RunBanners", 4, function()
         needsReflow = false
     end
     local function Retire(row)
+        if row.card then SetScreenLayer(row.card, false) end
         local view = row.presented
         if view then
             view:Hide()
@@ -310,6 +368,7 @@ DFRL:NewMod("RunBanners", 4, function()
     end
     function banners.Clear()
         pendingErrors, errorCount = {}, 0
+        awardScreen, settleAwardScreens = nil, false
         for index = 1, MAX_VISIBLE do
             Retire(pool[index])
         end
@@ -433,6 +492,12 @@ DFRL:NewMod("RunBanners", 4, function()
     local function Enqueue(text, boss, kind, id, originalText, award)
         CountDiagnostic("queued")
         sequence = sequence + 1
+        local screen = false
+        if award and type(AZS_SetOnTopOfScreens) == "function" then
+            screen = ObserveAwardScreen()
+            -- The matching phase/summary can follow the award in the same update.
+            if not screen then settleAwardScreens = true end
+        end
         local copy = {
             id = id,
             kind = kind,
@@ -440,6 +505,7 @@ DFRL:NewMod("RunBanners", 4, function()
             originalText = originalText,
             boss = boss,
             award = award,
+            screen = screen,
             sequence = sequence,
         }
         if queueCount == 0 and Push(copy, GetTime()) then return end
@@ -765,11 +831,15 @@ DFRL:NewMod("RunBanners", 4, function()
         -- Fully opaque rows need only their next fade or retirement deadline.
         nextPaintAt = not (animating or moved or promoted) and nextAt or nil
         lastPaintAt = now
-        if fallback and visibleCount == 0 then SyncUpdates() end
+        if visibleCount == 0 then
+            awardScreen = nil
+            if fallback then SyncUpdates() end
+        end
     end
     Update = function()
         local elapsed = tonumber(arg1) or 0
         FlushErrors(not active)
+        SettleAwardScreens()
         age, painted = age + elapsed, painted + elapsed
         if age >= 0.2 and (not fallback or registered or native.IsCaptured()) then
             age = 0
@@ -792,9 +862,12 @@ DFRL:NewMod("RunBanners", 4, function()
         if controller:GetScript("OnUpdate") ~= update then controller:SetScript("OnUpdate", update) end
     end
     HookScript(root, "OnShow", function()
+        if awardScreen then ObserveAwardScreen() end
         local ok, message = pcall(Paint, GetTime())
         if not ok then Failed(message) end
+        if awardScreen then SyncScreenCards() end
     end)
+    HookScript(root, "OnHide", SyncScreenCards)
     DFRL.layout.Register("banners", root, function()
         root:ClearAllPoints()
         root:SetPoint("TOP", UIParent, "TOP", 0, -130)
@@ -826,6 +899,7 @@ DFRL:NewMod("RunBanners", 4, function()
             SyncUpdates()
         elseif event == "CHAT_MSG_ADDON" then
             if arg1 == "AZSZONE" then banners.Clear() end
+            if (arg1 == "AZSRUN" or arg1 == "AZSEND") and awardScreen and visibleCount > 0 then ObserveAwardScreen() end
             if arg1 == "AZSZONE" or arg1 == "AZSRUN" then Refresh() end
         elseif event == "CHAT_MSG_SYSTEM" then
             if fallback then

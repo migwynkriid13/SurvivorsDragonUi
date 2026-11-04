@@ -46,6 +46,15 @@ awards can expire before allocating a card. The system-message fallback uses
 the existing controller while a toast is pending and detaches it at expiry.
 See [retail artwork provenance](../third_party/AchievementToast-ARTWORK.md).
 
+Awards received on a level-up or jewelry choice screen, or while the run's
+end screen is active, use `AZS_SetOnTopOfScreens` on the individual toast.
+The first controller update can associate a new award with phase or summary
+data delivered in the same update. Later screen changes never promote earlier
+run awards. Closing the screen, hiding Banners, expiry and world cleanup
+release the registration. The toast remains click-through, and ordinary
+banners use their usual layer. Clients without the layering API retain the
+standard toast placement. Live rendering above the end screen remains unverified.
+
 ## Placement and lifetime
 
 Three passive pooled labels share an independent UIParent-owned root, centered

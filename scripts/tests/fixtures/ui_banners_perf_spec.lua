@@ -53,6 +53,17 @@ local function AchievementCard(current, title)
         if object.kind == "Frame" and object.title and object.title:GetText() == title then return object end
     end
 end
+local function AddScreenApi(current)
+    current.phase = "playing"
+    current.screenCards = {}
+    current.env.AZS_GetPhase = function() return current.phase end
+    current.env.AZS_GetRunSummary = function() return current.summary end
+    current.env.AZS_SetOnTopOfScreens = function(frame, on)
+        assert(frame:GetParent() == current.layoutFrame and frame:GetName(), "overlay promoted the wrong frame")
+        assert((current.screenCards[frame] == true) ~= on, "overlay wrote the same registration twice")
+        current.screenCards[frame] = on or nil
+    end
+end
 local iconPath = "Interface\\Icons\\INV_Test_Achievement"
 for _, performance in ipairs({ false, true }) do
     local current = NewBannerContext()
@@ -91,6 +102,47 @@ for _, performance in ipairs({ false, true }) do
     current:Event(service, "PLAYER_LEAVING_WORLD")
     assert(not card:IsShown() and current.nativeShown, "world cleanup failed to retire the award or restore native HUD")
 end
+
+for _, performance in ipairs({ false, true }) do
+    local current = NewBannerContext()
+    AddScreenApi(current)
+    current:SetSetting("customBanners", true)
+    current:SetSetting("performanceMode", performance)
+    local service = current:Controller("CVAR_UPDATE")
+    current.handler({ id = 1, kind = "achievement", name = "In play", text = "In play" })
+    local earlier = assert(AchievementCard(current, "In play"))
+    current:Call(service, "OnUpdate", 0.01)
+    current.phase = "choosing"
+    current:Event(service, "CHAT_MSG_ADDON", "AZSRUN")
+    current.handler({ id = 2, kind = "achievement", name = "Choice award", text = "Choice award" })
+    local choice = assert(AchievementCard(current, "Choice award"))
+    current.handler({ id = 3, kind = "boss", text = "Boss banner" })
+    assert(current.screenCards[choice] and not current.screenCards[earlier], "choice screen promoted an earlier award")
+    current:SetLayoutHidden(true)
+    assert(not next(current.screenCards), "hidden Layout retained a screen registration")
+    current:SetLayoutHidden(false)
+    assert(current.screenCards[choice], "visible award did not recover on the same choice screen")
+    current.phase = "playing"
+    current:Event(service, "CHAT_MSG_ADDON", "AZSRUN")
+    assert(not next(current.screenCards), "choice screen registration survived resume")
+    current.env.DFRL.banners.Clear()
+
+    current.handler({ id = 4, kind = "achievement", name = "End award", text = "End award" })
+    local terminal = assert(AchievementCard(current, "End award"))
+    assert(not next(current.screenCards), "end award was promoted before a screen was reported")
+    current.summary = { result = "victory" }
+    current:Event(service, "CHAT_MSG_ADDON", "AZSEND")
+    current:Call(service, "OnUpdate", 0.01)
+    assert(current.screenCards[terminal], "same-update run summary did not promote the award")
+    current.now = current.now + 4.11
+    current:Call(service, "OnUpdate", 4.11)
+    assert(not terminal:IsShown() and not next(current.screenCards), "expired end award retained its screen layer")
+    current.handler({ id = 5, kind = "achievement", name = "Another end award", text = "Another end award" })
+    assert(next(current.screenCards), "live terminal award did not acquire the screen layer")
+    current:Event(service, "PLAYER_LEAVING_WORLD")
+    assert(not next(current.screenCards), "world cleanup retained a terminal screen registration")
+end
+print("PASS only live achievements from choice or terminal screens receive the temporary native overlay layer")
 
 local legacy = NewBannerContext()
 legacy:SetSetting("customBanners", true)
@@ -141,6 +193,8 @@ for _, award in ipairs({
 end
 
 local chatOnly = NewBannerContext(true)
+AddScreenApi(chatOnly)
+chatOnly.phase = "choosing"
 chatOnly:SetSetting("customBanners", true)
 local chatService = chatOnly:Controller("CHAT_MSG_SYSTEM")
 assert(chatOnly.nativeShown and not chatService:GetScript("OnUpdate"), "chat fallback acquired the HUD or idle work")
@@ -153,9 +207,11 @@ chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "|cffffff00Achievement earned: [R
 local chatCard = assert(AchievementCard(chatOnly, "Regular"), "chat-only award did not show")
 assert(chatCard.points:GetText() == "10" and chatService:GetScript("OnUpdate"), "chat award lost points or expiry")
 assert(chatCard.icon:GetTexture() == "Interface\\Icons\\INV_Misc_Note_01", "chat award lost the game's Regular icon")
+assert(chatOnly.screenCards[chatCard], "chat fallback did not promote its live choice award")
 chatOnly.now = chatOnly.now + 4.11
 chatOnly:Call(chatService, "OnUpdate", 4.11)
 assert(not chatCard:IsShown() and not chatService:GetScript("OnUpdate"), "chat toast retained idle work after expiry")
+assert(not next(chatOnly.screenCards), "expired chat award retained its screen registration")
 chatOnly:SetSetting("customBanners", false)
 assert(not chatService.events.CHAT_MSG_SYSTEM and not chatOnly.handler, "disabled fallback retained its listener")
 print("PASS achievement awards retain official metadata, exact legacy messages, pooled presentation and idle cleanup")
