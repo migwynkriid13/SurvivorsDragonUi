@@ -1,13 +1,60 @@
 # Run banners
 
 `modules/ui/banners.lua` displays native notices in its own **Banners** frame. It
-uses the same resolved DEFAULT face, size 12, OUTLINE and black shadow as chat,
-through the shared helpers in `core/fonts.lua`. The supplied translated text is
-displayed unchanged except for the requested full guardian-death wording below.
-The native `boss` flag selects red text; other notices use
-gold. No icon, backdrop, sound or gameplay lookup is added. The Layout caption
-uses the existing fourteen-language source/runtime catalogs.
+uses the same resolved DEFAULT face, size 12, OUTLINE and black shadow as chat
+for ordinary notices. The supplied translated text is displayed as received,
+with the full guardian-death wording described below. The native `boss` flag
+selects red text. Other ordinary notices use gold.
 Received affix warnings use the same red warning style and banner lifetime.
+
+## Achievement toasts
+
+When an achievement is earned, the Banners group shows its localized title
+with the retail achievement frame, icon and points shield. The
+[achievement payload contract](CODEX-ACHIEVEMENT-BANNER-API-PROPOSAL.md)
+adds the stable key, texture path and awarded points to the existing callback.
+The addon validates the metadata and snapshots the display fields at receipt.
+The existing banner ID identifies each notification, including awards with the
+same title. Zero points use the emblem shield. An unknown amount leaves the
+shield hidden.
+
+Older callbacks can supply the title and amount through the localized banner
+text. Custom banners also recognizes the game's chat format, such as
+`Achievement earned: [Regular] (10 points)`. On clients without the full banner
+API, it listens for complete award messages on `CHAT_MSG_SYSTEM` while in the world.
+This path leaves native banners and chat under game ownership. It needs the
+game to emit the award as a system message. When a notice lacks an icon,
+both paths look up its exact localized title and awarded points. The lookup
+uses the game's 0.141.0 achievement records in all fourteen languages. Missing
+matches and collisions without a chosen fallback use the neutral question mark.
+A notice without a usable title keeps the ordinary text presentation.
+
+The [fallback source table](../localization/achievement-icons.tsv) records
+131 definitions. The native constructor at `0x145e4d620` in the pinned client
+builds the name, points and icon together. For example, the **Regular** record
+binds `INV_Misc_Note_01` at `0x145e55946` and stores 10 points at `0x145e55958`.
+The two **Champion of Naxxramas** rewards differ by points and retain their own
+icons. The two 10-point **Overtime** records share the first pocket watch as
+their fallback. Where **Never Ending** and **Unending** share a localized title,
+their 25-point collision uses the second pocket watch. All selected icon paths
+were found in the installed archives. Regenerate the localized data
+with `scripts/generate_localization.py --client <exe> --refresh-achievements-only`.
+
+Achievement cards reuse the same three queue slots, group placement, lifetime
+and Performance Mode behavior. Each slot lazily adds one frame, four textures
+and three text regions, only when it presents a visible achievement. Hidden
+awards can expire before allocating a card. The system-message fallback uses
+the existing controller while a toast is pending and detaches it at expiry.
+See [retail artwork provenance](../third_party/AchievementToast-ARTWORK.md).
+
+Awards received on a level-up or jewelry choice screen, or while the run's
+end screen is active, use `AZS_SetOnTopOfScreens` on the individual toast.
+The first controller update can associate a new award with phase or summary
+data delivered in the same update. Later screen changes never promote earlier
+run awards. Closing the screen, hiding Banners, expiry and world cleanup
+release the registration. The toast remains click-through, and ordinary
+banners use their usual layer. Clients without the layering API retain the
+standard toast placement. Live rendering above the end screen remains unverified.
 
 ## Placement and lifetime
 
@@ -76,7 +123,7 @@ newest 20 publications, oldest first; this addon does not consume that history.
 | `cache`       | Cache hints and purchase feedback |
 | `rune`        | Rune notification                 |
 
-All supplied kinds use the same text path, including future unknown kinds.
+Ordinary banners and future unknown kinds use the text path.
 Guardian-slain notices also have `boss == true`; the flag is not used to infer
 an entity type, spawn, health, reward or encounter state. No message is inferred
 from chat, a boss list, a countdown or an item acquisition.

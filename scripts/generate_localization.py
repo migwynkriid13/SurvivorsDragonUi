@@ -5,6 +5,7 @@ Use --refresh-spell-names-only for the separately pinned current icon aliases.
 This is a data-generation tool, not a formatter, syntax check or runtime test.
 """
 import argparse
+import csv
 import hashlib
 import json
 import mmap
@@ -20,6 +21,12 @@ CODES = ["en", "pl", "cs", "de", "pt", "es", "fr", "ro", "tr", "ru", "uk", "zh",
 SOURCE_SHA256 = "22f7938eb4f99f2857dc091b1c57c147bd848eaabfeaa81e444c0a3393ca8150"
 SPELL_NAMES_SHA256 = "80ac3217660a02020b3e09f1ce93bfaa6ba89abd9a9d62405b9f70114fd6d46c"
 MARKS_KEYS = ("marks.gained", "marks.earned")
+ACHIEVEMENTS_SHA256 = "6ca5f4ba4eb6b26716e4b7d9e03cbd25ddafe7582dcd8e55333e070a28058afa"
+ACHIEVEMENT_KEYS = ("Achievement earned:", "Achievement earned: {name} (+{n})", "{n} points", "Jeweler's Eye", "Every Bauble")
+ACHIEVEMENT_COLLISION_ICONS = {
+    (10, frozenset({"Overtime"})): "INV_Misc_PocketWatch_01",
+    (25, frozenset({"Never Ending", "Unending"})): "INV_Misc_PocketWatch_02",
+}
 AFFIXES_SHA256 = "08f8c58d6967b94598c56b822a1e6b323a52924a299a6df70ef6055ca839b8cd"
 AFFIX_WARNINGS_SHA256 = "5dd6819d836748ccf809ab76fe6509c9ee793e087939b5d036c430d835a14e63"
 AFFIX_WARNING_KEYS = ("An Explosive Orb appears! Destroy it before it bursts!",)
@@ -136,7 +143,29 @@ def refresh_spell_names(client, metadata):
     print("Prepared spell-name aliases for " + str(len(counts)) + " languages from client SHA-256 " + SPELL_NAMES_SHA256)
 
 
-def refresh_native_templates(client, metadata, keys, fingerprint, subject):
+def achievement_icon_block(rows, catalog):
+    matches = {}
+    for row in rows:
+        name = catalog.get(row["name"], row["name"])
+        name = re.sub(r"\{(zone|class)\}", lambda match: catalog[row[match[1]]], name)
+        matches.setdefault((name, int(row["points"])), []).append(row)
+    lines = ["        achievementIcons = {\n"]
+    for (name, points), group in sorted(matches.items()):
+        icons = {row["icon"] for row in group}
+        if len(icons) == 1:
+            icon = next(iter(icons))
+        else:
+            source_names = frozenset(row["name"] for row in group)
+            icon = ACHIEVEMENT_COLLISION_ICONS.get((points, source_names))
+            if icon not in icons:
+                continue
+        identity = name + "\n" + str(points)
+        lines.append("            [" + lua_string(identity) + "] = " + lua_string(icon) + ",\n")
+    lines.append("        },\n")
+    return "".join(lines)
+
+
+def refresh_native_templates(client, metadata, keys, fingerprint, subject, achievement_icons=False):
     """Prepare reviewed native captions without replacing unrelated catalogs."""
     from generate_loot_icons import Native
 
@@ -144,6 +173,9 @@ def refresh_native_templates(client, metadata, keys, fingerprint, subject):
     output = ROOT / "localization/data.lua"
     source = output.read_text(encoding="utf-8")
     prepared = {}
+    if achievement_icons:
+        with (ROOT / "localization/achievement-icons.tsv").open(encoding="utf-8", newline="") as handle:
+            icon_rows = list(csv.DictReader(handle, delimiter="\t"))
 
     def replace(match):
         code, body = match[1], match[2]
@@ -162,6 +194,9 @@ def refresh_native_templates(client, metadata, keys, fingerprint, subject):
         body, count = re.subn(r"^        native = \{\n(.*?)^        \},", native_block, body, count=1, flags=re.MULTILINE | re.DOTALL)
         if count != 1:
             raise ValueError("Missing native caption section for " + code)
+        if achievement_icons:
+            body = re.sub(r"^        achievementIcons = \{\n.*?^        \},\n", "", body, flags=re.MULTILINE | re.DOTALL)
+            body += achievement_icon_block(icon_rows, catalogs[code])
         return "    " + code + " = {\n" + body + "    },"
 
     result = re.sub(r"^    (\w+) = \{\n(.*?)^    \},$", replace, source, flags=re.MULTILINE | re.DOTALL)
@@ -263,9 +298,12 @@ if __name__ == "__main__":
     refresh.add_argument("--refresh-marks-only", action="store_true", help="Refresh only the two native marks templates from the reviewed Heroic update.")
     refresh.add_argument("--refresh-affixes-only", action="store_true", help="Prepare the six reviewed native affix names/descriptions from 0.125.0.")
     refresh.add_argument("--refresh-affix-warnings-only", action="store_true", help="Prepare the reviewed native affix warning templates from 0.131.0.")
+    refresh.add_argument("--refresh-achievements-only", action="store_true", help="Prepare the reviewed achievement banner captions and fallback icons.")
     parser.add_argument("--metadata", type=Path, help="Optional data-preparation receipt for a targeted refresh.")
     arguments = parser.parse_args()
-    if arguments.refresh_affix_warnings_only:
+    if arguments.refresh_achievements_only:
+        refresh_native_templates(arguments.client, arguments.metadata, ACHIEVEMENT_KEYS, ACHIEVEMENTS_SHA256, "achievement", achievement_icons=True)
+    elif arguments.refresh_affix_warnings_only:
         refresh_affix_warnings(arguments.client, arguments.metadata)
     elif arguments.refresh_affixes_only:
         refresh_affixes(arguments.client, arguments.metadata)
