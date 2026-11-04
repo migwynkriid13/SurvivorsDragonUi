@@ -57,10 +57,11 @@ DFRL:NewMod("Jewelry", 4, function()
     local ICON_ZOOM = 1.05
     local iconSpan = 1 / ICON_ZOOM
     local iconInset = (1 - iconSpan) / 2
-    local function PrepareIconParts()
+    local function PrepareIconParts(size)
         local parts = {}
-        local scale = ICON_ART_SIZE / ICON_SIZE
-        local padding = (ICON_SIZE - ICON_ART_SIZE) / 2
+        size = size or ICON_ART_SIZE
+        local scale = size / ICON_SIZE
+        local padding = (ICON_SIZE - size) / 2
         for part = 1, 16 do
             local top, bottom = (part - 1) * 2, part * 2
             local edge = math.max(math.abs(top - 16), math.abs(bottom - 16))
@@ -102,6 +103,9 @@ DFRL:NewMod("Jewelry", 4, function()
     local SHARED_CARVING = texturePath .. "Frame.blp"
     local GEMMED_CARVING = texturePath .. "GemmedRunecarver.blp"
     local ATTACHED_CARVING = texturePath .. "AttachedRunecarver.blp"
+    local ORIGINAL_RIM = texturePath .. "OriginalRim.blp"
+    local ORIGINAL_BACKING = texturePath .. "OriginalSocketDetached.blp"
+    local originalRimSize = RIM_SIZE * 72 / 86
     local SLOT_NAMES = { "Finger0Slot", "Finger1Slot", "NeckSlot", "Trinket0Slot", "Trinket1Slot" }
     local EMPTY_TEXTURES = {
         "EmptyRing.blp",
@@ -113,6 +117,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local slots, slotsReady = {}, false
     local inWorld, editing, attached, elapsed = true, false, false, 0
     local shownWanted, wantedDocked, SyncUpdates, cleared = false, nil, nil, true
+    local selectedOriginal, originalFrame = false, false
     local displayGeometry = {}
     local function Docked()
         if type(DFRL.ActionBarAttached) == "function" then return DFRL.ActionBarAttached("attachJewelry") end
@@ -448,6 +453,7 @@ DFRL:NewMod("Jewelry", 4, function()
     local iconProbe = artwork:CreateTexture(nil, "ARTWORK")
     iconProbe:Hide()
     local iconParts, iconPool, iconGroups, iconByTexture, iconsDirty = PrepareIconParts(), {}, {}, {}, false
+    local runecarverParts, originalParts = iconParts, nil
     local function SetIcon(slot, texture)
         slot.empty = nil
         -- A failed native texture assignment keeps the preceding slot artwork.
@@ -556,7 +562,7 @@ DFRL:NewMod("Jewelry", 4, function()
         table.insert(slots, slot)
     end
 
-    -- The carving is the only jewelry surround; no separate inner rim is drawn.
+    -- Both styles reuse one housing region per slot.
     local overlay = CreateFrame("Frame", nil, hud)
     overlay:SetAllPoints(hud)
     overlay:SetFrameLevel(hud:GetFrameLevel() + 3)
@@ -569,18 +575,37 @@ DFRL:NewMod("Jewelry", 4, function()
         carving:Hide()
         slot.carving, slot.carvingPending = carving, true
     end
+    local function BindCarving(slot, path)
+        if slot.carvingPath == path then return true end
+        local carving = slot.carving
+        local loaded = carving:SetTexture(path)
+        slot.carvingQuality = nil
+        if not T.TextureAssigned(loaded, carving:GetTexture(), path) then
+            slot.carvingPath = nil
+            return false
+        end
+        slot.carvingPath = path
+        return true
+    end
+    local function SetRimPresentation(slot, original, red, green, blue)
+        local carving = slot.carving
+        if (slot.originalRim == true) ~= original then
+            local size = original and originalRimSize or carvingSize
+            carving:SetWidth(size)
+            carving:SetHeight(size)
+            slot.originalRim = original
+        end
+        if (slot.rimR or 1) ~= red or (slot.rimG or 1) ~= green or (slot.rimB or 1) ~= blue then
+            carving:SetVertexColor(red, green, blue, 1)
+            slot.rimR, slot.rimG, slot.rimB = red, green, blue
+        end
+    end
     local function PaintCarving(slot, quality)
         local docked = wantedDocked == true and quality > 0
         local path = docked and ATTACHED_CARVING or (quality < 2 and SHARED_CARVING or GEMMED_CARVING)
         if slot.carvingQuality == quality and slot.carvingPath == path then return true end
-        local carving = slot.carving
-        if slot.carvingPath ~= path then
-            local loaded = carving:SetTexture(path)
-            if not T.TextureAssigned(loaded, carving:GetTexture(), path) then
-                slot.carvingQuality, slot.carvingPath = nil, nil
-                return false
-            end
-        end
+        if not BindCarving(slot, path) then return false end
+        if slot.originalRim then SetRimPresentation(slot, false, 1, 1, 1) end
         local left = quality < 2 and (256 + quality * 128) or (quality - 2) * 128
         local top, bottom = 0, 1
         if docked then
@@ -588,8 +613,42 @@ DFRL:NewMod("Jewelry", 4, function()
             top = quality == 5 and 0.5 or 0
             bottom = top + 0.5
         end
-        carving:SetTexCoord(left / 512, (left + 128) / 512, top, bottom)
-        slot.carvingQuality, slot.carvingPath = quality, path
+        slot.carving:SetTexCoord(left / 512, (left + 128) / 512, top, bottom)
+        slot.carvingQuality = quality
+        return true
+    end
+    local function PaintOriginalRim(slot)
+        if not BindCarving(slot, ORIGINAL_RIM) then return false end
+        local red = slot.texture and slot.qualityR
+        local left = red and 129 or 1
+        if slot.carvingQuality ~= left then
+            slot.carving:SetTexCoord(left / 256, (left + 72) / 256, 1 / 128, 73 / 128)
+            slot.carvingQuality = left
+        end
+        SetRimPresentation(slot, true, red or 1, red and slot.qualityG or 1, red and slot.qualityB or 1)
+        return true
+    end
+    local function PaintOriginalBacking(slot, shown)
+        local backing = slot.originalBacking
+        if not shown then
+            if backing and backing:IsShown() then backing:Hide() end
+            return true
+        end
+        if not backing then
+            backing = hud:CreateTexture(nil, "BACKGROUND")
+            backing:SetWidth(socketSize)
+            backing:SetHeight(socketSize)
+            backing:SetPoint("CENTER", slot.button, "CENTER", 0, 0)
+            backing:SetTexCoord(0, 160 / 256, 0, 160 / 256)
+            backing:Hide()
+            slot.originalBacking = backing
+        end
+        if not slot.originalBackingReady then
+            local loaded = backing:SetTexture(ORIGINAL_BACKING)
+            if not T.TextureAssigned(loaded, backing:GetTexture(), ORIGINAL_BACKING) then return false end
+            slot.originalBackingReady = true
+        end
+        if not backing:IsShown() then backing:Show() end
         return true
     end
     local function UpdateRarity(slot)
@@ -600,14 +659,22 @@ DFRL:NewMod("Jewelry", 4, function()
         local rank = slot.texture and slot.qualityR and slot.quality
         -- Crop 0 is the unadorned housing. Poor and common share crop 1.
         local quality = rank and rank <= 5 and math.max(1, rank) or 0
-        local ready = PaintCarving(slot, quality)
-        local shown = ready or (quality ~= 0 and PaintCarving(slot, 0))
+        local ready
+        if originalFrame then
+            ready = PaintOriginalRim(slot)
+        else
+            ready = PaintCarving(slot, quality)
+        end
+        local shown = ready or ((originalFrame or quality ~= 0) and PaintCarving(slot, 0))
         if shown and not slot.carving:IsShown() then
             slot.carving:Show()
         elseif not shown and slot.carving:IsShown() then
             slot.carving:Hide()
         end
-        slot.carvingPending = not ready
+        local backingReady = true
+        local backingShown = originalFrame and wantedDocked == false
+        if backingShown or slot.originalBacking then backingReady = PaintOriginalBacking(slot, backingShown) end
+        slot.carvingPending = not ready or not backingReady
     end
     local function SetQuality(slot, quality, red, green, blue)
         local changed = slot.quality ~= quality
@@ -706,7 +773,7 @@ DFRL:NewMod("Jewelry", 4, function()
     hud:SetScript("OnShow", function()
         elapsed = INTERVAL
         if SyncUpdates then SyncUpdates() end
-        if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(Docked()) end
+        if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(Docked(), selectedOriginal) end
     end)
     local function ResolveSlots()
         if slotsReady then return true end
@@ -733,6 +800,19 @@ DFRL:NewMod("Jewelry", 4, function()
             and owner
             and owner:IsVisible()
     end
+    local function ApplyFrameStyle()
+        if originalFrame == selectedOriginal then return end
+        originalFrame = selectedOriginal
+        if originalFrame and not originalParts then originalParts = PrepareIconParts(ICON_SIZE) end
+        iconParts = originalFrame and originalParts or runecarverParts
+        iconsDirty = true
+        local size = originalFrame and ICON_SIZE or ICON_ART_SIZE
+        for _, slot in ipairs(slots) do
+            slot.placeholder:SetWidth(size)
+            slot.placeholder:SetHeight(size)
+            slot.carvingPending = true
+        end
+    end
     local function Refresh()
         if not inWorld or not attached or not DFRL.display.Get("equippedJewelry") then
             Clear()
@@ -742,7 +822,9 @@ DFRL:NewMod("Jewelry", 4, function()
         if not shownWanted or wantedDocked ~= docked then
             if wantedDocked ~= docked then
                 for _, slot in ipairs(slots) do
-                    if slot.carvingQuality and slot.carvingQuality > 0 then slot.carvingPending = true end
+                    if originalFrame or (slot.carvingQuality and slot.carvingQuality > 0) then
+                        slot.carvingPending = true
+                    end
                 end
             end
             cleared = false
@@ -764,6 +846,7 @@ DFRL:NewMod("Jewelry", 4, function()
             Clear()
             return
         end
+        ApplyFrameStyle()
         for _, slot in ipairs(slots) do
             local ok, texture = pcall(GetInventoryItemTexture, "player", slot.id)
             if ok and type(texture) == "string" and texture ~= "" then
@@ -799,6 +882,7 @@ DFRL:NewMod("Jewelry", 4, function()
         end
     end
     local function UpdateDisplay()
+        selectedOriginal = DFRL.display.Get("jewelryFrameStyle") == "original"
         PlaceSlots()
         local docked = Docked()
         if attached then
@@ -838,7 +922,9 @@ DFRL:NewMod("Jewelry", 4, function()
         end
         Refresh()
         if SyncUpdates then SyncUpdates() end
-        if DFRL.SetJewelryBarShown then DFRL.SetJewelryBarShown(docked and hud:IsVisible() and true or false) end
+        if DFRL.SetJewelryBarShown then
+            DFRL.SetJewelryBarShown(docked and hud:IsVisible() and true or false, selectedOriginal)
+        end
     end
     function DFRL.SetJewelryEditing(active)
         editing = active

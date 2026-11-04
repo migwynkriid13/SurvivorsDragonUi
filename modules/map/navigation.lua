@@ -780,19 +780,7 @@ DFRL:NewMod("Navigation", 2, function()
                 (0.51 * c - 1.73 * s) * scale,
                 (0.51 * s + 1.73 * c) * scale
             )
-            if turned then
-                c, s = c / 2, -s / 2
-                playerTexture:SetTexCoord(
-                    0.5 - c - s,
-                    0.5 + s - c,
-                    0.5 - c + s,
-                    0.5 + s + c,
-                    0.5 + c - s,
-                    0.5 - s - c,
-                    0.5 + c + s,
-                    0.5 - s + c
-                )
-            end
+            if turned then T.RotateTexture(playerTexture, -facing) end
             playerSide, playerFacing = side, facing
         end
         if not playerOverlay:IsShown() then playerOverlay:Show() end

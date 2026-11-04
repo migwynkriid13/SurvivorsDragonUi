@@ -9,6 +9,7 @@ env._G = nil
 env.setmetatable = setmetatable
 local addonEnv = setmetatable({ _G = env, T = env.T }, { __index = env })
 function env.DFRL:GetEnv() return addonEnv end
+function env.DFRL:GetInfoOrCons() return "Interface\\AddOns\\SurvivorsDragonUi\\" end
 function env.DFRL:NewMod(name, _, initialize)
     context.modules[name] = function()
         setfenv(initialize, self:GetEnv())
@@ -43,7 +44,7 @@ local createFont = env.CreateFont
 env.CreateFont = function(name)
     local object = createFont(name)
     function object:SetFont(face, size, flags)
-        if face == "DEFAULT" then
+        if face == "DEFAULT" or string.find(face, "Missing.ttf", 1, true) then
             self.font = nil
             return false
         end
@@ -118,6 +119,25 @@ assert(#context.objects == count, "font preview allocated drawing objects")
 display.FinishEdit(false)
 assert(label:GetFont() == "NATIVE_TEST" and loot:GetFont() == "Fonts\\FRIZQT__.TTF", "Cancel lost original faces")
 assert(env.STANDARD_TEXT_FONT == "NATIVE_TEST" and env._G == nil, "Cancel lost native font paths without _G")
+
+display.BeginEdit()
+display.Set("uiCustomFont", "VAG Rounded.ttf")
+assert(label:GetFont() == "NATIVE_TEST", "a custom file changed an unselected face")
+display.Set("uiFont", "custom")
+local customPath = "Interface\\AddOns\\SurvivorsDragonUi\\media\\fonts\\VAG Rounded.ttf"
+assert(label:GetFont() == customPath and env.NAMEPLATE_FONT == customPath, "custom file missed the shared font owner")
+assert(independent:GetFont() == "INDEPENDENT_TEST", "custom file overrode an independent face")
+display.Set("uiCustomFont", "../Elsewhere.ttf")
+assert(display.Get("uiCustomFont") == "VAG Rounded.ttf", "preview accepted a path outside the fonts folder")
+display.Set("uiCustomFont", "Missing.ttf")
+assert(label:GetFont() == "NATIVE_TEST", "missing file did not keep captions readable")
+display.Set("uiCustomFont", "Another.Face.TTF")
+assert(
+    label:GetFont() == "Interface\\AddOns\\SurvivorsDragonUi\\media\\fonts\\Another.Face.TTF",
+    "changing a file did not refresh the selected Custom face"
+)
+display.FinishEdit(false)
+assert(display.Get("uiCustomFont") == "" and label:GetFont() == "NATIVE_TEST", "Cancel retained the custom font")
 
 -- Face and style are independent, and constructor helpers cannot restore a
 -- disabled shadow. No-outline still retains unrelated native font flags.

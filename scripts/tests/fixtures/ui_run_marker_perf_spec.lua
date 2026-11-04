@@ -4,6 +4,7 @@ assert(_VERSION == "Lua 5.1", "marker fixtures require the CI Lua 5.1 interprete
 
 local context = H.New()
 local env = context.env
+context:Load("core/display.lua", "Display")
 local create = context.Object
 function context:Object(...)
     local object = create(self, ...)
@@ -13,8 +14,10 @@ end
 env.markers, env.markerStates = {}, {}
 env.render = { activeMarkers = {}, activeMarkerCount = 0, markerStatesDirty = true }
 env.GameTooltip = { IsOwned = function() return false end }
-env.T.StyleDefeatedMarker = function(_, check, _, dead)
+local markerSizes = {}
+env.T.StyleDefeatedMarker = function(icon, check, size, dead)
     context.reads.styles = (context.reads.styles or 0) + 1
+    markerSizes[icon] = size
     if dead then
         check:Show()
     else
@@ -33,15 +36,14 @@ env.math.cos = function(...)
     context.reads.pulses = (context.reads.pulses or 0) + 1
     return math.cos(...)
 end
-env.math.sqrt = function(...)
-    context.reads.squareRoots = (context.reads.squareRoots or 0) + 1
-    return math.sqrt(...)
-end
+local chunk = assert(loadfile(assert(arg[1], "missing extracted marker source")))
+setfenv(chunk, env)
+local source = chunk()
+local bossIcon = env.DFRL:GetInfoOrCons("tex") .. "waypoint\\WorldQuestBoss.blp"
+local bossHalo = env.DFRL:GetInfoOrCons("tex") .. "timer\\WorldQuestBossHalo.blp"
 for index = 1, 5 do
-    local marker = env.CreateFrame("Frame", nil, env.UIParent)
-    marker.skull = marker:CreateTexture(nil)
+    local marker = source.New(env.UIParent)
     marker.check = marker:CreateTexture(nil)
-    marker.glow = {}
     local shown = marker.IsShown
     function marker:IsShown()
         context.reads.markerShown = (context.reads.markerShown or 0) + 1
@@ -50,23 +52,26 @@ for index = 1, 5 do
     env.markers[index] = marker
 end
 env.markerStates[1], env.markerStates[2], env.markerStates[3] = "due", "dead", "up"
-local chunk = assert(loadfile(assert(arg[1], "missing extracted marker source")))
-setfenv(chunk, env)
-local source = chunk()
 local update = source.Update
 local before = #context.objects
 env.performanceMode = true
 update(false)
 assert(#context.objects == before, "Performance Mode prepared disabled skull halo objects")
+assert(env.markers[1].skull.texture == bossIcon, "scheduled marker did not bind the boss icon")
+assert(math.abs(markerSizes[env.markers[1].skull] - 17.1) < 0.000001, "upcoming skull was not reduced by 5%")
+assert(markerSizes[env.markers[2].skull] == 18 and markerSizes[env.markers[3].skull] == 18)
 for _, marker in ipairs(env.markers) do
-    assert(not marker.glowCardinal and #marker.glow == 0)
+    assert(not marker.glow)
     marker.state = nil
 end
 env.performanceMode, env.render.markerStatesDirty = false, true
 context:ResetCounts()
 update(false)
-assert(not env.markers[1].glowCardinal and not env.markers[2].glowCardinal)
-assert(#context.objects == before + 10, "first active skull did not prepare exactly its existing halo")
+assert(not env.markers[1].glow and not env.markers[2].glow)
+assert(#context.objects == before + 1, "first active skull did not prepare exactly one halo texture")
+local halo = env.markers[3].glow
+assert(halo.texture == bossHalo and halo.blend == "BLEND", "active skull did not bind the red contour")
+assert(halo:GetWidth() == 24 and halo:GetHeight() == 24, "halo did not align with the skull")
 assert(env.render.activeMarkerCount == 1 and env.render.activeMarkers[1] == env.markers[3])
 assert(env.markers[1]:IsShown() and env.markers[2].check:IsShown() and not env.markers[4]:IsShown())
 assert(context.reads.styles == 3 and context.reads.clock == 1 and context.reads.pulses == 1)
@@ -79,27 +84,17 @@ assert(not context.reads.markerShown and not context.reads.styles, "unchanged st
 context.now = context.now + 0.01
 context:ResetCounts()
 update(false)
-assert(context.writes.SetAlpha == 8 and context.writes.SetWidth == 2 and context.writes.SetHeight == 2)
+assert(context.writes.SetAlpha == 1 and not context.writes.SetWidth and not context.writes.SetHeight)
 local pulse = 0.5 - 0.5 * math.cos(context.now * 2 * math.pi / 2.4)
-local alpha, offset = 0.25 + 0.25 * pulse, 0.9 + (4.55 - 0.9) * pulse
-assert(env.markers[3].glow[1].texture:GetAlpha() == alpha, "active halo alpha equation changed")
-assert(env.markers[3].glowCardinal:GetWidth() == 2 * offset, "active halo offset equation changed")
-assert(env.markers[3].glowCardinal:GetHeight() == 2 * offset, "cardinal halo height lost its pulse")
-local diagonal = 2 * ((1 / math.sqrt(2)) * offset)
-assert(env.markers[3].glowDiagonal:GetWidth() == diagonal, "diagonal halo width lost its pulse")
-assert(env.markers[3].glowDiagonal:GetHeight() == diagonal, "diagonal halo height lost its pulse")
+assert(halo:GetAlpha() == 0.5 + 0.35 * pulse, "active halo alpha equation changed")
 
 env.markerStates[5], env.render.markerStatesDirty = "up", true
 update(false)
 context.now = context.now + 0.01
 context:ResetCounts()
 update(false)
-assert(
-    env.render.activeMarkerCount == 2 and context.reads.pulses == 1 and not context.reads.squareRoots,
-    "active skulls repeated pulse or diagonal math"
-)
-assert(context.writes.SetWidth == 4 and context.writes.SetHeight == 4 and context.writes.SetAlpha == 16)
-assert(env.markers[3].glowDiagonal:GetWidth() == env.markers[5].glowDiagonal:GetWidth())
+assert(env.render.activeMarkerCount == 2 and context.reads.pulses == 1, "active skulls repeated pulse math")
+assert(context.writes.SetAlpha == 2 and not context.writes.SetWidth and not context.writes.SetHeight)
 env.markerStates[5], env.render.markerStatesDirty = nil, true
 update(false)
 
@@ -119,7 +114,7 @@ assert(env.render.markerStatesDirty and not env.markers[3]:IsShown(), "failed ma
 update(false)
 assert(env.markers[3]:IsShown() and env.render.activeMarkerCount == 1, "retirement blocked same-schedule recovery")
 
-local texture = env.markers[3].glow[4].texture
+local texture = env.markers[3].glow
 local setAlpha = texture.SetAlpha
 function texture:SetAlpha(value)
     if context.rejectAlpha then
@@ -134,14 +129,14 @@ local ok = pcall(update, false)
 assert(not ok and env.markers[3].glowAlpha == oldAlpha, "failed pulse was published as successfully painted")
 context:ResetCounts()
 update(false)
-assert(context.writes.SetAlpha == 8, "failed pulse did not retry every halo copy")
+assert(context.writes.SetAlpha == 1, "failed pulse did not retry the halo opacity")
 
 env.markerStates[3], env.render.markerStatesDirty = "dead", true
 context:ResetCounts()
 update(false)
 assert(env.render.activeMarkerCount == 0 and env.table.getn(env.render.activeMarkers) == 0)
 assert(context.reads.styles == 1 and not context.reads.clock, "defeated state retained active pulse work")
-assert(env.markers[3].check:IsShown() and not env.markers[3].glow[1].texture:IsShown())
+assert(env.markers[3].check:IsShown() and not env.markers[3].glow:IsShown())
 context:ResetCounts()
 for _ = 1, 60 do
     context.now = context.now + 1 / 60
@@ -153,7 +148,7 @@ assert(not next(context.reads), "inactive markers still sampled time, traversed 
 env.markerStates[2], env.render.markerStatesDirty = "up", true
 update(false)
 assert(env.render.activeMarkerCount == 1 and env.render.activeMarkers[1] == env.markers[2])
-assert(not env.markers[2].check:IsShown() and env.markers[2].glow[1].texture:IsShown())
+assert(not env.markers[2].check:IsShown() and env.markers[2].glow:IsShown())
 local hide = env.markers[2].Hide
 local rejectHide = true
 env.markers[2].Hide = function(self)
@@ -182,9 +177,7 @@ context:ResetCounts()
 update(false)
 assert(env.markers[2]:IsShown() and not env.markers[2].check:IsShown(), "static mode lost the living skull state")
 assert(env.render.activeMarkerCount == 0 and not context.reads.clock and not context.reads.pulses)
-for _, glow in ipairs(env.markers[2].glow) do
-    assert(not glow.texture:IsShown(), "static mode retained a red skull halo")
-end
+assert(not env.markers[2].glow:IsShown(), "static mode retained a red skull halo")
 context:ResetCounts()
 for _ = 1, 60 do
     update(false)
@@ -194,11 +187,44 @@ assert(not next(context.reads), "static skulls retained frame animation work")
 env.performanceMode, env.render.markerStatesDirty = false, true
 update(false)
 assert(
-    env.render.activeMarkerCount == 1 and env.markers[2].glow[1].texture:IsShown(),
+    env.render.activeMarkerCount == 1 and env.markers[2].glow:IsShown(),
     "disabling performance mode did not restore the unchanged living skull halo"
 )
 
 env.markerStates[2], env.render.markerStatesDirty = nil, true
 update(false)
 assert(not env.markers[2]:IsShown() and env.render.activeMarkerCount == 0)
-print("PASS marker transitions reconcile on changes and only active skulls retain exact frame-driven halo animation")
+
+context.failTexture = bossHalo
+env.markerStates[4], env.render.markerStatesDirty = "up", true
+update(false)
+local retryHalo = env.markers[4].glow
+assert(env.markers[4]:IsShown() and not retryHalo:IsShown() and env.render.activeMarkerCount == 0)
+context.failTexture, env.render.markerStatesDirty = nil, true
+update(false)
+assert(env.markers[4].glow == retryHalo and retryHalo:IsShown(), "failed binding did not reuse its halo region")
+local display = env.DFRL.display
+display.BeginEdit()
+display.Set("bossIconStyle", "original")
+env.render.markerStatesDirty = true
+update(false)
+assert(env.markers[4].skull.texture == "Interface\\TargetingFrame\\UI-TargetingFrame-Skull")
+assert(
+    env.markers[4].glow == retryHalo
+        and retryHalo.texture == env.DFRL:GetInfoOrCons("tex") .. "timer\\ClassicBossHalo.blp"
+)
+display.FinishEdit(false)
+env.render.markerStatesDirty = true
+update(false)
+assert(
+    env.markers[4].skull.texture == bossIcon and retryHalo.texture == bossHalo,
+    "Cancel did not restore the active artwork"
+)
+display.BeginEdit()
+display.Load({ bossIconStyle = "original", guardianIconStyle = "original" })
+display.FinishEdit(true)
+assert(env.SurvivorsDragonUiDisplay.bossIconStyle == "original")
+assert(env.SurvivorsDragonUiDisplay.guardianIconStyle == "original")
+display.Reset()
+assert(display.Get("bossIconStyle") == "default" and display.Get("guardianIconStyle") == "default")
+print("PASS active skulls pulse one fixed contour without reflow and retire it with their marker state")

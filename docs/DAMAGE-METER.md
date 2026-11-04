@@ -118,17 +118,22 @@ learned talents, pet/totem attacks and periodic effects in every native language
 Unrelated native sources retain their separate rows even when their names match.
 Recognized ability ranks use a stable display-group identity for rate samples.
 
-The shared meter controller reads native and legacy data once per second during
-regular updates. Totals, shares, bars, attribution and displayed rates use that
-same cadence. Input, settings, scrolling, Reset and showing the meter prime the
-existing reader for the next frame, keeping user feedback immediate without
-another idle updater.
+The shared meter controller reads native and legacy data once per second by
+default. Input, settings, scrolling, Reset and showing the meter prime the
+existing reader for the next frame.
 
-Damage Done requests the selected native recent window on the regular
-one-second pass. Extra triggered reads within that second may use complete
-native snapshots with `windowSeconds = 0` while the viewport's native rates
-remain current. These counter reads do not replace recent DPS with the All average. Newly
-revealed or replaced row identities, Reset and native context retirement obtain
+A regular pass reads the snapshot in one frame and draws its rows, bars, header
+and tooltips on the following frame. If another regular read is due on that
+frame, it waits until after the pending draw. Primed reads and the first read
+after the meter appears still read and draw in the same frame. Hiding,
+disabling, choice cards, world exit, Release and controller detachment drop a
+pending draw, and a draw failure uses the existing fault path.
+
+Damage Done requests the selected native recent window on the next regular read
+at least one second after the last rate sample. Extra reads within that second
+may use complete native snapshots with `windowSeconds = 0` and keep the cached
+recent DPS for the viewport. Newly revealed or replaced row identities, Reset
+and native context retirement obtain
 a fresh recent capture immediately through the existing reader. Only visible
 rows retain sampled native rates; unavailable history stays unavailable.
 Selecting All uses native averages without requesting recent history. Healing Done
@@ -236,6 +241,14 @@ party getter skip that view.
 Under **DPS window**, use the minus/plus buttons for **5–120 seconds**, in
 five-second steps. Below five, **All** selects the whole-run average. Hover over
 the header or a source to see its whole-run average alongside recent DPS.
+
+**Refresh rate** sets how often totals, bars, shares and order update: every
+**0.25–2 seconds** in quarter-second steps, **1 second** by default. DPS and
+HPS normally update on the next read at least a second after the last rate
+sample. Faster reads can use zero-window snapshots between rate samples. The
+choice is saved as `meterRefreshRate` in the display table with the usual
+preview, Confirm, Cancel, profiles and full resets.
+
 The **reset button** starts a new session for all four views. It clears totals, source rows, shares,
 rankings, scroll position and displayed/recent rates together. Existing effects
 or pets remain in game; their later damage or healing counts as new activity.
@@ -253,7 +266,7 @@ matching guardian/chat text, and the shared chat shadow: black at `(1, -1)`.
 The outline stays applied when changing font size, loading profiles or resetting.
 The gold header retains its original styling.
 
-The default scale remains **0.8** and width **240** UI units, with side-width limits **120–960**. Its bottom-right corner sits at the screen's bottom-right corner with no offset. Shared layout registration captures this scale before applying saved geometry. Defaults apply to unset geometry and both full resets; confirmed/draft positions and scales retain the shared rules. The default corner stays fixed when the ability count changes. Active side dragging holds the opposite edge fixed.
+The default scale is **0.8** and width **255** UI units, for the same visible width as Guardians and Rarity odds. Side-width limits remain **120–960**. Its bottom-right corner sits at the screen's bottom-right corner with no offset. Shared layout registration captures this scale before applying saved geometry. Defaults apply to unset geometry and both full resets; confirmed/draft positions and scales retain the shared rules. The default corner stays fixed when the ability count changes. Active side dragging holds the opposite edge fixed.
 
 Width now lives beside scale and position in the existing Layout record. The obsolete `meterWidth` display field and slider are removed. `meterFontSize` and `meterNameFontSize` are finite, clamped/rounded display integers. Older saves/profiles missing a valid name size inherit their normalized `meterFontSize`, preserving the selected appearance; full resets use eleven for both. Both settings participate in named profiles and the existing save/discard lifecycle. No new SavedVariable or geometry migration is needed. Hidden/off views accept required root geometry but defer presentation, and resizing never starts native collection while the meter is off.
 

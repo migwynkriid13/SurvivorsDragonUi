@@ -1376,3 +1376,92 @@ for _, missing in ipairs({ "MouselookStart", "MouselookStop", "IsMouselooking", 
     current:Event(current.controller, "PLAYER_LEAVING_WORLD")
 end
 print("PASS missing native camera APIs preserve original plate input without partial camera control")
+
+do
+    local current = Plates()
+    current:Publish(Entries())
+    current:Tick(0.21)
+    local plate, world = current.guardian, current.env.WorldFrame
+    local reads = {}
+    local function Count(object, method, key)
+        local original = object[method]
+        object[method] = function(self, ...)
+            reads[key] = (reads[key] or 0) + 1
+            return original(self, ...)
+        end
+    end
+    Count(plate, "GetEffectiveScale", "scale")
+    Count(plate, "GetWidth", "width")
+    Count(plate, "GetHeight", "height")
+    Count(plate, "GetCenter", "center")
+    Count(world, "GetEffectiveScale", "world")
+    local origin = plate.fixture.origin
+    assert(origin and origin.metricsScale == 1, "a live plate did not cache its native metrics")
+    for _ = 1, 100 do
+        current:Tick(1 / 60)
+    end
+    assert(reads.center and reads.center >= 100, "settled plates stopped sampling their native position")
+    assert(not reads.scale and not reads.width and not reads.height, "settled plates reread their fixed native metrics")
+
+    local scale = 2
+    world.GetEffectiveScale = function()
+        reads.world = (reads.world or 0) + 1
+        return scale
+    end
+    reads.world = 0
+    current:Call(plate.nativeBar, "OnValueChanged")
+    assert(reads.world == 1, "a health callback reused an earlier geometry sample")
+    assert(reads.scale == 1 and reads.width == 1 and reads.height == 1, "a UI scale change kept stale plate metrics")
+    assert(plate.fixture.origin.metricsScale == 2)
+    current:Call(plate.nativeBar, "OnValueChanged")
+    assert(reads.world == 2 and reads.scale == 1, "repeated callbacks reread unchanged plate metrics")
+
+    -- The shared mock dispatches OnHide and OnShow on the native transitions.
+    plate:Hide()
+    plate:Show()
+    assert(plate.fixture.origin ~= origin and reads.scale == 2, "a reused plate kept its retired metrics")
+
+    for _, case in ipairs({ { "GetWidth", -1 }, { "GetWidth", 0 }, { "GetHeight" }, { "GetEffectiveScale" } }) do
+        local method, value = unpack(case)
+        local original = plate[method]
+        plate[method] = function() return value end
+        plate:Hide()
+        plate:Show()
+        local incomplete = plate.fixture.origin
+        assert(incomplete and incomplete.metricsScale == nil, method .. " cached incomplete native metrics")
+        plate[method] = original
+        current:Tick(1 / 60)
+        assert(incomplete.metricsScale == 2 and incomplete.x, method .. " did not recover on the next sample")
+    end
+end
+print("PASS plates cache fixed native metrics per incarnation and callbacks sample fresh shared geometry")
+
+do
+    local current = Plates()
+    local env = current.env
+    current:SetSetting("nameplatesBossGuardiansOnly", false)
+    current:SetSetting("classHealth", true)
+    local player = current:MakePlate("Hero", 1000)
+    player.nativeBar.color = { 0, 1, 0 }
+    local other = current:MakePlate("Other Hero", 1000)
+    other.nativeBar.color = { 0, 1, 0 }
+    env.AZS_ZONE, env.AZS_ZONE_UPDATED = { hero = "Hero", class = "mage" }, 1
+    current:Tick(0.21)
+    local function AssertPlayerColor(class)
+        local r, g, b = player.fixture.style.name:GetTextColor()
+        local color = env.T.GetClassColor(class)
+        assert(r == color[1] and g == color[2] and b == color[3], "player plate lost the run class tint")
+    end
+    AssertPlayerColor("mage")
+    env.AZS_ZONE, env.AZS_ZONE_UPDATED = { hero = "Hero", class = "shaman" }, 2
+    current:Tick(0.21)
+    AssertPlayerColor("shaman")
+    local r, g, b = other.fixture.style.name:GetTextColor()
+    assert(r == 0 and g == 1 and b == 0, "another hero's nameplate inherited the player's class")
+    r, g, b = player.nativeBar:GetStatusBarColor()
+    assert(r == 0 and g == 1 and b == 0, "nameplate skin modified the native tint")
+    player.nativeBar.color = { 1, 0, 0 }
+    current:Tick(0.21)
+    r, g, b = player.fixture.style.name:GetTextColor()
+    assert(r == 1 and g == 0 and b == 0, "a hostile plate with the hero's name inherited the player class")
+end

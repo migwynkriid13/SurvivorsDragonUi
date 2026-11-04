@@ -1,12 +1,16 @@
 # Equipped jewelry
 
-The Runecarver artwork uses grey-metal housings matched to the action bar. Runecarver supplies the surround: the old circle is removed from the top and sides, while attached jewelry keeps the small bottom arch that joins the bar. Equipped items add a crown gem, three socket stones and a soft outer halo in their rarity color. The row meets the original straight action-bar edge, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
+The default Runecarver artwork uses grey-metal housings matched to the action bar. Attached jewelry has a small bottom arch joining each housing to the bar. Equipped items add a crown gem, three socket stones and a soft outer halo in their rarity color. The row meets the original straight action-bar edge, with no jewelry panel, permanent title or side ornament. It uses the character's five normal equipment slots, ordered left to right as first ring, second ring, necklace, first trinket and second trinket. By default, the necklace occupies the middle socket in both attached and detached modes, including its empty-slot placeholder. It is independent of the native six-pickup run build and does not add an ability row or infer run jewelry from worn gear, stats or chat.
 
 ## Settings and placement
 
 Open `/sdui` → **Jewelry** for equipped-jewelry visibility, attachment and the
-game's original jewelry/ability rows. These controls now live together on this
-page rather than under Action bar.
+game's original jewelry and ability rows.
+
+Under **Frame style**, choose **Original** for the circular rarity-colored
+frames used before Runecarver. Original also restores the full socket rail
+when attached and the silver backing when detached. **Runecarver** is the
+default for new and older profiles, and both full resets restore it.
 
 **Custom jewelry order** is off by default, keeping **ring → ring → neck →
 trinket → trinket**. Turn it on to choose the item from a dropdown for each of the five positions,
@@ -14,17 +18,16 @@ from left to right. Choosing an item swaps its position with the selected item,
 so each equipped slot appears once. The order works attached or detached.
 Turning it off restores the original order while retaining your custom choice.
 
-Changes preview immediately. Confirm saves the choice; Cancel, world leave,
-logout and reload discard an unconfirmed change. Profiles include the order,
-and both full resets turn custom order off. Disabling equipped jewelry dims its
-custom-order controls without clearing the choice. Item artwork, size, rarity
-effects and effects-only hover text retain their behavior.
+Changes preview immediately. Confirm saves your choices. Cancel, world leave,
+logout and reload discard unconfirmed changes. Profiles include the style and
+order, and both full resets turn custom order off. Disabling equipped jewelry
+dims the custom-order controls and retains the saved choices.
 
 ## Data and interaction
 
-`modules/ui/jewelry.lua` resolves `NeckSlot`, `Finger0Slot`, `Finger1Slot`, `Trinket0Slot` and `Trinket1Slot` through `GetInventorySlotInfo`, requiring five distinct valid native IDs. `GetInventoryItemTexture("player", id)` supplies each current icon. Item art retains its centered 5% source magnification in both modes. The rendered icon and empty-slot picture use a 33.90-unit artwork box centered on the unchanged 32-unit hover frame, giving the Runecarver opening clearance. Sixteen bands include the formerly missing top and bottom caps, preserving the complete selected vertical image range without adding another circle. No sample equipped items, item IDs, item names, item statistics, invented ranks or sixth slot are shipped.
+`modules/ui/jewelry.lua` resolves `NeckSlot`, `Finger0Slot`, `Finger1Slot`, `Trinket0Slot` and `Trinket1Slot` through `GetInventorySlotInfo`, requiring five distinct valid native IDs. `GetInventoryItemTexture("player", id)` supplies each current icon. Item art retains its centered 5% source magnification in both modes. The rendered icon and empty-slot picture use a centered 33.90-unit artwork box for Runecarver and 32 units for Original. Both use the same 32-unit hover frame. Sixteen bands include the formerly missing top and bottom caps, preserving the complete selected vertical image range without adding another circle. No sample equipped items, item IDs, item names, item statistics, invented ranks or sixth slot are shipped.
 
-Empty sockets use the selected original WoW inventory pictures for the necklace, both rings and both trinkets over subtle charcoal circles. The complete source interiors are scaled down and centered with clearance inside the Runecarver housings, so the chain and trinket are not clipped by the circular opening. Source pixels and preparation are recorded in [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md). The Runecarver housings, spacing and positions remain the same in attached and detached modes. A successful native texture read returning nil or an empty string shows the matching placeholder; an actual item texture replaces it at the existing refresh cadence. Read failures keep the icon area clear. Placeholders are cosmetic artwork, never stored as equipped-item textures: empty slots clear effects and skip the item tooltip reader. Disable, missing required APIs/player and world cleanup hide them with the rest of the row. No new setting or saved state is added.
+Empty sockets use the selected original WoW inventory pictures for the necklace, both rings and both trinkets over subtle charcoal circles. The complete source interiors are scaled down and centered with clearance inside the Runecarver housings, so the chain and trinket are not clipped by the circular opening. Source pixels and preparation are recorded in [Jewelry-ARTWORK.md](../third_party/Jewelry-ARTWORK.md). The Runecarver housings, spacing and positions remain the same in attached and detached modes. A successful native texture read returning nil or an empty string shows the matching placeholder; an actual item texture replaces it at the existing refresh cadence. Read failures keep the icon area clear. Placeholders are cosmetic artwork, never stored as equipped-item textures: empty slots clear effects and skip the item tooltip reader. Disable, missing required APIs/player and world cleanup hide them with the rest of the row.
 
 Equipped items retain native rarity colors in their effects-only hover text,
 including poor and common quality. `GetInventoryItemQuality("player", id)`

@@ -84,3 +84,11 @@ texture mirror were also inspected during selection. Reforged's round dragon
 logo and the native square dragon-head item icon were not selected. The glyph's
 owning source uses it as a map marker; SDUI supplies its independent button/input
 and square-edge placement. See [MINIMAP-BUTTONS.md](../docs/MINIMAP-BUTTONS.md).
+
+## Cleaned launcher plate
+
+The launcher uses `LauncherBackgroundClean.blp`, prepared from the matching
+32-square TGA. Only the inset top and right lines are painted black. The source
+alpha, outer gold rails and original crop are preserved. The affix icons use
+the original `LauncherBackground.blp`. The glyph uses the same source texture
+with a small offset to center it in the gold opening.

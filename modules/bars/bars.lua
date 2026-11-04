@@ -213,10 +213,9 @@ DFRL:NewMod("Bars", 1, function()
         local artHeight = defaults.height + 2 * defaults.topInset
         local socketBottom = defaults.buttonWidth * 2 / 36
         local upper = T.CreateArtworkStrip(bar, "BACKGROUND", 3)
-        upper:SetTextures(
-            DFRL:GetInfoOrCons("tex") .. "jewelry\\",
-            { "SocketRail.blp", "SocketRail_2.blp", "SocketRail_3.blp" }
-        )
+        local railPath = DFRL:GetInfoOrCons("tex") .. "jewelry\\"
+        local carvedRail = { "SocketRail.blp", "SocketRail_2.blp", "SocketRail_3.blp" }
+        local originalRail = { "OriginalSocketRail.blp", "OriginalSocketRail_2.blp", "OriginalSocketRail_3.blp" }
         upper:SetPoint("TOPLEFT", bar, "TOPLEFT", -defaults.sideInset, defaults.jewelryTopInset)
         upper:SetWidth(defaults.width + 2 * defaults.sideInset)
         upper:SetHeight(defaults.jewelryTopInset - socketBottom)
@@ -321,7 +320,8 @@ DFRL:NewMod("Bars", 1, function()
                 upper:Hide()
             end
         end
-        function DFRL.SetJewelryBarShown(shown)
+        function DFRL.SetJewelryBarShown(shown, original)
+            if shown then upper:SetTextures(railPath, original and originalRail or carvedRail) end
             if jewelryShown == shown then return end
             jewelryShown = shown
             UpdateBackground()

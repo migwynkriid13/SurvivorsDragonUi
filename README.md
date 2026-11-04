@@ -82,6 +82,8 @@ Click **Confirm** in the full editor to save or **Cancel** to undo. In **Profile
 
 To hide the gold launcher, turn off **Show SDUI button** under **Map & navigation** → **Minimap**. You can still open the editor with `/sdui`.
 
+Turn on **Show rarity odds** under **Interface** → **Rarity odds** for a movable panel with estimated Rare, Epic and Legendary chances for spell, cache and guardian rewards. The panel stays visible during card selection on supported game builds.
+
 **Performance Mode**, above **Layout**, starts off. Turn it on for static portraits and HUD effects, chat and banners without fading, and no cooldown numbers. Combat text keeps its usual motion and selected style. Your individual choices return when you turn it off.
 
 ### Action bar and portraits
@@ -89,6 +91,8 @@ To hide the gold launcher, turn off **Show SDUI button** under **Map & navigatio
 The SDUI action bar starts on. Under **Action bar**, turn off **Use SDUI action bar** to use the game's default bottom bar. Jewelry and counters stay detached, and the game keeps its own XP bar. Their saved attachment choices return with the SDUI bar. SDUI action buttons start locked. Turn off **Lock action buttons** and confirm to Shift-click two occupied buttons and swap their spells. **Show gryphons** adds ornaments at each end of the SDUI bar; it starts off. Turn off **Attach XP to action bar** to move the SDUI XP bar separately. **Show XP text** adds current/required XP, such as `5/25`, to that bar; it starts off.
 
 Portraits use 2D images by default. Under **Unit frames**, choose **Experimental 3D portraits** or **Hide portraits** for bars without portraits.
+
+Right-click the player, target or a party member's portrait or health bar to open the raid icons. Pick an icon or choose **None** to clear the unit's mark.
 
 **Show health** and **Show health percentage** choose the text on unit health bars. A single value is centered. Enable both for health on the left and percentage on the right, or disable both to hide the text. On the player bar, blue `+` numbers show remaining shield (absorb). Its percentage uses maximum HP: 7K shield with 1K maximum HP is `+700%`. **Shorten health numbers** starts on; turn it off for full numbers without K/M/B/T. **Encounters** → **Boss bars** and **Guardian tracker** each have their own shortening and percentage switches; percentages start off. **Class-colored health** uses each character's class color for player and party health bars.
 
@@ -107,6 +111,8 @@ To show fewer floating numbers, turn on **Group damage numbers** and choose a **
 The DPS meter is off by default. Turn on **Enable damage meter** under **Damage meter** and Confirm to show the game's damage totals and DPS. Click its heading to cycle through Damage Done, Healing Done, Boss Damage and Party Damage; views waiting for their first data are skipped. Scroll for more rows. Recognized ranks of the same ability share one row. Party Damage shows heroes with their native portraits during co-op. Choose 1 to 10 rows and which numbers, icons, ranks and header values to show. **Name font size** changes names separately from **Number font size**; unused number space goes to names automatically. Move, scale or hide **DPS meter** under **Layout**. Details does not need to be installed.
 
 Use **Encounters** → **Run timer** to change its text and font. In **Boss bars** in the same category, **Guardians in boss bar** adds fighting guardians to the boss bars; it starts off. You can also mirror either guide to put its arrow on the other side. Under **Map & navigation** → **Minimap**, **Keep defeated guardian icons** keeps lair icons visible while guardians are down; it starts off.
+
+To use your own font, put a `.ttf` file in `SurvivorsDragonUi/media/fonts`. In **Layout**, enter its filename, including `.ttf`, under **Custom font file** and click **Preview font**. Choose **Custom** in **Layout**, **Encounters** → **Run timer**, or both, then Confirm.
 
 ## Help
 

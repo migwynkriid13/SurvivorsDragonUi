@@ -263,7 +263,7 @@ function H.New()
     function dfrl:GetEnv() return env end
     function dfrl:GetInfoOrCons() return "Interface\\AddOns\\SurvivorsDragonUi\\media\\tex\\" end
     function dfrl:NewMod(name, _, callback) context.modules[name] = callback end
-    dfrl.tools.SetFont = function(object, size, flags) object:SetFont("DEFAULT_TEST", size, flags) end
+    dfrl.tools.SetFont = function(object, size, flags) return object:SetFont("DEFAULT_TEST", size, flags) end
     dfrl.tools.GetDefaultFont = function() return "DEFAULT_TEST" end
     dfrl.tools.GetFontFlags = function(flags) return flags or "" end
     dfrl.tools.SetChatShadow = function(object)

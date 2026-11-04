@@ -1,0 +1,72 @@
+# Rarity odds
+
+Enable **Show rarity odds** in **Interface** → **Rarity odds**. In Layout, drag
+a side handle to widen the panel or a corner to scale it. It shares the visible
+default width and gold title style of Guardians and the DPS meter. The panel
+centers between the tracker and the space reserved for the meter, or sits beside
+that stack when the viewport is too short. Layout keeps the geometry you save.
+The panel hides while upgrade or jewelry reward cards are open. It returns
+automatically when play resumes. The setting uses the existing preview, Confirm,
+Cancel, profiles and reset paths.
+
+Hover the title to see how character luck and the level bonus combine. Hover a
+reward row to see its full name and its Rare, Epic and Legendary chances as
+one-in-N odds.
+
+## What the numbers measure
+
+The table estimates each base rarity roll given a reward type. Spell cards and
+cache rings/trinkets share a row because they use the same base roll. Guardian
+jewelry and new amulets each show the applicable source modifier. Spell upgrade
+eligibility can raise the rolled tier, a new amulet may use a different
+available tier, and empowering an existing amulet keeps its rarity. The odds
+for any particular hand of cards also depend on which reward types the game
+offers.
+
+The [game's addon API](AzerothSurvivors-Addon-API.md) publishes the player's Luck
+as `AZS_STATS.luck` and the current run level as `AZS_RUN.lvl`. The installed
+0.139.2 executable's embedded Lua shows that the `AZS` parser replaces the
+stats table without publishing a stats timestamp. `AZSRUN` and `AZSZONE` have
+their own update stamps. The panel reads the current phase first and rejects a
+retired run stamp or prior stats table across an observed run boundary.
+
+The model uses the five base weights recovered from the 0.97.2 spell-card
+generator and the 0.113.2 cache/guardian reward path. For
+`k = 1 + luck + min(level / 100, 0.30) + source bonus`, divide the weights
+`60, 25k, 10k², 4k³, k⁴` by their sum. Spell cards and cache rings/trinkets use
+zero source bonus. New amulets add 0.50, and guardian rewards add 0.25 to both
+jewelry rows. The displayed Rare, Epic and Legendary values use one decimal
+place. The recovered model has not been verified against rolls in the installed
+game.
+
+## Drawing and lifecycle
+
+The panel defaults off. The module allocates one event controller and one
+mouse-transparent Layout frame. The first usable reading adds 20 font strings
+and three textures. The two [Quest Tracker header strips](../third_party/GuardianTracker-ARTWORK.md)
+share the guardian tracker's layout and alpha. The Bonus Objective star uses
+its original transparency directly over the header. Four text rows sit
+directly over the world, with the shared text outline and shadow for contrast.
+Reward names fit on one line, and Legendary has the widest odds column. Caption
+measurements use the active font and refresh with changes to language, font or
+panel size. The side handles resize the header and all columns from the shared
+default width.
+Both Performance Mode states use this static presentation. The controller
+samples at most four times per second while permitted. Unchanged roll strength
+skips odds formatting and text writes. A language change refreshes captions on
+the next permitted update. Off, Layout hiding, world leave and logout detach
+the reader.
+
+Playing and paused phases show the panel when valid data is available. Native
+`choosing` hides the entire panel on its next existing sample and defers
+odds and cursor work. Hover details use the shared game tooltip and sample cadence.
+They close when the panel hides or Layout opens and yield to other UI and its
+tooltips. The feature adds no separate SavedVariable. Mock coverage runs in PR CI.
+Appearance in the installed game remains unverified.
+
+The star is Blizzard Entertainment artwork from `bonus-objective-star` in
+The War Within build `11.0.2.56162`. Its [512×512 WorldQuest BLP](https://wago.tools/api/casc/1339312?build=11.0.2.56162)
+uses FileDataID `1339312`. The [atlas table](https://wago.tools/db2/UiTextureAtlasMember/csv?build=11.0.2.56162)
+identifies the crop `(479, 223, 511, 255)`, with exclusive right and bottom.
+The runtime `media/tex/rarity/BonusObjectiveStar.blp` keeps all 32×32 crop pixels
+and their alpha in a lossless BLP. No frame rim is baked into the asset.

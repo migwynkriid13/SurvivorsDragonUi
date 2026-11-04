@@ -1,6 +1,6 @@
 # Cache and guardian waypoint artwork
 
-The tracked-map and navigation textures use Blizzard World of Warcraft artwork downloaded from the Gethe UI texture mirror on 2026-10-15. The guardian gold-dragon/skull medallion comes from the pinned game-art source below and is shared by the HUD, minimap and tracker header. The cache chest is the separate user-supplied artwork documented below. These icons are not generated approximations.
+The tracked-map and navigation textures use Blizzard World of Warcraft artwork downloaded from the Gethe UI texture mirror on 2026-10-15. The silver guardian crest is shared by the overhead marker, HUD, minimap and tracker header. The cache chest is the separate user-supplied artwork documented below. These icons are not generated approximations.
 
 Original artwork and World of Warcraft are copyright Blizzard Entertainment. The mirror provides access to the source files; this attribution does not assert a separate redistribution license.
 
@@ -77,27 +77,17 @@ the unused `CachePouch.tga` preparation input is also removed. The full world-ma
 
 ## Guardian and former cache HUD artwork
 
-The selected HUD design uses actual Blizzard game textures distributed by [NeticSoul/DragonUI](https://github.com/NeticSoul/DragonUI/tree/00197f223180323ea7297c0157edbd1a43d2f99f), pinned to commit `00197f223180323ea7297c0157edbd1a43d2f99f`:
-
-- [Guardian gold-dragon/skull medallion: `kill_elite.tga`](https://raw.githubusercontent.com/NeticSoul/DragonUI/00197f223180323ea7297c0157edbd1a43d2f99f/DragonUI/Textures/Nameplates/Quests/Kill/kill_elite.tga).
-- [Cache loot pouch: `loot_bag.tga`](https://raw.githubusercontent.com/NeticSoul/DragonUI/00197f223180323ea7297c0157edbd1a43d2f99f/DragonUI/Textures/Nameplates/Quests/Loot/loot_bag.tga).
-- [Pinned upstream LICENSE](https://github.com/NeticSoul/DragonUI/blob/00197f223180323ea7297c0157edbd1a43d2f99f/LICENSE).
-
-DragonUI core code is copyright 2026 NeticSoul and DragonUI contributors under MIT. Its LICENSE explicitly excludes World of Warcraft game artwork from that core-code license: these textures are copyright Blizzard Entertainment and included only for use with the game. This change imports no upstream Lua. The shipped `modules/map/waypoints.lua` comment retains source attribution and this artwork notice; the public source document is not added to the runtime ZIP.
-
-Original glyph pixels and alpha are retained without rescaling. Transparent source padding is cropped, then the glyph is centered inside a square transparent sampling region with at least one pixel of padding. Both outputs use uncompressed 32-bit RGBA TGA on power-of-two canvases:
-
-| Bundled file                              | Original canvas | Source rectangle | Output canvas | Placement and sampling                                                          |
-| ----------------------------------------- | --------------- | ---------------- | ------------- | ------------------------------------------------------------------------------- |
-| `media/tex/waypoint/GuardianFloating.tga` | 64 × 64         | `[0, 1, 62, 64)` | 128 × 128     | Paste at `(1, 1)`; square region `[0, 0, 65, 65)`, UV `0..65/128` on each axis. |
-
-Square sampling preserves the guardian glyph's proportions inside its 32-by-32 HUD icon field. Guardian HUD, minimap and tracker views reuse this medallion and crop. The obsolete `MapPin.tga` preparation input is removed along with its earlier BLP and world-map drawing and click/hover code. Public source links above retain the provenance of the retired artwork.
+The guardian crest uses Blizzard's `vignettekillelite` sprite. The source and
+crop are documented in [EncounterIcons-ARTWORK.md](EncounterIcons-ARTWORK.md).
+The retired loot-pouch HUD glyph came from DragonUI's
+[`loot_bag.tga`](https://github.com/NeticSoul/DragonUI/blob/00197f223180323ea7297c0157edbd1a43d2f99f/DragonUI/Textures/Nameplates/Quests/Loot/loot_bag.tga).
+DragonUI's code license excludes Blizzard's game artwork.
 
 ## Drawing recommendations
 
 - Floating waypoint guides default to 190 by 46 with transparent backgrounds. Draw the icon, text and arrow without a bottom stripe, dark fill, enclosing border or native vertex gradient. The previous `FloatingRail.tga` is removed from the source and runtime manifest. Existing timer artwork and its [WidgetStatusBar attribution](WidgetStatusBar-SOURCE.md) remain unchanged.
 - Cache HUD marker: draw `Chest.blp` in its existing 32-by-32 field with `SetTexCoord(0, 1, 0, 1)`. Keep the chest upright.
-- Guardian HUD marker: draw `GuardianFloating.tga` in a 32-by-32 field with `SetTexCoord(0, 65 / 128, 0, 65 / 128)`. Keep the gold dragon and skull upright.
+- Guardian HUD marker: draw `GuardianFloating.blp` in a 32-by-32 field with `SetTexCoord(0, 65 / 128, 0, 65 / 128)`.
 - Place a left-aligned DEFAULT 13 destination title above DEFAULT 15 distance beside the icon, with outline and black shadow. Rotate the arrow in place to the right of the text.
 - Direction arrow: retain the selected **05 Quest spear**'s full `HudArrow.tga` canvas and full UVs. Its 21 × 23 visible glyph on a 32 × 32 canvas draws at 24 units high and about 21.91 units wide using a full texture size of `24 * 32 / 23` (about 33.39 square). The original upward-facing artwork rotates around the same texture pivot. Cache, guardian and fallen-ally guides share this size and the existing supported texture-coordinate rotation, without assuming retail `Texture:SetRotation`.
 - Default anchors use the midpoint of the combined DEFAULT action-bar artwork and XP border height from static addon-owned appearance metadata. Cache is left and Guardian right with an eight-unit gap beyond the artwork. Uniform HUD scaling preserves the 190:46 proportions; confirmed independent geometry stays in use.

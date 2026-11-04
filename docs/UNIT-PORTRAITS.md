@@ -61,6 +61,19 @@ packet handoffs, exact aliases/collisions, hidden recovery, retirement and
 accepted target precedence. Local source review and pinned formatting do not
 establish native event order or in-game appearance.
 
+## Raid target icons
+
+The player, target and party frames share one cursor-anchored native dropdown.
+Right-click on the portrait or health bar opens the eight native marks and
+**None**. The check mark and click use the clicked frame's unit token. The client
+and server handle marking permissions. Spell targeting retains the original
+right-click cancel action.
+
+The addon creates one hidden dropdown owner on the first eligible click and
+reuses the native menu rows and icon artwork. The menu closes if the owning frame
+hides, its target changes, the group changes or the player leaves the world. No
+polling, new artwork or saved settings are used.
+
 ## Target health and compact numbers
 
 **Shorten health numbers** in `/sdui` → **Unit frames** defaults on. Off shows
@@ -124,6 +137,23 @@ and resume from the current publication with a new loss baseline. Changed
 maximum health or spawn identity also resets the effect. Damage still uses the
 original full counters and the existing half-second fade, never abbreviated
 text or combat messages.
+
+Target, target-of-target, pet and party frames run at most one full refresh
+per frame. Target `UNIT_HEALTH`, `UNIT_MAXHEALTH`, `UNIT_FACTION` and
+`UNIT_CLASSIFICATION_CHANGED`, native `OnValueChanged` callbacks and health
+owner notifications only arm a one-shot `OnUpdate` on the existing target event
+frame. The native callback still repairs enemy red synchronously, because
+`HealthBar_OnValueChanged` repaints the gradient before the hook runs. The
+health owner's own bar write during that refresh cannot queue a second pass.
+Selection, world entry, party changes and Show paint immediately with their
+existing border force, which cancels any pending pass. Compact frames mark the
+matching record dirty and flush dirty records on the next frame from their
+existing event frame; ownership, target and roster transitions still refresh
+all records synchronously. Hidden frames schedule nothing; target Hide, world
+leave and logout cancel pending work, using `PLAYER_LEAVING_WORLD` and
+`PLAYER_LOGOUT` registrations on both existing event frames. No frame, region,
+updater or setting is added. CI-only mocks cover
+the coalescing; native event order and client timing remain unverified.
 
 With shortening enabled, unit-health and boss/guardian current/maximum labels share K, M, B and T
 for thousands, millions, billions and trillions. Examples are `1.2K`, `15.1B`

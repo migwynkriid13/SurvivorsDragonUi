@@ -91,6 +91,8 @@ env.DFRL.navigation = {
     MinimapSize = function() return 100, 100 end,
 }
 c:Load("core/hud.lua")
+c:Load("core/widgets.lua")
+c:Load("core/tooltips.lua")
 c:Load("core/display.lua", "Display")
 do
     local defaults = env.DFRL.display.Snapshot()
@@ -358,6 +360,18 @@ display.FinishEdit(false)
 assert(guardianHud:IsShown(), "profile Cancel lost confirmed respawn guidance")
 PublishLairs({ Lair(3, nil, 0.56, "asleep", 7), soon })
 assert(guardianHud:IsShown() and guardianDistance:GetText() == "60 yards", "respawn displaced a living guardian")
+do
+    local icon
+    for _, object in ipairs(c.objects) do
+        if object.parent == guardianHud and object.texture == display.GuardianIcon() then icon = object end
+    end
+    assert(icon, "visible guardian guidance did not bind its selected icon")
+    display.BeginEdit()
+    display.Set("guardianIconStyle", "original")
+    assert(icon.texture == display.GuardianIcon(), "guardian icon preview needed a new lair packet")
+    display.FinishEdit(false)
+    assert(icon.texture == display.GuardianIcon(), "Cancel did not restore the guardian waypoint icon")
+end
 PublishLairs({ near, soon, Lair(3, nil, 0.501) })
 assert(guardianHud:IsShown() and guardianDistance:GetText() == "300 yards", "fallback chose distance over respawn time")
 assert(

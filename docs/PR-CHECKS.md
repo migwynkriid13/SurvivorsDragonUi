@@ -7,6 +7,19 @@ executes selected production Lua against fake native boundaries. Keep the `Forma
 check in the repository's branch rules; editing a workflow does not configure
 branch protection by itself.
 
+The rarity odds fixture drives the production panel with mocked phase, run
+and stats feeds. It covers the shared quest header, the compact reward table,
+single-line caption fitting and resize recovery, known odds by reward type, level caps, zero
+and invalid Luck, preview/Confirm/Cancel/reset, stale data across run
+boundaries, reward-card suppression and hidden or unchanged work. The
+hover cases cover the luck breakdown, source-specific per-roll odds, changed-only
+refresh and tooltip ownership across Layout and card transitions. Guardian
+fixtures cover hiding the complete tracker, deferring tracker-only health and
+countdown reads, and reusing rows and filters when choices close. The
+minimap fixtures also cover the nearest off-map cache arrow, artwork retry,
+in-range handoff, rounded distance and tooltip ownership. These fixtures do
+not establish the installed game's odds, rendering or input behavior.
+
 The 0.139.0 compatibility cases are authored for CI only. Artwork data fixtures
 check every packaged BLP against the native power-of-two size gate and compare
 both neighbour pixels at each strip join. Mocked production helpers cover strip
@@ -187,6 +200,11 @@ the authoring SHA-256 and neutral crop and inspect the five gem and halo cells,
 their clear opening and a shared solid metal pixel. Attached crops clear the
 halo at both arch joins while preserving upper glow and opaque metal. These
 cases run in CI only.
+
+Original frame cases cover the gold and native-rarity rims, deferred
+detached backing allocation, texture retries, reuse and returning to
+Runecarver. The editor and Display cases cover the default, draft preview,
+Cancel, Confirm, profiles and reset. These cases use fake UI objects.
 
 Jewelry cache cases use the exact production reader/cache/compositor functions
 over fake native tooltip and texture boundaries. They cover unchanged successful
@@ -680,7 +698,8 @@ The assertions cover:
   saved off choices, missing/invalid and reset defaults, centered zone text while
   off and display transactions; selective final-window cooldown
   reads; strict SCT retirement deadlines and native raid-icon UV forms; dirty
-  boss marker reconciliation with exact active halos; settled loot hold/hidden
+  boss marker reconciliation with one fixed active contour, opacity-only
+  pulses, lazy binding retry, and style changes on pooled markers; settled loot hold/hidden
   expiry; Revive clipping reuse; static player status; shared Layout
   samples/final release; unchanged waypoint math with active interpolation;
   lazy Chat time and observed/unreported tooltip owners. These fixtures are
@@ -1422,10 +1441,10 @@ handles in both Performance Mode states. No runtime test hook is shipped and
 no local tests, validation or addon/game execution were run.
 
 Cache/ally styling cases in both Performance Mode states require the reused
-native request to carry the same `offset = { z = 5 }` table for caches and
-fallen allies, with no offset for encounters. A changed fake camera projection alters the five-yard point without
+native request to reuse `offset = { z = 4 }` for caches and
+`offset = { z = 5 }` for fallen allies, with no offset for encounters. A changed fake camera projection moves the raised cache point without
 an added screen gap or metadata query. Pooled cache → ally → boss → cache views
-retain one frame while restoring 22.4/29.12/32-unit sizes and existing encounter
+retain one frame while restoring 22.4/29.12/25.6-unit sizes and existing encounter
 spacing. Cache → ally reuse resizes exactly once to the 30%-larger ally icon.
 Settled ally and cache frames
 issue no size/placement writes. Missing world-offset support omits cache and
@@ -1456,3 +1475,46 @@ icon defaults. Full waypoint, native-position and minimap lifecycle fixtures
 explicitly opt into the guidance they exercise, retaining preview/Cancel,
 profile, native-read, pooling and cleanup assertions. These cases remain
 CI-only; no local tests or game execution were run.
+
+## Stepped rotation, plate metrics and deferred refreshes
+
+`ui_rotation_steps_spec.lua` checks that `T.RotateTexture` reproduces the former
+eight-coordinate equation at step angles, skips writes within one of its 128
+steps, wraps negative, large and half-step angles, ignores non-finite angles and
+repaints after `T.ClearRotation`. The waypoint frame fixture turns a guide for
+60 samples and allows at most 14 UV writes while keeping the exact bearing and
+heading equation. `ui_minimap_arrow_steps_spec.lua` drives the production
+legacy minimap arrow from native `AZS_RUN.pf` packets: its offset follows every
+heading, its UVs change only per step and an unchanged heading writes nothing.
+The gold glow fixture allows at most 128 distinct ray crops across the 4.8-second
+wrap, forbids repeated writes within the same step and requires a restart to
+repaint the rays.
+
+The nameplate fixture requires a settled plate to sample its position every
+frame without rereading effective scale, width or height. A health callback
+reads WorldFrame geometry afresh, a WorldFrame scale change rereads the plate
+metrics once and a reused plate starts a new origin with fresh metrics. Missing
+scale and missing, zero or invalid dimensions stay uncached until the next
+valid sample on the same plate. These mocks count reads and writes only.
+They do not measure Lua allocation, renderer materials or FPS, and no local
+tests or game execution were run.
+
+The native meter view fixture's regular tick now runs the read frame and a
+zero-elapsed draw frame. New cases require a regular read to make exactly one
+snapshot call and to paint only on the next frame, in both Performance Mode
+states. Primed reads (mouse wheel, settings) paint in the same frame; hiding
+or disabling between read and draw paints nothing and detaches cleanly; a
+deferred draw failure reaches the existing fault path. The fixture checks
+half-second and two-second settings and verifies that a frame longer than the
+quarter-second refresh interval draws the pending result before another
+regular read, preserving elapsed time for that read.
+
+`ui_health_spec.lua` loads the production target color, border and
+refresh-scheduling code against the real health owner. A burst of target
+signals yields exactly one deferred full pass, the native recolor is repaired
+synchronously, and selection, world entry and Show stay immediate; Hide, world
+leave and logout cancel pending work. `ui_mini_health_spec.lua` checks
+per-record coalescing of unit events and bar callbacks, synchronous roster
+refreshes, cancellation and an idle controller without `OnUpdate`. These are
+CI-only operation counts over mocks; they do not prove native event order,
+client timing or FPS.

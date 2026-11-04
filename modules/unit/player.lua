@@ -224,24 +224,6 @@ DFRL:NewMod("Player", 1, function()
         end
     end
 
-    local function FixPlayerClick()
-        -- The multiplayer SELF dropdown is unused in Survivors and can
-        -- overflow its native button pool. Right-click opens our fixed menu.
-        local original = _G.PlayerFrame_OnClick
-        _G.PlayerFrame_OnClick = function(button)
-            if button == "RightButton" and not SpellIsTargeting() then
-                ToggleGameMenu(true)
-                return
-            end
-            if original then original(button) end
-        end
-        _G.PlayerFrameDropDown_Initialize = function() end
-        if PlayerFrameDropDown then
-            PlayerFrameDropDown.initialize = _G.PlayerFrameDropDown_Initialize
-            PlayerFrameDropDown:Hide()
-        end
-    end
-
     local function CreateRestingIcon()
         local indicator = CreateFrame("Frame", nil, PlayerFrame)
         indicator:SetPoint(
@@ -365,7 +347,7 @@ DFRL:NewMod("Player", 1, function()
         end
         UpdatePortraitShape()
         CreateRestingIcon()
-        FixPlayerClick()
+        T.BindRaidMarkMenu(PlayerFrame, PlayerFrameHealthBar, "player")
         UpdateValues()
         DFRL.layout.Register("playerFrame", PlayerFrame, nil, {
             region = editRegion,
@@ -383,7 +365,13 @@ DFRL:NewMod("Player", 1, function()
     end
 
     local frame = CreateFrame("Frame")
+    local function RefreshRunHealthColor()
+        frame:SetScript("OnUpdate", nil)
+        if PlayerFrameHealthBar:IsVisible() then UpdateHealthColor(true) end
+    end
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    frame:RegisterEvent("PLAYER_LEAVING_WORLD")
+    frame:RegisterEvent("CHAT_MSG_ADDON")
     frame:RegisterEvent("UNIT_HEALTH")
     frame:RegisterEvent("UNIT_MAXHEALTH")
     frame:RegisterEvent("UNIT_LEVEL")
@@ -391,13 +379,23 @@ DFRL:NewMod("Player", 1, function()
     frame:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
             Initialize()
-            frame:UnregisterEvent("PLAYER_ENTERING_WORLD")
+            UpdateHealthColor()
+        elseif event == "PLAYER_LEAVING_WORLD" then
+            frame:SetScript("OnUpdate", nil)
+            T.RetireRunPlayer()
+            UpdateHealthColor()
+        elseif event == "CHAT_MSG_ADDON" then
+            if
+                (arg1 == "AZSZONE" or arg1 == "AZSRUN")
+                and DFRL.display.Get("classHealth")
+                and PlayerFrameHealthBar:IsVisible()
+            then
+                -- The native parser may publish its tables after our receipt.
+                frame:SetScript("OnUpdate", RefreshRunHealthColor)
+            end
         elseif event == "PLAYER_LEVEL_UP" or arg1 == "player" then
             UpdateValues()
         end
     end)
-    if UnitExists("player") then
-        Initialize()
-        frame:UnregisterEvent("PLAYER_ENTERING_WORLD")
-    end
+    if UnitExists("player") then Initialize() end
 end)

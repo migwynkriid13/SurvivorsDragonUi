@@ -18,17 +18,17 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         cursors = {},
         choices = {},
     }
-    local positionIconOffset = { z = 5 }
+    local path = DFRL:GetInfoOrCons("tex") .. "waypoint\\"
     local styles = {
         cache = {
             key = "worldCacheIcons",
             mode = "worldCacheIconMode",
             distance = "worldCacheIconDistance",
-            art = "Chest.blp",
+            art = path .. "Chest.blp",
             state = "present",
             attachment = "position",
             size = 22.4,
-            offset = positionIconOffset,
+            offset = { z = 4 },
             padding = 0,
             crop = { 0, 1, 0, 1 },
         },
@@ -36,9 +36,9 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             key = "worldBossIcons",
             mode = "worldBossIconMode",
             distance = "worldBossIconDistance",
-            art = "GuardianFloating.blp",
             state = "alive",
             attachment = "overhead",
+            size = 27.2,
             padding = 6,
             crop = { 0, 65 / 128, 0, 65 / 128 },
         },
@@ -46,33 +46,23 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             key = "worldBossIcons",
             mode = "worldBossIconMode",
             distance = "worldBossIconDistance",
-            art = "GuardianFloating.blp",
             state = "alive",
             attachment = "overhead",
+            size = 25.6,
             padding = 6,
-            crop = { 0, 65 / 128, 0, 65 / 128 },
-        },
-        finalBoss = {
-            key = "worldBossIcons",
-            mode = "worldBossIconMode",
-            distance = "worldBossIconDistance",
-            art = "GuardianFloating.blp",
-            state = "alive",
-            attachment = "overhead",
-            padding = 6,
-            crop = { 0, 65 / 128, 0, 65 / 128 },
         },
         downedPartyMember = {
             key = "worldPartyIcons",
-            art = "FallenAlly.blp",
+            art = path .. "FallenAlly.blp",
             state = "downed",
             attachment = "position",
             size = 29.12,
-            offset = positionIconOffset,
+            offset = { z = 5 },
             padding = 0,
             crop = { 0, 1, 0, 1 },
         },
     }
+    styles.finalBoss = styles.boss
     local projectionStates = {
         onScreen = true,
         offscreen = true,
@@ -84,7 +74,6 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         unknownAnchor = true,
         worldChanged = true,
     }
-    local path = DFRL:GetInfoOrCons("tex") .. "waypoint\\"
     local function Number(value) return type(value) == "number" and value - value == 0 end
     local function Id(value) return type(value) == "string" and value ~= "" end
     local function Integer(value, minimum, maximum)
@@ -264,18 +253,19 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             end
             state.markers[record.anchorId] = marker
         end
-        local size = style.size or 32
+        local size = style.size
         if marker.size ~= size then
             marker:SetWidth(size)
             marker:SetHeight(size)
             marker.size = size
         end
-        if marker.kind ~= record.kind or not marker.ready then
-            local ok, result = pcall(marker.icon.SetTexture, marker.icon, path .. style.art)
+        if marker.art ~= style.art or not marker.ready then
+            local ok, result = pcall(marker.icon.SetTexture, marker.icon, style.art)
             marker.ready = ok and result ~= false
             if marker.ready then marker.icon:SetTexCoord(unpack(style.crop)) end
-            marker.kind = record.kind
+            marker.art = style.art
         end
+        if marker.kind ~= record.kind then marker.kind = record.kind end
         return marker
     end
     local function CacheAffordable()
@@ -295,6 +285,9 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         return visible == true or visible == 1
     end
     function api.UpdateOptions()
+        local bossIcon = DFRL.display.BossIcon()
+        styles.boss.art, styles.boss.crop = bossIcon.world, bossIcon.crop
+        styles.guardian.art = DFRL.display.GuardianIcon()
         local cache = DFRL.display.Get("worldCacheIcons")
         local boss = DFRL.display.Get("worldBossIcons")
         local party = DFRL.display.Get("worldPartyIcons")

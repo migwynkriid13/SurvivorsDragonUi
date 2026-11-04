@@ -91,6 +91,18 @@ assert(
     selectionReads == 1 and not tracker.selectionDeferred and tracker.selected == tracker.entries[1],
     "restored guide did not run production deferred selection exactly once"
 )
+local turnStamp = stamp
+context:ResetCounts()
+for _ = 1, 60 do
+    facing, turnStamp = facing + 0.01, turnStamp + 1
+    stamp = turnStamp
+    update(tracker, 1)
+end
+assert(
+    (context.writes.SetTexCoord or 0) >= 1 and context.writes.SetTexCoord <= 14,
+    "continuous turning wrote more UV sets than its rotation steps"
+)
+assert(tracker.pointer.rotationStep ~= nil, "the arrow did not keep its rotation step")
 tracker.selected = nil
 update(tracker, 0.01)
 assert(

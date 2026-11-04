@@ -11,9 +11,7 @@ DFRL:NewMod("RunTimers", 5, function()
     local COINS_ICON = DFRL:GetInfoOrCons("tex") .. "tally\\Coins.blp"
     local MARKER_SIZE = 18
     local ACTIVE_GLOW_PERIOD = 2.4
-    local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.25, 0.5
-    local ACTIVE_GLOW_MIN_OFFSET, ACTIVE_GLOW_MAX_OFFSET = 0.9, 4.55
-    local ACTIVE_GLOW_DIAGONAL_FACTOR = 1 / math.sqrt(2)
+    local ACTIVE_GLOW_MIN_ALPHA, ACTIVE_GLOW_MAX_ALPHA = 0.5, 0.85
     local FLOW_WIDTH, FLOW_SPEED = 64, 32
     local FLOW_INTERVAL = 1 / 20
     local FLOW_SPACING = (BAR_WIDTH + FLOW_WIDTH) / 5 / 1.7
@@ -496,6 +494,13 @@ DFRL:NewMod("RunTimers", 5, function()
         return frame, bar, text, overlay, fill
     end
 
+    local function BindBossMarkerArt(marker, art)
+        if marker.bossArt == art then return end
+        marker.hasBossArt = marker.skull:SetTexture(art.timer) ~= false
+        if not marker.hasBossArt then marker.skull:SetTexture(SKULL_ICON) end
+        marker.bossArt = art
+    end
+
     local function NewRunMarker(parent)
         local marker = CreateFrame("Frame", nil, parent)
         marker:SetWidth(MARKER_SIZE)
@@ -504,7 +509,6 @@ DFRL:NewMod("RunTimers", 5, function()
         marker:SetAlpha(1)
         marker:EnableMouse(false)
         marker.skull = marker:CreateTexture(nil, "ARTWORK")
-        marker.skull:SetTexture(SKULL_ICON)
         marker.skull:SetWidth(MARKER_SIZE)
         marker.skull:SetHeight(MARKER_SIZE)
         marker.skull:SetPoint("CENTER", marker, "CENTER", 0, 0)
@@ -1233,6 +1237,7 @@ DFRL:NewMod("RunTimers", 5, function()
         { label = "Arial Narrow", face = "Fonts\\ARIALN.TTF" },
         { label = "Morpheus", face = "Fonts\\MORPHEUS.TTF" },
         { label = "Skurri", face = "Fonts\\SKURRI.TTF" },
+        { label = "Custom", face = "custom" },
     }
     local fontOutlines = {
         { label = "None", value = "" },
@@ -1328,6 +1333,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local selected, outline = DFRL.display.Get("uiFont"), DFRL.display.Get("uiFontOutline")
             fontEditor.uiFontDropdown:SetValue(selected)
             fontEditor.uiFontOutlineDropdown:SetValue(outline)
+            if fontEditor.RefreshCustomFont then fontEditor.RefreshCustomFont() end
             if fontEditor.uiFont ~= selected or fontEditor.uiFontOutline ~= outline then
                 fontEditor.uiFont, fontEditor.uiFontOutline = selected, outline
                 if fontEditor.RefreshOptionLayout then fontEditor.RefreshOptionLayout() end
@@ -1356,6 +1362,11 @@ DFRL:NewMod("RunTimers", 5, function()
                     group.dropdown:SetValue(selected)
                     T.SetTextIfChanged(group.description, group.descriptions[selected])
                 end
+            end
+        end
+        if fontEditor.iconSelectors then
+            for key, picker in pairs(fontEditor.iconSelectors) do
+                if picker:IsVisible() then picker:SetValue(DFRL.display.Get(key)) end
             end
         end
         for key, control in pairs(displayColors) do
@@ -1451,8 +1462,13 @@ DFRL:NewMod("RunTimers", 5, function()
         T.SetFont(text, settings.size, settings.outline, true)
         -- Translated run captions with non-ASCII glyphs use the game face;
         -- retain the user's saved font choice for the other languages.
-        if settings.face ~= "DEFAULT" and not string.find(DFRL.locale.Text(caption or "RUN"), "[\128-\255]") then
-            pcall(text.SetFont, text, settings.face, settings.size, settings.outline)
+        local face = settings.face
+        if face == "custom" then face = settings.customFace end
+        if face and face ~= "DEFAULT" and not string.find(DFRL.locale.Text(caption or "RUN"), "[\128-\255]") then
+            local ok, loaded = pcall(text.SetFont, text, face, settings.size, settings.outline)
+            if not ok or (not loaded and text:GetFont() ~= face) then
+                T.SetFont(text, settings.size, settings.outline, true)
+            end
         end
         text:SetShadowColor(0, 0, 0, settings.shadow and 1 or 0)
         text:SetShadowOffset(settings.shadow and 1 or 0, settings.shadow and -1 or 0)
@@ -1681,6 +1697,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local style = fontSampleClock.editorStyle or {}
         if
             style.face ~= currentFont.face
+            or style.customFile ~= currentFont.customFile
             or style.size ~= currentFont.size
             or style.outline ~= currentFont.outline
             or style.shadow ~= currentFont.shadow
@@ -1690,7 +1707,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local defaultFace = T.GetDefaultFont()
             local function FontReady(label)
                 local face, size, flags = label:GetFont()
-                return (face == currentFont.face or face == defaultFace)
+                return (face == currentFont.face or face == currentFont.customFace or face == defaultFace)
                     and size == currentFont.size
                     and (flags or "") == currentFont.outline
             end
@@ -1700,6 +1717,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             if ready then
                 style.face, style.size, style.outline = currentFont.face, currentFont.size, currentFont.outline
+                style.customFile = currentFont.customFile
                 style.shadow, style.language = currentFont.shadow, DFRL.locale.code
                 fontSampleClock.editorStyle = style
             end
@@ -1717,11 +1735,23 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function PreviewFont(settings)
         currentFont = FontSettings(settings)
+        if currentFont.face == "custom" then
+            currentFont.customFile = DFRL.display.Get("uiCustomFont")
+            currentFont.customFace = T.GetCustomFontFace(currentFont.customFile)
+        end
         StyleClockLabel(runClock, currentFont, runClock.visible)
         StyleClockLabel(bossClock, currentFont, bossClock.visible)
         RefreshTimerCaptions()
         UpdateRunFontBounds()
         RefreshFontControls()
+    end
+
+    local function RefreshDisplayTimerFont()
+        if currentFont.face == "custom" and currentFont.customFile ~= DFRL.display.Get("uiCustomFont") then
+            PreviewFont(fontDraft or _G.SurvivorsDragonUiRunFont)
+        else
+            RefreshTimerCaptions()
+        end
     end
 
     DFRL.runFont = {
@@ -1852,6 +1882,7 @@ DFRL:NewMod("RunTimers", 5, function()
             { "near", "Nearby only", "Show icons at or within the distance cutoff." },
             { "far", "Distant only", "Show icons beyond the distance cutoff." },
         }
+        local encounterIconOptions = { { "default", "Default" }, { "original", "Original" } }
         local categories = {
             { key = "layout", label = "Layout" },
             { key = "profiles", label = "Profiles" },
@@ -2004,6 +2035,13 @@ DFRL:NewMod("RunTimers", 5, function()
                         step = 5,
                         format = function(value) return value == 0 and DFRL.locale.Text("All") or tostring(value) end,
                     },
+                    {
+                        "meterRefreshRate",
+                        "Refresh rate",
+                        "Update meter numbers every 0.25 to 2 seconds.",
+                        step = 0.25,
+                        format = function(value) return tostring(value) .. " s" end,
+                    },
                     { "meterNameFontSize", "Name font size", "Change spell and player name size.", step = 1 },
                     { "meterFontSize", "Number font size", "Change meter numbers and header size.", step = 1 },
                     { "meterShowDamage", "Ability damage", "Show each ability's damage or healing total." },
@@ -2037,6 +2075,18 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
                 options = {
                     { "lootShowMarks", "Show marks rewards", "Show marks from already-collected items." },
+                },
+            },
+            {
+                key = "rarityOdds",
+                label = "Rarity odds",
+                options = {
+                    {
+                        "rarityOdds",
+                        "Show rarity odds",
+                        "Estimate the rarity of spell and jewelry rewards.",
+                        wide = true,
+                    },
                 },
             },
             {
@@ -2122,12 +2172,21 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "jewelry",
                 label = "Equipped jewelry",
                 jewelryPicker = true,
+                mode = {
+                    key = "jewelryFrameStyle",
+                    label = "Frame style",
+                    after = "equippedJewelry",
+                    values = {
+                        { "runecarver", "Runecarver", "Carved frames with rarity gems." },
+                        { "original", "Original", "Restore the original circular jewelry frames." },
+                    },
+                },
                 options = {
                     { "equippedJewelry", "Equipped jewelry", "Show five equipped items attached to the action bar." },
                     {
                         "attachJewelry",
                         "Attach jewelry to action bar",
-                        "Off: move jewelry separately, keeping the silver rims.",
+                        "Off: move jewelry separately.",
                     },
                     {
                         "hideNativeBuild",
@@ -2223,6 +2282,18 @@ DFRL:NewMod("RunTimers", 5, function()
                         wide = true,
                         range = true,
                     },
+                    {
+                        "bossIconStyle",
+                        "Boss icon",
+                        "Use this style above bosses and on the run timer.",
+                        choices = encounterIconOptions,
+                    },
+                    {
+                        "guardianIconStyle",
+                        "Guardian icon",
+                        "Use this style for guardian markers and the tracker.",
+                        choices = encounterIconOptions,
+                    },
                 },
             },
             {
@@ -2313,7 +2384,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Map & navigation",
                 sections = { "waypoints", "cacheIcons", "bossIcons", "minimap" },
             },
-            { key = "interface", label = "Interface", sections = { "chat", "loot", "tooltip", "banners" } },
+            {
+                key = "interface",
+                label = "Interface",
+                sections = { "chat", "loot", "rarityOdds", "tooltip", "banners" },
+            },
             { key = "profiles", label = "Profiles", sections = { "profiles" } },
         }
         local byKey, sections = {}, {}
@@ -2339,6 +2414,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
                 { key = "uiFontOutline", label = "Outline", offset = 338 },
                 { key = "uiFontShadow", label = "Black shadow", offset = 454 },
+                {
+                    key = "uiCustomFont",
+                    label = "Custom font file",
+                    description = "Add a .ttf file to media/fonts. Enter its filename, then choose Custom in either font menu.",
+                    offset = 490,
+                },
             },
             combat = {
                 { key = "outgoing", label = "Outgoing damage", offset = 0 },
@@ -2529,7 +2610,8 @@ DFRL:NewMod("RunTimers", 5, function()
         if type(GetAddOnMetadata) == "function" then
             local ok, version = pcall(GetAddOnMetadata, "SurvivorsDragonUi", "Version")
             if ok and type(version) == "string" then
-                local _, _, patch = string.find(version, "^%d+%.%d+%.(%d+)%-survivors$")
+                -- An optional local build suffix shows as v88.1, v88.2 and so on.
+                local _, _, patch = string.find(version, "^%d+%.%d+%.(%d+[%.%d]*)%-survivors$")
                 if patch then titleText = titleText .. " v" .. patch end
             end
         end
@@ -2599,7 +2681,7 @@ DFRL:NewMod("RunTimers", 5, function()
         performance.label:SetHeight(28)
         displayControls.performanceMode = performance
         builders.layout = function(page)
-            page:SetHeight(490)
+            page:SetHeight(602)
             DFRL.layout.CreateControls(page, contentWidth, function() SelectPage("layout") end)
             local choiceWidth = (contentWidth - gap) / 2
             local fontLabel = FontEditorLabel(page, captions.uiFont.label, 0, -captions.uiFont.offset, 12)
@@ -2641,6 +2723,50 @@ DFRL:NewMod("RunTimers", 5, function()
             shadow:SetHeight(28)
             shadow:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -captions.uiFontShadow.offset)
             displayControls.uiFontShadow = shadow
+
+            local record = captions.uiCustomFont
+            FontEditorLabel(page, record.label, 0, -record.offset, 12)
+            local status = FontEditorLabel(page, record.description, 0, -554, 9)
+            status:SetWidth(contentWidth)
+            status:SetHeight(40)
+            status:SetJustifyH("LEFT")
+            status:SetJustifyV("TOP")
+            local preview = T.CreateEditorButton(page, "Preview font", choiceWidth, 26)
+            preview:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -520)
+            local input = T.CreateEditorInput(page, choiceWidth, 26)
+            input:SetMaxLetters(80)
+            input:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -520)
+            local shownFile
+            fontEditor.RefreshCustomFont = function()
+                local filename = DFRL.display.Get("uiCustomFont")
+                if shownFile == filename then return end
+                shownFile = filename
+                T.SetTextIfChanged(input, filename)
+                T.SetTextIfChanged(status, record.description)
+            end
+            local function ApplyCustomFont()
+                local filename = T.NormalizeCustomFontFile(input:GetText() or "")
+                if not filename or (filename ~= "" and not T.GetCustomFontFace(filename)) then
+                    T.SetTextIfChanged(status, "Could not load that .ttf file from media/fonts.")
+                    return
+                end
+                DFRL.display.Set("uiCustomFont", filename)
+                T.SetTextIfChanged(status, record.description)
+                input:ClearFocus()
+            end
+            preview:SetScript("OnClick", ApplyCustomFont)
+            input:SetScript("OnEnterPressed", ApplyCustomFont)
+            input:SetScript("OnEscapePressed", function()
+                shownFile = nil
+                fontEditor.RefreshCustomFont()
+                input:ClearFocus()
+            end)
+            HookScript(page, "OnShow", fontEditor.RefreshCustomFont)
+            HookScript(page, "OnHide", function()
+                shownFile = nil
+                input:ClearFocus()
+            end)
+            fontEditor.RefreshCustomFont()
         end
         builders.profiles = function(page) DFRL.profiles.CreateControls(page, contentWidth) end
 
@@ -2726,6 +2852,30 @@ DFRL:NewMod("RunTimers", 5, function()
                         function(value) DFRL.display.Set(key, value) end
                     )
                     displayColors[key] = control
+                elseif entry.choices then
+                    local key = entry[1]
+                    control = CreateFrame("Frame", nil, content)
+                    control:SetWidth(controlWidth)
+                    control:SetHeight(rowHeight)
+                    local title = FontEditorLabel(control, entry[2], 0, -3, 12)
+                    title:SetWidth(controlWidth)
+                    title:SetTextColor(0.94, 0.79, 0.47)
+                    local hint = FontEditorLabel(control, entry[3], 0, -54, 9)
+                    hint:SetWidth(controlWidth)
+                    hint:SetHeight(32)
+                    hint:SetJustifyV("TOP")
+                    hint:SetTextColor(0.59, 0.59, 0.56)
+                    local picker = Dropdown(
+                        control,
+                        entry.choices,
+                        controlWidth,
+                        30,
+                        function(value) DFRL.display.Set(key, value) end
+                    )
+                    picker:SetPoint("TOPLEFT", control, "TOPLEFT", 0, -22)
+                    picker.dropdownOpenUp = true
+                    fontEditor.iconSelectors = fontEditor.iconSelectors or {}
+                    fontEditor.iconSelectors[key] = picker
                 elseif entry.step then
                     control = DisplayNumber(content, entry, controlWidth, rowHeight)
                     if entry.range then
@@ -2737,12 +2887,16 @@ DFRL:NewMod("RunTimers", 5, function()
                 else
                     control = DisplayToggle(content, entry[1], entry[2], entry[3], 0, controlWidth)
                 end
-                table.insert(
-                    leading and beforeMode or controls,
-                    { frame = control, span = span, numeric = entry.step ~= nil, color = entry.color, entry = entry }
-                )
+                table.insert(leading and beforeMode or controls, {
+                    frame = control,
+                    span = span,
+                    numeric = entry.step ~= nil,
+                    color = entry.color,
+                    height = entry.choices and rowHeight or nil,
+                    entry = entry,
+                })
                 if leading and entry[1] == category.mode.after then leading = false end
-                if dependents and entry[1] ~= category.master and not entry.range then
+                if dependents and entry[1] ~= category.master and not entry.range and not entry.choices then
                     table.insert(dependents.controls, control)
                 end
                 control:EnableMouseWheel(true)
@@ -3575,7 +3729,6 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         local function PaintGlow()
             local c, s = math.cos(entry.glowPhase), math.sin(entry.glowPhase)
-            local halfC, halfS = c / 2, s / 2
             for index, glow in ipairs(entry.glow) do
                 local direction = entry.glowDirections[index]
                 local facing = math.max(0, c * direction.x - s * direction.y)
@@ -3586,16 +3739,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 end
             end
             for _, light in ipairs(entry.glowLights) do
-                light.rays:SetTexCoord(
-                    0.5 - halfC - halfS,
-                    0.5 + halfS - halfC,
-                    0.5 - halfC + halfS,
-                    0.5 + halfS + halfC,
-                    0.5 + halfC - halfS,
-                    0.5 - halfS - halfC,
-                    0.5 + halfC + halfS,
-                    0.5 - halfS + halfC
-                )
+                T.RotateTexture(light.rays, entry.glowPhase)
                 for _, sparkle in ipairs(light.sparkles) do
                     local twinkle = math.max(0, math.sin(entry.glowPhase * 3 + sparkle.offset * 0.7 + 0.8))
                     local alpha = 0.55 * twinkle * twinkle * twinkle * twinkle
@@ -3656,6 +3800,9 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             entry.glowRunning = true
             entry.glowAge, entry.glowPhase = 0, 0
+            for _, light in ipairs(entry.glowLights) do
+                T.ClearRotation(light.rays)
+            end
             PaintGlow()
             for _, light in ipairs(entry.glowLights) do
                 light.rays:Show()
@@ -4116,58 +4263,35 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function PrepareMarkerGlow(marker)
-        if marker.glowPrepared then return end
-        marker.glowCardinal = marker.glowCardinal or CreateFrame("Frame", nil, marker)
-        marker.glowDiagonal = marker.glowDiagonal or CreateFrame("Frame", nil, marker)
-        marker.glowCardinal:SetPoint("CENTER", marker, "CENTER", 0, 0)
-        marker.glowDiagonal:SetPoint("CENTER", marker, "CENTER", 0, 0)
-        local cardinalSide = 2 * ACTIVE_GLOW_MIN_OFFSET
-        local diagonalSide = 2 * (ACTIVE_GLOW_DIAGONAL_FACTOR * ACTIVE_GLOW_MIN_OFFSET)
-        marker.glowCardinal:SetWidth(cardinalSide)
-        marker.glowCardinal:SetHeight(cardinalSide)
-        marker.glowDiagonal:SetWidth(diagonalSide)
-        marker.glowDiagonal:SetHeight(diagonalSide)
-        marker.glowCardinal:Hide()
-        marker.glowDiagonal:Hide()
-        marker.glowOffset = ACTIVE_GLOW_MIN_OFFSET
-        -- Translucent copies trace the native skull silhouette. Their
-        -- offsets breathe inward/outward beneath the unchanged skull.
-        local slot = 1
-        for x = -1, 1 do
-            for y = -1, 1 do
-                if x ~= 0 or y ~= 0 then
-                    local distance = math.sqrt(x * x + y * y)
-                    local dx, dy = x / distance, y / distance
-                    local copy = marker.glow[slot]
-                    local glow = copy and copy.texture or marker:CreateTexture(nil, "BACKGROUND")
-                    marker.glow[slot] = copy or { texture = glow, x = dx, y = dy }
-                    glow:Hide()
-                    glow:SetTexture(SKULL_ICON)
-                    glow:SetWidth(MARKER_SIZE)
-                    glow:SetHeight(MARKER_SIZE)
-                    local point = (y == 1 and "TOP" or y == -1 and "BOTTOM" or "")
-                        .. (x == 1 and "RIGHT" or x == -1 and "LEFT" or "")
-                    glow:SetPoint("CENTER", distance == 1 and marker.glowCardinal or marker.glowDiagonal, point, 0, 0)
-                    glow:SetVertexColor(1, 0.25, 0, 1)
-                    glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
-                    glow:SetBlendMode("ADD")
-                    slot = slot + 1
-                end
-            end
+        local art = marker.bossArt.halo
+        if marker.glowArt == art then return true end
+        local glow = marker.glow
+        if not glow then
+            glow = marker:CreateTexture(nil, "BACKGROUND")
+            marker.glow = glow
+            glow:Hide()
+            -- The 64-pixel canvas holds a 48-pixel skull mask with an 8-pixel fade on each side.
+            local side = MARKER_SIZE * 64 / 48
+            glow:SetWidth(side)
+            glow:SetHeight(side)
+            glow:SetPoint("CENTER", marker, "CENTER", 0, 0)
+            glow:SetBlendMode("BLEND")
+            glow:SetAlpha(ACTIVE_GLOW_MIN_ALPHA)
+            marker.glowAlpha = ACTIVE_GLOW_MIN_ALPHA
         end
-        table.setn(marker.glow, slot - 1)
-        marker.glowPrepared = true
+        if glow:SetTexture(art) == false then return false end
+        marker.glowArt = art
+        return true
     end
 
     local function ShowMarkerGlow(marker, shown)
-        shown = shown and marker:GetParent():IsVisible() or false
-        if shown then PrepareMarkerGlow(marker) end
+        shown = shown and marker.hasBossArt and marker:GetParent():IsVisible() and PrepareMarkerGlow(marker) or false
         if marker.glowShown == shown then return shown end
-        for _, glow in ipairs(marker.glow) do
+        if marker.glow then
             if shown then
-                glow.texture:Show()
+                marker.glow:Show()
             else
-                glow.texture:Hide()
+                marker.glow:Hide()
             end
         end
         marker.glowShown = shown
@@ -4449,7 +4573,6 @@ DFRL:NewMod("RunTimers", 5, function()
                 marker:SetScript("OnEnter", function() ShowMarkerTooltip(marker) end)
                 marker:SetScript("OnLeave", function() HideMarkerTooltip(marker) end)
                 T.RegisterTooltipIcon(marker)
-                marker.glow = {}
                 marker.check = T.CreateDefeatedMarkerCheck(marker, MARKER_SIZE)
                 HideMarker(marker)
                 markers[index] = marker
@@ -4486,11 +4609,15 @@ DFRL:NewMod("RunTimers", 5, function()
         -- skulls need frame animation; due/defeated/retired slots stay idle.
         if render.markerStatesDirty or render.markerAtLimit ~= atLimit then
             local count, pending = 0, false
+            local art = DFRL.display.BossIcon()
+            render.bossIcon = art
             for index, marker in ipairs(markers) do
                 local state = not atLimit and markerStates[index] or nil
                 if state then
+                    BindBossMarkerArt(marker, art)
                     if marker.state ~= state then
-                        T.StyleDefeatedMarker(marker.skull, marker.check, MARKER_SIZE, state == "dead")
+                        local size = state == "due" and MARKER_SIZE * 0.95 or MARKER_SIZE
+                        T.StyleDefeatedMarker(marker.skull, marker.check, size, state == "dead")
                         marker.state = state
                     end
                     local glowShown = ShowMarkerGlow(marker, state == "up" and not performanceMode)
@@ -4520,21 +4647,9 @@ DFRL:NewMod("RunTimers", 5, function()
         -- The native run clock and schedule still own all gameplay timing/state.
         local pulse = 0.5 - 0.5 * math.cos(GetTime() * 2 * math.pi / ACTIVE_GLOW_PERIOD)
         local glowAlpha = ACTIVE_GLOW_MIN_ALPHA + (ACTIVE_GLOW_MAX_ALPHA - ACTIVE_GLOW_MIN_ALPHA) * pulse
-        local glowOffset = ACTIVE_GLOW_MIN_OFFSET + (ACTIVE_GLOW_MAX_OFFSET - ACTIVE_GLOW_MIN_OFFSET) * pulse
-        local cardinalSide = 2 * glowOffset
-        local diagonalSide = 2 * (ACTIVE_GLOW_DIAGONAL_FACTOR * glowOffset)
         for _, marker in ipairs(render.activeMarkers) do
-            if marker.glowOffset ~= glowOffset then
-                marker.glowCardinal:SetWidth(cardinalSide)
-                marker.glowCardinal:SetHeight(cardinalSide)
-                marker.glowDiagonal:SetWidth(diagonalSide)
-                marker.glowDiagonal:SetHeight(diagonalSide)
-                marker.glowOffset = glowOffset
-            end
             if marker.glowAlpha ~= glowAlpha then
-                for _, glow in ipairs(marker.glow) do
-                    glow.texture:SetAlpha(glowAlpha)
-                end
+                marker.glow:SetAlpha(glowAlpha)
                 marker.glowAlpha = glowAlpha
             end
         end
@@ -5021,6 +5136,7 @@ DFRL:NewMod("RunTimers", 5, function()
     bossGroup:SetScript("OnMouseWheel", function() bossGroup.ScrollRows(arg1) end)
 
     DFRL.display.Listen(function()
+        if render.bossIcon ~= DFRL.display.BossIcon() then render.markerStatesDirty = true end
         local performance = DFRL.display.Get("performanceMode")
         if performanceMode ~= performance then
             performanceMode = performance
@@ -5041,7 +5157,7 @@ DFRL:NewMod("RunTimers", 5, function()
         SyncReplacements()
         run.affixes:SyncAttachment()
         UpdateDisplayLabels()
-        RefreshTimerCaptions()
+        RefreshDisplayTimerFont()
         refreshRows = true
         local combined = DFRL.display.Get("bossCombineBars")
         local capacity = DFRL.display.Get("bossRows")

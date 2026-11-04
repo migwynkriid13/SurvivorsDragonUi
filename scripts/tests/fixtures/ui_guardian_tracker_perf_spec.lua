@@ -5,6 +5,7 @@ assert(_VERSION == "Lua 5.1", "guardian tracker fixtures require CI Lua 5.1")
 local function Tracker()
     local context = H.New()
     local env = context.env
+    env.DFRL.display.GuardianIcon = function() return env.DFRL:GetInfoOrCons("tex") .. "waypoint\\GuardianFloating.blp" end
     context.settings.guardianRows = 0
     context.settings.guardianShowDead = true
     context.settings.guardianShowCurrentHealth, context.settings.guardianShowMaximumHealth = true, true
@@ -15,6 +16,7 @@ local function Tracker()
     env.DFRL.guardians = {
         GetSnapshot = function(snapshot, trackerShowDead)
             assert(trackerShowDead == context.settings.guardianShowDead, "tracker lost the current dead-row filter")
+            if context.choiceHidden then return end
             context.reads.snapshot = (context.reads.snapshot or 0) + 1
             snapshot.status, snapshot.rows = "ready", context.entries
             snapshot.revision, snapshot.generation = context.revision, context.generation
@@ -98,8 +100,23 @@ local function Tracker()
     end
     -- Settle the shared measurement label's font after initial column sizing.
     context:Tick()
+    local tracker = env.DFRL_GuardianTracker
+    assert(env.T.NearlyEqual(tracker:GetWidth() * tracker:GetEffectiveScale(), 204), "guardian default width diverged")
+    local title
+    for _, object in ipairs(context.objects) do
+        if object.parent == tracker and object.kind == "FontString" and object:GetText() == "Guardians" then
+            title = object
+            break
+        end
+    end
+    assert(title, "title case guardian caption was not drawn")
+    local r, g, b = title:GetTextColor()
+    assert(r == 1 and g == 0.82 and b == 0, "guardian header lost the meter's gold")
+    local row = context:Row()
+    r, g, b = row.name:GetTextColor()
+    assert(r == 0.87 and g == 0.74 and b == 0.49, "guardian names lost their original pale gold")
     context:ResetCounts()
-    return context, context:Row()
+    return context, row
 end
 
 for _, performance in ipairs({ false, true }) do
@@ -123,6 +140,18 @@ for _, performance in ipairs({ false, true }) do
         listUpdates == 0 and row.status:GetText() == "Respawns in 1:00",
         "roster reuse held countdowns or refiltered"
     )
+    context.choiceHidden = true
+    context:Tick()
+    local tracker = env.DFRL_GuardianTracker
+    assert(not tracker:IsShown() and not row:IsVisible(), "upgrade cards retained tracker artwork or rows")
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+    context.choiceHidden = false
+    context.entry.remaining = 59
+    context:Tick()
+    assert(tracker:IsShown() and row:IsVisible() and row.status:GetText() == "Respawns in 0:59")
+    assert(listUpdates == 0, "closing cards retired the existing guardian filter")
     context.entries[2] = { key = "2:8", index = 2, id = 8, name = "New guardian", state = "asleep", status = "asleep" }
     context.revision = 2
     context:Tick()

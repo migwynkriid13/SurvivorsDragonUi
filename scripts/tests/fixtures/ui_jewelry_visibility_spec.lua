@@ -16,6 +16,8 @@ local function Run(performanceMode)
         writes.hide = writes.hide + 1
         self.shown = false
     end
+    function methods:SetWidth(size) self.width = size end
+    function methods:SetHeight(size) self.height = size end
     local enabled, visible, player, docked = true, true, true, true
     local textures, reads, qualityReads = {}, 0, 0
     local rarityUpdates, retirements = 0, 0
@@ -146,6 +148,25 @@ local function Run(performanceMode)
             not slot.placeholder.shown and env.slots[2].placeholder.shown,
             "retired jewelry did not recover native equipment"
         )
+    end
+
+    textures[1] = nil
+    api.Refresh()
+    visible, env.selectedOriginal = false, true
+    beforeRarity = rarityUpdates
+    api.Refresh()
+    assert(not env.originalFrame and rarityUpdates == beforeRarity, "hidden frame style prepared artwork")
+    visible = true
+    api.Refresh()
+    assert(env.originalFrame and rarityUpdates == beforeRarity + 5)
+    for _, entry in ipairs(env.slots) do
+        assert(entry.placeholder.width == 32 and entry.placeholder.height == 32)
+    end
+    env.runecarverParts, env.selectedOriginal = {}, false
+    api.Refresh()
+    assert(not env.originalFrame and rarityUpdates == beforeRarity + 10)
+    for _, entry in ipairs(env.slots) do
+        assert(entry.placeholder.width > 32 and entry.placeholder.height == entry.placeholder.width)
     end
 end
 

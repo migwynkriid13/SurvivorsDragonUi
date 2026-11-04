@@ -1,5 +1,14 @@
 setfenv(1, DFRL:GetEnv())
 
+-- Default dimensions in UIParent units, independent of panel scale.
+DFRL.tools.RightHudStyle = {
+    width = 204,
+    questHeaderHeight = 25.5,
+    titleSize = 10.4,
+    titleColor = { 1, 0.82, 0 },
+    bodyColor = { 1, 1, 1 },
+}
+
 -- Native screen-unit setters now round through 24-bit floats. Their getters
 -- need not return the exact Lua number that was set, even at a fixed viewport.
 function DFRL.tools.NearlyEqual(a, b)
@@ -18,6 +27,31 @@ function DFRL.tools.TextureAssigned(loaded, assigned, wanted)
     if assigned == wanted then return true end
     return type(wanted) == "string" and assigned == string.gsub(wanted, "%.[^%.]*$", "")
 end
+
+-- Rotations snap to fixed steps, so each texture reuses a bounded set of UV
+-- crops and skips the write while its step is unchanged.
+local ROTATION_STEPS = 128
+local ROTATION_STEP = 2 * math.pi / ROTATION_STEPS
+function DFRL.tools.RotateTexture(texture, angle)
+    if type(angle) ~= "number" or angle - angle ~= 0 then return end
+    local step = math.mod(math.floor(angle / ROTATION_STEP + 0.5), ROTATION_STEPS)
+    if step < 0 then step = step + ROTATION_STEPS end
+    if texture.rotationStep == step then return end
+    texture.rotationStep = step
+    local c, s = math.cos(step * ROTATION_STEP) / 2, math.sin(step * ROTATION_STEP) / 2
+    texture:SetTexCoord(
+        0.5 - c - s,
+        0.5 + s - c,
+        0.5 - c + s,
+        0.5 + s + c,
+        0.5 + c - s,
+        0.5 - s - c,
+        0.5 + c + s,
+        0.5 - s + c
+    )
+end
+
+function DFRL.tools.ClearRotation(texture) texture.rotationStep = nil end
 
 -- Wide artwork uses equal source strips with a neighbouring pixel at each
 -- join. All pieces share their parent's lifecycle; no frame or updater is used.
@@ -107,6 +141,19 @@ function DFRL.tools.CreateArtworkStrip(parent, layer, count)
         end
     end
     return view
+end
+
+-- The packaged Quest Tracker crop is shared by the guardian and reward HUDs.
+-- See third_party/GuardianTracker-ARTWORK.md for the original art and notice.
+function DFRL.tools.CreateQuestTrackerHeader(parent, width, height)
+    local header = T.CreateArtworkStrip(parent, "BACKGROUND", 2)
+    header:SetTextures(DFRL:GetInfoOrCons("tex"), { "guardians\\Header.blp", "guardians\\Header_2.blp" })
+    header:SetWidth(width)
+    header:SetHeight(height)
+    header:SetTexCoord(1 / 512, 281 / 512, 0, 70 / 128)
+    header:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+    header:SetAlpha(0.8)
+    return header
 end
 
 -- The original two horizontal halves are stacked in a legal 512x512 atlas.
@@ -520,6 +567,12 @@ function DFRL.tools.NewActionBarState(ignored)
     return owner
 end
 
+function DFRL.tools.NormalizeCustomFontFile(value)
+    if type(value) ~= "string" or string.len(value) > 80 then return end
+    if value == "" then return value end
+    if string.find(value, '^[^/\\:<>"|?*%c]+%.[Tt][Tt][Ff]$') then return value end
+end
+
 -- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS:
 -- https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/Fonts.xml
 local classColors = {
@@ -536,7 +589,63 @@ local classColors = {
 
 function DFRL.tools.GetClassColor(class) return type(class) == "string" and classColors[string.upper(class)] or nil end
 
+function DFRL.tools.MatchesClassColor(red, green, blue)
+    for _, color in pairs(classColors) do
+        if T.NearlyEqual(red, color[1]) and T.NearlyEqual(green, color[2]) and T.NearlyEqual(blue, color[3]) then
+            return true
+        end
+    end
+    return false
+end
+
+local runPlayer = {}
+local runClassPhases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
+
+function DFRL.tools.RetireRunPlayer()
+    runPlayer.retiredZone, runPlayer.retiredStamp = AZS_ZONE, AZS_ZONE_UPDATED
+    runPlayer.observedZone, runPlayer.observedStamp = nil, nil
+    runPlayer.zone, runPlayer.color = nil, nil
+end
+
+function DFRL.tools.GetRunPlayerColor(name)
+    local zone, stamp = AZS_ZONE, AZS_ZONE_UPDATED
+    if
+        type(zone) ~= "table"
+        or type(stamp) ~= "number"
+        or stamp < 0
+        or stamp - stamp ~= 0
+        or (name ~= nil and (name == "" or name ~= zone.hero))
+        or type(AZS_GetPhase) ~= "function"
+    then
+        return
+    end
+    local runStamp = AZS_RUN_UPDATED
+    if runPlayer.zone == zone and runPlayer.stamp == stamp and runPlayer.runStamp == runStamp then
+        return runPlayer.color
+    end
+    local ok, phase = pcall(AZS_GetPhase)
+    if not ok then return end
+    runPlayer.zone, runPlayer.stamp, runPlayer.runStamp = zone, stamp, runStamp
+    runPlayer.color = nil
+    if not runClassPhases[phase] then
+        if runPlayer.observedZone then
+            runPlayer.retiredZone, runPlayer.retiredStamp = runPlayer.observedZone, runPlayer.observedStamp
+            runPlayer.observedZone, runPlayer.observedStamp = nil, nil
+        end
+        return
+    end
+    if zone == runPlayer.retiredZone and stamp == runPlayer.retiredStamp then return end
+    runPlayer.observedZone, runPlayer.observedStamp = zone, stamp
+    -- UnitClass can still describe the character-selection record after a switch.
+    runPlayer.color = T.GetClassColor(zone.class)
+    return runPlayer.color
+end
+
 function DFRL.tools.GetUnitClassColor(unit)
+    if unit == "player" then
+        local color = T.GetRunPlayerColor()
+        if color then return color end
+    end
     if type(UnitClass) ~= "function" then return end
     local _, class = UnitClass(unit)
     return T.GetClassColor(class)

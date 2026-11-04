@@ -24,7 +24,8 @@ DFRL:NewMod("GuardianRoster", 2, function()
     end
     local function Active()
         local navigation = DFRL.navigation
-        return navigation and navigation.IsRunPhase(navigation.Phase()) or false
+        local phase = navigation and navigation.Phase()
+        return navigation and navigation.IsRunPhase(phase) or false, phase
     end
     local function Living(row) return row.state == "asleep" or row.state == "awake" end
     local function Copy(row, copy)
@@ -146,11 +147,13 @@ DFRL:NewMod("GuardianRoster", 2, function()
     -- The tracker shows fighting health and reads countdowns when dead rows are shown.
     -- Other callers get the full snapshot when the tracker choice is absent.
     function roster.GetSnapshot(snapshot, trackerShowDead)
+        local active, phase = Active()
+        if trackerShowDead ~= nil and phase == "choosing" then return end
         snapshot = snapshot or { rows = {}, counts = {} }
         local changed = snapshot.revision ~= revision or snapshot.generation ~= generation or snapshot.status ~= "ready"
         snapshot.revision, snapshot.generation, snapshot.status = revision, generation, "inactive"
         local counts = snapshot.counts
-        if not Active() then
+        if not active then
             counts.total, counts.living, counts.asleep, counts.fighting = 0, 0, 0, 0
             counts.returning, counts.due, counts.empty = 0, 0, 0
             for index in ipairs(snapshot.rows) do

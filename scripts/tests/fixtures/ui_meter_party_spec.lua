@@ -211,10 +211,12 @@ local function Meter(configure)
         end
     end
     context:AttachMeter()
+    -- Regular one-second reads draw on the following frame; primed reads draw immediately.
     function context:Tick(elapsed)
         local step = elapsed or 1.01
         self.now = self.now + step
         self:Call(self.controller, "OnUpdate", step)
+        self:Call(self.controller, "OnUpdate", 0)
     end
     function context:Cycle(direction)
         self:Call(self.header, "OnClick", direction or "LeftButton")
@@ -272,6 +274,7 @@ Test("disabled meter defers all view construction until live first enable", func
         c:SetSetting("meterEnabled", true)
         c:AttachMeter()
         assert(c.root and c.header and c.controller, "live preview did not construct the view")
+        assert(c.env.T.NearlyEqual(c.root:GetWidth() * c.root:GetEffectiveScale(), 204), "meter default width diverged")
         c:Tick(0.01)
         assert(c.root:IsVisible() and c:Row(1).entry, "first enable waited for another interval")
         local root, used = c.root, #c.objects
@@ -544,8 +547,12 @@ Test("numeric reservation follows the final caption instead of fixed empty colum
     context:Tick()
     context:Cycle()
     local row = context:Row(1)
+    local availableWithIcons = context.root:GetWidth() - 53
     assert(row.value:GetText() == "10" and row.value.measuredText == "10", "layout measured the previous caption")
-    assert(row.value:GetWidth() == 9 and row.name:GetWidth() == 173, "short DPS retained a fixed numeric deadzone")
+    assert(
+        row.value:GetWidth() == 9 and row.name:GetWidth() == availableWithIcons - 14,
+        "short DPS retained a fixed numeric deadzone"
+    )
     local allocated = #context.objects
     local nameWidth = row.name:GetWidth()
     context.healing[1].dps = 1210
@@ -585,14 +592,17 @@ Test("numeric reservation follows the final caption instead of fixed empty colum
     context:ResetCounts()
     context:Tick()
     assert(
-        not row.value:IsShown() and row.name:GetWidth() == 187,
+        not row.value:IsShown() and row.name:GetWidth() == availableWithIcons,
         "disabled numbers did not return their entire gutter"
     )
     assert(not context.reads.metrics, "disabled numeric text still requested glyph metrics")
     context:SetSetting("meterShowIcons", false)
     context:ResetCounts()
     context:Tick()
-    assert(row.name:GetWidth() == 219 and not context.reads.metrics, "disabled icons retained unused name space")
+    assert(
+        row.name:GetWidth() == availableWithIcons + 32 and not context.reads.metrics,
+        "disabled icons retained unused name space"
+    )
 end)
 
 Test("name and number fonts stay independent and rejected native sizes retry", function()

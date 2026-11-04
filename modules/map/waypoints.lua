@@ -7,13 +7,8 @@ d23deaf8f44a7d280dc974a5c9d5321c013db59b. The selected Quest spear retains
 the complete original 32-by-32 canvas, colors and alpha in TGA/BLP:
 https://raw.githubusercontent.com/Gethe/wow-ui-textures/d23deaf8f44a7d280dc974a5c9d5321c013db59b/MINIMAP/MiniMap-QuestArrow.PNG
 
-Guardian medallion artwork is Blizzard game artwork from source commit
-00197f223180323ea7297c0157edbd1a43d2f99f:
-Textures/Nameplates/Quests/Kill/kill_elite.tga (GuardianFloating.tga)
-Source provenance and license: third_party/CacheWaypoints-ARTWORK.md.
-The upstream LICENSE excludes World of Warcraft artwork from its core MIT
-license: game textures are copyright Blizzard Entertainment and included only
-for use with the game. No upstream Lua is imported.
+GuardianFloating.blp uses Blizzard's vignettekillelite sprite. Source
+provenance and preparation: third_party/EncounterIcons-ARTWORK.md.
 
 The cache HUD, minimap and tally reuse the user's supplied chest.tga, prepared
 losslessly as Chest.blp. Its original pixels and alpha are retained.
@@ -30,6 +25,12 @@ DFRL:NewMod("Waypoints", 3, function()
     if not navigation then return end
     local worldMarkers = T.NewWorldMarkerApi and T.NewWorldMarkerApi(navigation)
     local texturePath = DFRL:GetInfoOrCons("tex") .. "waypoint\\"
+    local guardianArt = DFRL.display.GuardianIcon()
+    local function BindGuardianIcon(icon)
+        if icon.guardianArt ~= guardianArt and icon:SetTexture(guardianArt) ~= false then
+            icon.guardianArt = guardianArt
+        end
+    end
     local actionDefaults, xpDefaults = DFRL.actionBarDefaults, DFRL.xpBarDefaults
     if not actionDefaults or not xpDefaults then return end
     local stackTop = actionDefaults.bottom + actionDefaults.height + actionDefaults.topInset
@@ -69,7 +70,6 @@ DFRL:NewMod("Waypoints", 3, function()
             frameName = "DFRL_GuardianWaypoint",
             title = "Guardian",
             defaultSide = "RIGHT",
-            hudArt = "GuardianFloating.blp",
             hudTexCoord = { 0, 65 / 128, 0, 65 / 128 },
         },
         {
@@ -120,25 +120,36 @@ DFRL:NewMod("Waypoints", 3, function()
         local outdoorDiameter = { 14, 12, 10, 8, 6, 4 }
         local indoorDiameter = { 300, 240, 180, 120, 80, 50 }
         local nativeFlag = T.NewHudOwner("flag")
-        local hoveredPin, hoveredName
+        local hoveredPin, hoveredName, hoveredDistance, hoveredLanguage
         local mode, modeDirty, probing, reloading = nil, true, false, false
         local pendingZoom, RollbackZoom
         for _, tracker in ipairs(trackers) do
             tracker.minimapPins, tracker.minimapPool, tracker.minimapCycle = {}, {}, 0
         end
 
-        local function HideGuardianTooltip(pin)
+        local function HideMinimapTooltip(pin)
             if pin and hoveredPin ~= pin then return end
             if hoveredPin and GameTooltip and GameTooltip:IsOwned(hoveredPin) and GameTooltip:IsShown() then
                 GameTooltip:Hide()
             end
-            hoveredPin, hoveredName = nil, nil
+            hoveredPin, hoveredName, hoveredDistance, hoveredLanguage = nil, nil, nil, nil
         end
 
-        local function UpdateGuardianTooltip()
-            local tracker = trackers[2]
-            if not GameTooltip or not next(tracker.minimapPins) or type(_G.GetCursorPosition) ~= "function" then
-                HideGuardianTooltip()
+        local function PinHit(pin, x, y)
+            if not pin or not pin:IsVisible() or not Number(pin.drawnX) or not Number(pin.drawnY) then return end
+            local radius = pin:GetWidth() / 2
+            return math.abs(x - pin.drawnX) <= radius and math.abs(y - pin.drawnY) <= radius
+        end
+
+        local function UpdateMinimapTooltip()
+            local caches, guardians = trackers[1], trackers[2]
+            local edge = caches.minimapEdge
+            if
+                not GameTooltip
+                or (not next(guardians.minimapPins) and not next(caches.minimapPins) and not (edge and edge:IsShown()))
+                or type(_G.GetCursorPosition) ~= "function"
+            then
+                HideMinimapTooltip()
                 return
             end
             if DFRL.layout.IsEditing() or DFRL.layout.IsHidden("tooltip") then
@@ -161,46 +172,57 @@ DFRL:NewMod("Waypoints", 3, function()
                 or width <= 0
                 or height <= 0
             then
-                HideGuardianTooltip()
+                HideMinimapTooltip()
                 return
             end
             local x, y = cursorX / scale - centerX, cursorY / scale - centerY
             if math.abs(x) > width / 2 or math.abs(y) > height / 2 then
-                HideGuardianTooltip()
+                HideMinimapTooltip()
                 return
             end
             local hit
-            for _, entry in ipairs(MinimapEntries(tracker)) do
-                local pin = tracker.minimapPins[entry.key]
-                if
-                    pin
-                    and pin.guardianName
-                    and pin:IsVisible()
-                    and Number(pin.drawnX)
-                    and Number(pin.drawnY)
-                    and math.abs(x - pin.drawnX) <= PIN_SIZE / 2
-                    and math.abs(y - pin.drawnY) <= PIN_SIZE / 2
-                then
+            for _, entry in ipairs(MinimapEntries(guardians)) do
+                local pin = guardians.minimapPins[entry.key]
+                if pin and pin.guardianName and PinHit(pin, x, y) then
                     hit = pin
                     break
                 end
             end
             if not hit then
-                HideGuardianTooltip()
+                if PinHit(edge, x, y) and Number(edge.cacheDistance) then
+                    hit = edge
+                else
+                    for _, entry in ipairs(caches.entries) do
+                        local pin = caches.minimapPins[entry.key]
+                        if PinHit(pin, x, y) and Number(pin.cacheDistance) then
+                            hit = pin
+                            break
+                        end
+                    end
+                end
+            end
+            if not hit then
+                HideMinimapTooltip()
                 return
             end
+            local distance = hit.cacheDistance and math.floor(math.sqrt(hit.cacheDistance) + 0.5)
+            local name, language = hit.guardianName, DFRL.locale.code
             if hit == hoveredPin then
                 -- A native/foreign owner or a hidden tooltip must not be reclaimed.
                 if not GameTooltip:IsOwned(hit) or not GameTooltip:IsVisible() then return end
-                if hoveredName == hit.guardianName then return end
+                if hoveredName == name and hoveredDistance == distance and hoveredLanguage == language then return end
             else
-                HideGuardianTooltip()
+                HideMinimapTooltip()
                 if GameTooltip:IsVisible() and not GameTooltip:IsOwned(Minimap) then return end
                 hoveredPin = hit
                 GameTooltip:SetOwner(hit, "ANCHOR_NONE")
             end
-            GameTooltip:SetText(hit.guardianName, 1, 0.82, 0)
-            hoveredName = hit.guardianName
+            local caption = name
+            if distance then
+                caption = DFRL.locale.Text("Cache") .. " · " .. DFRL.locale.Native("common.yards", { n = distance })
+            end
+            GameTooltip:SetText(caption, 1, 0.82, 0)
+            hoveredName, hoveredDistance, hoveredLanguage = name, distance, language
             if not GameTooltip:IsVisible() then GameTooltip:Show() end
         end
 
@@ -256,23 +278,33 @@ DFRL:NewMod("Waypoints", 3, function()
         local function RecyclePins(tracker, cycle)
             for key, pin in pairs(tracker.minimapPins) do
                 if not cycle or pin.cycle ~= cycle then
-                    HideGuardianTooltip(pin)
+                    HideMinimapTooltip(pin)
                     HideGuardianTimer(pin)
                     pin:Hide()
                     if pin.check then pin.check:Hide() end
                     pin.defeated = nil
                     pin.entryKey, pin.cycle = nil, nil
                     pin.guardianName = nil
+                    pin.cacheDistance = nil
                     tracker.minimapPins[key] = nil
                     table.insert(tracker.minimapPool, pin)
                 end
             end
         end
 
+        local function HideCacheEdge(tracker)
+            local pin = tracker.minimapEdge
+            if not pin then return end
+            HideMinimapTooltip(pin)
+            if pin:IsShown() then pin:Hide() end
+            pin.cacheDistance = nil
+        end
+
         ClearMinimapPins = function(kind, retryZoom)
             for _, tracker in ipairs(trackers) do
                 if not kind or tracker.kind == kind then RecyclePins(tracker, nil) end
             end
+            if not kind or kind == "cache" then HideCacheEdge(trackers[1]) end
             if not kind then navigation.UpdateMinimapPlayer(false) end
             if pendingZoom and (pendingZoom.retry or retryZoom) and not probing then RollbackZoom() end
         end
@@ -387,16 +419,18 @@ DFRL:NewMod("Waypoints", 3, function()
             pin:SetFrameLevel(navigation.MinimapLevel(tracker.kind))
             pin:EnableMouse(false)
             local art = pin:CreateTexture(nil, tracker.kind == "guardian" and "ARTWORK" or "OVERLAY")
-            art:SetTexture(texturePath .. tracker.hudArt)
+            if tracker.kind ~= "guardian" then art:SetTexture(texturePath .. tracker.hudArt) end
             art:SetTexCoord(unpack(tracker.hudTexCoord))
             if tracker.kind == "guardian" then
                 art:SetPoint("CENTER", pin, "CENTER", 0, 0)
                 pin.art = art
                 pin.check = T.CreateDefeatedMarkerCheck(pin, size)
-                pin:SetScript("OnHide", function() HideGuardianTooltip(this) end)
-                T.RegisterTooltipIcon(pin, nil, "cursor")
             else
                 art:SetAllPoints(pin)
+            end
+            if tracker.kind ~= "party" then
+                pin:SetScript("OnHide", function() HideMinimapTooltip(this) end)
+                T.RegisterTooltipIcon(pin, nil, "cursor")
             end
             return pin
         end
@@ -427,7 +461,7 @@ DFRL:NewMod("Waypoints", 3, function()
             local east, north, _, metric = navigation.GuideDelta(entry, true)
             if not metric or not Number(east) or not Number(north) then return end
             local x, y = east * scale, north * scale
-            if Number(x) and Number(y) then return x, y end
+            if Number(x) and Number(y) then return x, y, east, north end
         end
 
         local function DrawTrackedPin(tracker, entry, x, y, refreshTimers, now)
@@ -438,6 +472,7 @@ DFRL:NewMod("Waypoints", 3, function()
             end
             pin.entryKey, pin.cycle = entry.key, tracker.minimapCycle
             if tracker.kind == "guardian" then
+                BindGuardianIcon(pin.art)
                 pin.guardianName = entry.name
                 local defeated = entry.state == "empty"
                 if pin.defeated ~= defeated then
@@ -450,8 +485,37 @@ DFRL:NewMod("Waypoints", 3, function()
             return visible
         end
 
+        local function DrawCacheEdge(tracker, x, y, edge, distance)
+            local pin = tracker.minimapEdge
+            if not pin then
+                pin = CreateFrame("Frame", nil, Minimap)
+                pin:Hide()
+                pin:SetWidth(PIN_SIZE)
+                pin:SetHeight(PIN_SIZE)
+                pin:SetFrameLevel(navigation.MinimapLevel("cache"))
+                pin:EnableMouse(false)
+                pin.art = pin:CreateTexture(nil, "OVERLAY")
+                pin.art:SetAllPoints(pin)
+                pin:SetScript("OnHide", function() HideMinimapTooltip(this) end)
+                T.RegisterTooltipIcon(pin, nil, "cursor")
+                tracker.minimapEdge = pin
+            end
+            if not pin.bound then
+                local art = texturePath .. "HudArrow.blp"
+                pin.bound = T.TextureAssigned(pin.art:SetTexture(art), pin.art:GetTexture(), art)
+                if not pin.bound then return end
+            end
+            local ratio = math.max(math.abs(x), math.abs(y)) / edge
+            x, y = x / ratio, y / ratio
+            if pin.drawnX ~= x or pin.drawnY ~= y then T.RotateTexture(pin.art, math.atan2(x, y)) end
+            pin.cacheDistance = distance
+            PlacePin(pin, x, y)
+        end
+
         local function UpdateTrackerPins(tracker, scale, edge, refreshTimers)
             tracker.minimapCycle = tracker.minimapCycle + 1
+            local cache = tracker.kind == "cache"
+            local nearest, nearestX, nearestY, cacheOnMap
             if scale and DFRL.display.Get(tracker.displayKey) then
                 if tracker.kind == "party" and refreshTimers then
                     -- Recycle departed members before acquiring replacements,
@@ -471,14 +535,13 @@ DFRL:NewMod("Waypoints", 3, function()
                 end
                 local now
                 for _, entry in ipairs(MinimapEntries(tracker)) do
-                    local x, y = Offset(entry, scale)
+                    local x, y, east, north = Offset(entry, scale)
                     -- Lairs and fallen allies keep distant edge indicators.
-                    -- Off-map caches hide instead of piling up on the edge.
-                    if x and tracker.kind ~= "cache" then
+                    if x and not cache then
                         local ratio = math.max(1, math.abs(x) / edge, math.abs(y) / edge)
                         x, y = x / ratio, y / ratio
                     end
-                    if x and (tracker.kind ~= "cache" or (math.abs(x) <= edge and math.abs(y) <= edge)) then
+                    if x and (not cache or (math.abs(x) <= edge and math.abs(y) <= edge)) then
                         if
                             refreshTimers
                             and showGuardianTimers
@@ -493,11 +556,28 @@ DFRL:NewMod("Waypoints", 3, function()
                         if not drawOK or not drawn then
                             local pin = tracker.minimapPins[entry.key]
                             if pin then pin.cycle = nil end
+                        elseif cache then
+                            cacheOnMap = true
+                            tracker.minimapPins[entry.key].cacheDistance = east * east + north * north
+                        end
+                    elseif x and not cacheOnMap then
+                        local distance = east * east + north * north
+                        if Number(distance) and (not nearest or distance < nearest) then
+                            nearest, nearestX, nearestY = distance, x, y
                         end
                     end
                 end
             end
             RecyclePins(tracker, tracker.minimapCycle)
+            if cache then
+                if nearest and not cacheOnMap then
+                    if not pcall(DrawCacheEdge, tracker, nearestX, nearestY, edge, nearest) then
+                        HideCacheEdge(tracker)
+                    end
+                else
+                    HideCacheEdge(tracker)
+                end
+            end
         end
 
         UpdateMinimapPins = function(checkHover)
@@ -531,13 +611,15 @@ DFRL:NewMod("Waypoints", 3, function()
             end
             local pinsVisible = false
             for _, tracker in ipairs(trackers) do
-                if scale or next(tracker.minimapPins) then
+                if scale or next(tracker.minimapPins) or (tracker.minimapEdge and tracker.minimapEdge:IsShown()) then
                     UpdateTrackerPins(tracker, scale, edge, checkHover)
-                    if next(tracker.minimapPins) then pinsVisible = true end
+                    if next(tracker.minimapPins) or (tracker.minimapEdge and tracker.minimapEdge:IsShown()) then
+                        pinsVisible = true
+                    end
                 end
             end
             navigation.UpdateMinimapPlayer(pinsVisible)
-            if checkHover then UpdateGuardianTooltip() end
+            if checkHover then UpdateMinimapTooltip() end
         end
 
         StopMinimapPins = function()
@@ -594,7 +676,7 @@ DFRL:NewMod("Waypoints", 3, function()
         hud:EnableMouse(false)
         hud:Hide()
         local marker = hud:CreateTexture(nil, "ARTWORK")
-        marker:SetTexture(texturePath .. tracker.hudArt)
+        if tracker.kind ~= "guardian" then marker:SetTexture(texturePath .. tracker.hudArt) end
         marker:SetWidth(32)
         marker:SetHeight(32)
         marker:SetTexCoord(unpack(tracker.hudTexCoord))
@@ -1014,20 +1096,6 @@ DFRL:NewMod("Waypoints", 3, function()
         tracker.selectedKey = tracker.selected and tracker.selected.key or nil
     end
 
-    local function Rotate(texture, angle)
-        local c, s = math.cos(angle) / 2, math.sin(angle) / 2
-        texture:SetTexCoord(
-            0.5 - c - s,
-            0.5 + s - c,
-            0.5 - c + s,
-            0.5 + s + c,
-            0.5 + c - s,
-            0.5 - s - c,
-            0.5 + c + s,
-            0.5 - s + c
-        )
-    end
-
     local function WrapAngle(angle)
         local turn = math.pi * 2
         return angle - math.floor((angle + math.pi) / turn) * turn
@@ -1107,6 +1175,7 @@ DFRL:NewMod("Waypoints", 3, function()
             if tracker.pointer:IsShown() then tracker.pointer:Hide() end
             return
         end
+        if tracker.kind == "guardian" then BindGuardianIcon(tracker.marker) end
         elapsed = elapsed or 0
         local selected = tracker.selected
         if tracker.kind == "party" then T.SetTextIfChanged(tracker.titleText, selected.name) end
@@ -1148,7 +1217,7 @@ DFRL:NewMod("Waypoints", 3, function()
             -- Native heading is counterclockwise, destination bearing clockwise.
             local angle = bearing + facing
             if tracker.pointerAngle ~= angle then
-                Rotate(tracker.pointer, angle)
+                T.RotateTexture(tracker.pointer, angle)
                 tracker.pointerAngle = angle
             end
             if not tracker.pointer:IsShown() then tracker.pointer:Show() end
@@ -1314,6 +1383,7 @@ DFRL:NewMod("Waypoints", 3, function()
         end
     end)
     local function UpdateDisplay()
+        guardianArt = DFRL.display.GuardianIcon()
         if worldMarkers then
             worldMarkers.UpdateOptions()
             worldMarkers.Service(inWorld)

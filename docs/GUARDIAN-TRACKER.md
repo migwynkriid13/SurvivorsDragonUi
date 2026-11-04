@@ -1,9 +1,15 @@
 # Guardian tracker
 
 The tracker uses selected design **04**: the published quest-tracker header above
-an open list. The header contains its medallion and **GUARDIANS** title, with no
+an open list. The header contains its medallion and gold **Guardians** title, with no
 alive count or minus/plus button. The title uses the space previously reserved
-for the button.
+for the button. The header shares its default height with Rarity odds, and the
+medallion and title are centered vertically.
+
+The whole tracker hides during upgrade and jewelry reward choices. Its existing
+tenth-second refresh restores the rows from the current roster after the cards
+close. During the choice, the tracker skips health and countdown reads while
+retaining its rows and scroll position.
 
 `/sdui` → **Guardian tracker** has **Show dead**, on by default. On shows all
 accepted lairs, including respawn timers, due and empty rows. Off shows only
@@ -109,7 +115,7 @@ pill's right offset at the default scale. The pill anchor and default calculatio
 share `HEALTH_RIGHT_OFFSET`; neither follows moved or resized minimap geometry.
 Width changes reapply this default edge only when no confirmed or draft position
 exists; custom positions stay independent.
-The Layout left/right side handles set width from **120 to 960**, with **240** as the default, without scaling icons, fonts or rows. Corner handles still scale proportionally. Cached natural caption/health widths guide the columns: wide layouts retain the status column's natural width and give extra space to names; narrow layouts compress both. Long text can clip at small widths. Names retain at least 24 units; status retains at least 42 plus its eight-unit pill allowance, so the two 25-unit end caps never overlap. The measured header height retains its existing sizing.
+The Layout left/right side handles set width from **120 to 960**, with **240** as the default, without scaling icons, fonts or rows. Corner handles still scale proportionally. Cached natural caption/health widths guide the columns: wide layouts retain the status column's natural width and give extra space to names; narrow layouts compress both. Long text can clip at small widths. Names retain at least 24 units; status retains at least 42 plus its eight-unit pill allowance, so the two 25-unit end caps never overlap. Column measurements do not change the header height.
 
 Top/bottom handles choose 1–40 visible slots; scroll over the tracker or its editor outline for further rows. The `guardianRows` display preference defaults to zero, retaining the original automatic full list, including after resets. Only the selected slice is painted; the complete accepted native roster and countdowns remain available. An explicit slot count retains the selected viewport height even with fewer accepted rows.
 

@@ -283,6 +283,11 @@ The Run timer and Boss health Layout outlines have left/right center handles for
 
 The run fill uses `runBar.layoutWidth`, derived from the actual root width minus its original sixteen-unit inset. Every scheduled skull uses `width * nativeSpawnTime / nativeRunLength`; the final skull stays at the fill's right edge. Width is part of the marker cache key. Native health, boss state and native time still own the values and marker state. Native StatusBar UV writes remain untouched.
 
+The run timer shares the white World Quest skull with overhead boss markers.
+Upcoming skulls draw at 17.1 units. Active skulls draw at 18 units with a red
+contour that pulses in normal mode. Defeated bosses retain the faded skull and
+green check. See [encounter artwork](../third_party/EncounterIcons-ARTWORK.md).
+
 The existing 27 flow regions retain their speed, lane and phase, with spacing and wrap span reflowing to the new width. Foam and tier glints follow the filled portion. Ordinary forward steps update the fill immediately and let the effects catch up on the next eligible 20 Hz sample. Shrink, resize and completion reclip immediately. Pulse periods, colors and artwork stay the same, and wider bars reuse the existing pool. Hidden views defer cosmetic reflow until visible.
 
 Boss health also has top/bottom handles for 1–40 viewport slots, with mouse-wheel access to further validated native entries. The `bossRows` display preference defaults to zero (automatic full list), copied by profiles and restored on resets. Full encounter validation and native HUD ownership remain intact. Visible health rows use the current group width, preserve end caps and text size, and wrap their eighteen-unit debuffs into the available columns. Debuff height remains part of the measured outline. No data, health value or boss is fabricated to fill empty viewport slots.

@@ -224,6 +224,51 @@ assert(tracker.minimapPins[entry.key].timer:GetText() == "0:24", "failed timer t
 print("PASS guardian timer defaults, drafts, native timing, idle work, lazy pooling and retirement")
 
 do
+    local cache = {
+        kind = "cache",
+        displayKey = "cacheGuidance",
+        hudArt = "Chest.blp",
+        hudTexCoord = { 0, 1, 0, 1 },
+        minimapPins = {},
+        minimapPool = {},
+        minimapCycle = 0,
+        entries = { { key = "far", x = 100, y = 25 }, { key = "near", x = 0, y = -60 } },
+    }
+    display.Set("cacheGuidance", true)
+    context.failTexture = env.texturePath .. "HudArrow.blp"
+    Update(cache, 1, 40, true)
+    local arrow = assert(cache.minimapEdge)
+    assert(not arrow:IsShown() and not next(cache.minimapPins), "missing arrow art or off-map caches appeared")
+    context.failTexture = nil
+    Update(cache, 1, 40, true)
+    assert(arrow:IsShown() and arrow.drawnX == 0 and arrow.drawnY == -40 and arrow.cacheDistance == 3600)
+    context:ResetCounts()
+    Update(cache, 1, 40, true)
+    context:NoPresentationWrites()
+    cache.entries[2].x = 1
+    Update(cache, 1, 40, true)
+    assert(arrow.drawnX > 0 and not context.writes.SetTexCoord, "same rotation step rewrote the cache arrow UVs")
+    context:ResetCounts()
+    cache.entries[2].x = 6
+    Update(cache, 1, 40, true)
+    assert(context.writes.SetTexCoord == 1, "crossing a step did not turn the cache arrow")
+    cache.entries[2].x, cache.entries[2].y = 0, -10
+    Update(cache, 1, 40, true)
+    assert(not arrow:IsShown() and cache.minimapPins.near:IsShown(), "in-range cache did not replace the edge arrow")
+    assert(cache.minimapPins.near.cacheDistance == 100 and not cache.minimapPins.far)
+    cache.entries[2] = nil
+    Update(cache, 1, 40, true)
+    assert(cache.minimapEdge == arrow and arrow:IsShown() and arrow.drawnX == 40 and arrow.drawnY == 10)
+    Update(cache, nil, nil, true)
+    assert(not arrow:IsShown() and not arrow.cacheDistance, "unavailable map retained an edge arrow")
+    Update(cache, 1, 40, true)
+    display.Set("cacheGuidance", false)
+    Update(cache, 1, 40, true)
+    assert(not arrow:IsShown() and not arrow.cacheDistance, "disabled cache guidance retained an arrow")
+    print("PASS nearest off-map cache arrow, asset retry, unchanged writes and retirement")
+end
+
+do
     local party = {
         kind = "party",
         displayKey = "partyGuidance",

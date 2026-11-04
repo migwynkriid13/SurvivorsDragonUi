@@ -8,6 +8,8 @@ DFRL:NewMod("NameplateStyle", 5, function()
     local path = DFRL:GetInfoOrCons("tex") .. "nameplates\\"
     local WIDTH, HEIGHT, FONT_SIZE = 100, 10, 9
     local TEXT_OFFSET, GLOW_OFFSET = 2.5, 4
+    local classHealth = DFRL.display.Get("classHealth")
+    DFRL.display.Listen(function() classHealth = DFRL.display.Get("classHealth") end)
 
     local function PlateColor(red, green, blue)
         if red > 0.9 and green < 0.2 and blue < 0.2 then
@@ -219,6 +221,25 @@ DFRL:NewMod("NameplateStyle", 5, function()
         else
             red, green, blue = data.bar:GetStatusBarColor()
         end
+        local name
+        if sample then
+            name = sample.name
+        else
+            name = data.nameRegion:GetText()
+        end
+        local classColor
+        if classHealth and name and name ~= "" then
+            classColor = T.GetRunPlayerColor(name)
+            -- Anonymous plates expose only name and native tint. Require the
+            -- current hero's exact name and a friendly or class-colored tint.
+            if classColor then
+                local friendly = (green > red + 0.1 and green > blue + 0.1) or (blue > red + 0.1 and blue > green + 0.1)
+                if not friendly and not T.MatchesClassColor(red, green, blue) then classColor = nil end
+            end
+        end
+        if classColor then
+            red, green, blue = unpack(classColor)
+        end
         local nameRed, nameGreen, nameBlue = 1, 1, 1
         if namesOnly then
             nameRed, nameGreen, nameBlue = red, green, blue
@@ -230,12 +251,6 @@ DFRL:NewMod("NameplateStyle", 5, function()
         then
             style.name:SetTextColor(nameRed, nameGreen, nameBlue, 1)
             style.nameRed, style.nameGreen, style.nameBlue = nameRed, nameGreen, nameBlue
-        end
-        local name
-        if sample then
-            name = sample.name
-        else
-            name = data.nameRegion:GetText()
         end
         T.SetTextIfChanged(style.name, name or "")
         -- The native bar remains live for SCT health-loss matching. Only its
@@ -249,7 +264,9 @@ DFRL:NewMod("NameplateStyle", 5, function()
             minimum, maximum = data.bar:GetMinMaxValues()
             value = data.bar:GetValue()
         end
-        red, green, blue = PlateColor(red, green, blue)
+        if not classColor then
+            red, green, blue = PlateColor(red, green, blue)
+        end
         UpdateHealth(style, minimum, maximum, value, red, green, blue)
         local regions = data.nativeRegions
         CopyNativeIcon(style.raid, regions and regions[6])

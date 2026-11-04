@@ -10,6 +10,11 @@ for _, invalid in ipairs({ "", "1234", "123456", "11345", "02345", "abcde", fals
 end
 assert(display.Copy({ jewelryCustomOrder = false, jewelryOrder = "54321" }).jewelryOrder == "54321")
 assert(display.Copy({ jewelryCustomOrder = "true" }).jewelryCustomOrder == false)
+assert(display.Get("jewelryFrameStyle") == "runecarver")
+for _, invalid in ipairs({ "", "default", false, 1, {} }) do
+    assert(display.Copy({ jewelryFrameStyle = invalid }).jewelryFrameStyle == "runecarver")
+end
+assert(display.Copy({ jewelryFrameStyle = "original" }).jewelryFrameStyle == "original")
 env.WIDTH, env.ICON_SIZE, env.columnPitch = 317, 32, 50
 env.hud, env.slots, env.displayGeometry = {}, {}, {}
 env.inWorld, env.attached = true, true
@@ -50,10 +55,13 @@ assert(env.slots[1].position == 1 and env.slots[4].position == 4 and not display
 display.BeginEdit()
 display.Set("jewelryCustomOrder", true)
 display.SetJewelryPosition(2, "5")
+display.Set("jewelryFrameStyle", "original")
 display.FinishEdit(true)
+assert(env.SurvivorsDragonUiDisplay.jewelryFrameStyle == "original")
 assert(env.SurvivorsDragonUiDisplay.jewelryOrder == "15342")
 local profile = display.Snapshot()
 display.BeginEdit()
+display.Set("jewelryFrameStyle", "runecarver")
 display.Set("jewelryCustomOrder", false)
 display.FinishEdit(true)
 assert(not display.Get("jewelryCustomOrder") and display.Get("jewelryOrder") == "15342")
@@ -63,6 +71,7 @@ for index, slot in ipairs(env.slots) do
 end
 display.BeginEdit()
 display.Load(profile)
+assert(display.Get("jewelryFrameStyle") == "original", "profile lost the original frame style")
 assert(display.Get("jewelryCustomOrder") and display.Get("jewelryOrder") == "15342", "profile lost custom order")
 display.Set("jewelryOrder", "11111")
 assert(display.Get("jewelryOrder") == "15342", "invalid direct edit duplicated an item")
@@ -95,6 +104,7 @@ place()
 assert(env.slots[1].position == 5 and env.slots[5].position == 1)
 display.FinishEdit(false)
 display.Reset()
+assert(display.Get("jewelryFrameStyle") == "runecarver")
 place()
 assert(not display.Get("jewelryCustomOrder") and display.Get("jewelryOrder") == "12345")
 for index, slot in ipairs(env.slots) do

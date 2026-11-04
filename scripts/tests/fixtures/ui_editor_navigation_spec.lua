@@ -1380,7 +1380,7 @@ for _ in pairs(pages) do
     pageCount = pageCount + 1
 end
 assert(
-    pageCount == 22 and pages.cacheIcons and pages.bossIcons and layoutBuilds == 1,
+    pageCount == 23 and pages.cacheIcons and pages.bossIcons and pages.rarityOdds and layoutBuilds == 1,
     "full category walk lost or rebuilt sections"
 )
 local allCategoryObjects = #context.objects
@@ -1532,6 +1532,17 @@ display.Set("worldCacheIconDistance", 40)
 display.Set("worldBossIcons", false)
 editor.Display()
 assert(not cacheRange.enabled and not bossRange.enabled, "Always retained an unnecessary cutoff control")
+do
+    local bossIcon = assert(dialog.iconSelectors.bossIconStyle)
+    local guardianIcon = assert(dialog.iconSelectors.guardianIconStyle)
+    assert(bossIcon.dropdownEnabled and guardianIcon.dropdownEnabled, "overhead toggle disabled shared icon selectors")
+    SelectChoice(bossIcon, "original")
+    SelectChoice(guardianIcon, "original")
+    editor.Display()
+    assert(bossIcon.dropdownValue == "original" and guardianIcon.dropdownValue == "original")
+    local normalizedIcons = display.Copy({ bossIconStyle = "unknown", guardianIconStyle = "original" })
+    assert(normalizedIcons.bossIconStyle == "default" and normalizedIcons.guardianIconStyle == "original")
+end
 dialog.navigation.Select("action")
 local xpText = assert(env.displayControls.xpShowText, "Action bar did not prepare Show XP text")
 assert(not xpText.editorChecked, "XP text was enabled by default")
@@ -1541,6 +1552,7 @@ assert(display.Get("xpShowText") and xpText.editorChecked, "XP text checkbox did
 assert(not env.SurvivorsDragonUiDisplay.xpShowText, "XP text checkbox saved before Confirm")
 env.DFRL.layout.CancelEdit()
 assert(not display.Get("xpShowText"), "Cancel retained the XP text checkbox")
+assert(display.Get("bossIconStyle") == "default" and display.Get("guardianIconStyle") == "default")
 display.BeginEdit()
 dialog:Show()
 dialog.navigation.Select("action")
@@ -1569,6 +1581,14 @@ local customJewelry = assert(env.displayControls.jewelryCustomOrder)
 local jewelryChoices = assert(dialog.jewelryOrderSettings)
 assert(not customJewelry.editorChecked and not jewelryChoices.enabled and #jewelryChoices.controls == 5)
 assert(not dialog.editorDropdownMenu:IsShown(), "Jewelry retained a dropdown from another page")
+do
+    local style = assert(dialog.displayModes.jewelryFrameStyle.dropdown)
+    assert(style.dropdownValue == "runecarver", "Jewelry did not select Runecarver by default")
+    SelectChoice(style, "original")
+    editor.Display()
+    assert(style.dropdownValue == "original" and display.Get("jewelryFrameStyle") == "original")
+    assert(env.SurvivorsDragonUiDisplay.jewelryFrameStyle ~= "original", "Jewelry style saved before Confirm")
+end
 context:Call(customJewelry, "OnClick")
 editor.Display()
 assert(jewelryChoices.enabled, "custom order incorrectly depends on the SDUI action bar")
@@ -1600,6 +1620,7 @@ assert(display.Get("attachJewelry") and display.Get("attachTally"), "native prev
 env.DFRL.layout.CancelEdit()
 assert(not jewelryMenu:IsShown() and not jewelryMenu.owner, "Cancel retained the jewelry dropdown")
 assert(display.Get("customActionBar") and display.Get("attachJewelry") and display.Get("attachTally"))
+assert(display.Get("jewelryFrameStyle") == "runecarver", "Cancel retained the draft jewelry style")
 assert(
     not display.Get("jewelryCustomOrder") and display.Get("jewelryOrder") == "12345",
     "Cancel retained jewelry order"

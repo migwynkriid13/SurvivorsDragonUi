@@ -2,9 +2,13 @@
 -- media/tex/meter/LICENSE.txt. Pinned source: third_party/DetailsTWW-ARTWORK.md.
 -- Reset glyph: Blizzard Entertainment; provenance in the same source notes.
 -- The existing gold ring retains third_party/Jewelry-ARTWORK.md's provenance.
+local meterDefaults = { scale = 0.8, header = 32, row = 32, footer = 32 }
+meterDefaults.width = DFRL.tools.RightHudStyle.width / meterDefaults.scale
+DFRL.damageMeterDefaults = meterDefaults
+
 local function BuildMeter()
-    local HEADER, ROW_HEIGHT, FOOTER, REFRESH_SECONDS = 32, 32, 32, 1
-    local width, fontSize = 240, DFRL.display.Get("meterFontSize")
+    local HEADER, ROW_HEIGHT, FOOTER, REFRESH_SECONDS = meterDefaults.header, meterDefaults.row, meterDefaults.footer, 1
+    local width, fontSize = meterDefaults.width, DFRL.display.Get("meterFontSize")
     local nameFontSize = DFRL.display.Get("meterNameFontSize")
     local enabled = DFRL.display.Get("meterEnabled")
     local visible = DFRL.display.Get("meterRows")
@@ -22,6 +26,7 @@ local function BuildMeter()
     for key, setting in pairs(optionKeys) do
         options[key] = DFRL.display.Get(setting)
     end
+    options.refreshSeconds = DFRL.display.Get("meterRefreshRate")
     local palette = { revision = 0 }
     local function ReadPalette()
         local mode = DFRL.display.Get("meterColorMode")
@@ -133,6 +138,11 @@ local function BuildMeter()
     end
     local phases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
     local mode, offset, age = 1, 0, REFRESH_SECONDS
+    -- Regular reads draw on the following frame; primed reads draw immediately.
+    local primed = true
+    local function Prime()
+        age, primed = REFRESH_SECONDS, true
+    end
     local inWorld, editing, ready, faulted = true, false, true, false
     local rows, received, blocked = {}, {}, {}
     local receipts, publications, publicationSequence = {}, {}, 0
@@ -160,7 +170,7 @@ local function BuildMeter()
     local tooltipState = {}
     local hovered
     local root = CreateFrame("Frame", "DFRL_DamageMeter", UIParent)
-    root:SetScale(0.8)
+    root:SetScale(meterDefaults.scale)
     root:SetWidth(width)
     root:SetHeight(HEADER + visible * ROW_HEIGHT + FOOTER)
     root:SetFrameStrata("MEDIUM")
@@ -187,6 +197,7 @@ local function BuildMeter()
         end
         local cleanup = api and api.PendingCleanup()
         local active = inWorld and (listen or native.IsCaptured() or cleanup) and true or false
+        if not active then presentation.drawPending = false end
         if updating == active then return end
         updating = active
         if active then
@@ -245,7 +256,7 @@ local function BuildMeter()
         if not label:GetFont() then ready = false end
         label:SetJustifyH(justify or "LEFT")
         label:SetJustifyV("MIDDLE")
-        label:SetTextColor(1, 1, 1)
+        label:SetTextColor(unpack(T.RightHudStyle.bodyColor))
         T.SetChatShadow(label)
         return label
     end
@@ -503,7 +514,7 @@ local function BuildMeter()
     total:SetPoint("LEFT", header, "LEFT", 14, 1)
     total:SetWidth(width - 52)
     total:SetHeight(fontSize + 9)
-    total:SetTextColor(1, 0.82, 0)
+    total:SetTextColor(unpack(T.RightHudStyle.titleColor))
     local function DrawHeader(amount, rate)
         amount = options.total and amount or nil
         rate = options.totalDps and rate or nil
@@ -809,7 +820,7 @@ local function BuildMeter()
         presentation.cleared = true
     end
     local function Release(preserveDps)
-        dataValid = false
+        dataValid, presentation.drawPending = false, false
         ClearRows()
         if not preserveDps then dps.Suspend() end
         native.Release()
@@ -1322,7 +1333,8 @@ local function BuildMeter()
         end
         resetPending = false
     end
-    local function Refresh()
+    local function Refresh(immediate)
+        presentation.drawPending = false
         if not inWorld or not enabled or not ready or faulted then
             if api and api.PendingCleanup() then api.RetryCleanup() end
             Release()
@@ -1374,7 +1386,13 @@ local function BuildMeter()
         valid, message = Read(paint, source, amount, rate, message, publication, meta)
         presentation.waiting = not valid and message == nil
         dataDirty = false
+        -- Showing the meter draws in the same frame as its first read.
+        if not root:IsVisible() then immediate = true end
         SetShown(true)
+        if valid and not immediate and root:IsVisible() then
+            presentation.drawPending = true
+            return
+        end
         if root:IsVisible() then PreparePresentation() end
         if valid then
             if root:IsVisible() then
@@ -1401,6 +1419,20 @@ local function BuildMeter()
             end
         end
     end
+    local function DrawPending()
+        presentation.drawPending = false
+        if not inWorld or not enabled or not ready or faulted or presentation.choiceHidden then return end
+        if not root:IsVisible() then return end
+        -- Draw exactly the rows copied by the preceding read, without another snapshot.
+        PreparePresentation()
+        Draw()
+        if not ready then
+            Release()
+            SetShown(false)
+            return
+        end
+        native.Acquire()
+    end
     header:SetScript("OnClick", function()
         if editing or not enabled or not inWorld then return end
         HideTooltip()
@@ -1410,7 +1442,8 @@ local function BuildMeter()
         else
             viewSelection.first, viewSelection.steps = direction, 0
         end
-        viewSelection.direction, age = direction, REFRESH_SECONDS
+        viewSelection.direction = direction
+        Prime()
     end)
     header:SetScript("OnEnter", ShowHeaderTooltip)
     header:SetScript("OnLeave", HideTooltip)
@@ -1428,7 +1461,7 @@ local function BuildMeter()
     end)
     resetButton:SetScript("OnLeave", HideTooltip)
     root:SetScript("OnHide", function()
-        viewSelection.paint = false
+        viewSelection.paint, presentation.drawPending = false, false
         HideTooltip()
         if not presentation.choiceHidden then SuspendRates() end
         for _, row in ipairs(rows) do
@@ -1441,13 +1474,13 @@ local function BuildMeter()
             root:Hide()
             return
         end
-        if not viewSelection.paint then age = REFRESH_SECONDS end
+        if not viewSelection.paint then Prime() end
     end)
     root:SetScript("OnMouseWheel", function()
         if editing then return end
         HideTooltip()
         offset = math.max(0, math.min(offset - (tonumber(arg1) or 0), snapshot.count - visible))
-        age = REFRESH_SECONDS
+        Prime()
     end)
     DFRL.layout.Register("damageMeter", root, function()
         root:ClearAllPoints()
@@ -1462,10 +1495,12 @@ local function BuildMeter()
             DFRL.display.Set("meterRows", math.floor((height - HEADER - FOOTER) / ROW_HEIGHT + 0.5))
         end,
         onResize = function(frame)
-            width, age = frame:GetWidth(), REFRESH_SECONDS
+            width = frame:GetWidth()
+            Prime()
         end,
         onEdit = function(active)
-            editing, age = active, REFRESH_SECONDS
+            editing = active
+            Prime()
             HideTooltip()
             header:EnableMouse(not active)
             resetButton:EnableMouse(not active)
@@ -1474,7 +1509,8 @@ local function BuildMeter()
             end
         end,
         onReset = function()
-            mode, offset, age, faulted = 1, 0, REFRESH_SECONDS, false
+            mode, offset, faulted = 1, 0, false
+            Prime()
             viewSelection.first, viewSelection.steps, viewSelection.dirty = nil, 0, true
             dataDirty = true
             HideTooltip()
@@ -1499,6 +1535,8 @@ local function BuildMeter()
         local styleChanged = presentation.fontChoice ~= fontChoice or presentation.fontOutline ~= fontOutline
         local window = DFRL.display.Get("meterDpsWindow")
         local windowChanged = dps.window ~= window
+        -- Counters follow the chosen cadence; DPS samples keep their one-second step.
+        options.refreshSeconds = DFRL.display.Get("meterRefreshRate")
         local changed, iconsWereShown, petsWereCombined = false, options.icons, options.groupPets
         for key, setting in pairs(optionKeys) do
             local value = DFRL.display.Get(setting)
@@ -1534,7 +1572,8 @@ local function BuildMeter()
             ClearReadPass()
         end
         if changed then optionsRevision = optionsRevision + 1 end
-        visible, age = count, REFRESH_SECONDS
+        visible = count
+        Prime()
         offset = math.max(0, math.min(offset, snapshot.count - visible))
         for index = visible + 1, table.getn(rows) do
             ClearRow(rows[index])
@@ -1562,7 +1601,7 @@ local function BuildMeter()
         end
         ClearSamples()
         dataDirty = true
-        age = REFRESH_SECONDS
+        Prime()
     end)
     function DFRL.ResetMeterStats()
         if not enabled or not inWorld or not ready or faulted then return end
@@ -1585,12 +1624,33 @@ local function BuildMeter()
             T.SetTextIfChanged(status, "")
             if status:IsShown() then status:Hide() end
         end
-        dataDirty, age = true, REFRESH_SECONDS
+        dataDirty = true
+        Prime()
+    end
+    local function Fault(message)
+        faulted = true
+        dps.Clear()
+        session.Clear()
+        ClearSourceGroups()
+        if api then api.Clear() end
+        resetPending = false
+        Release()
+        SetShown(false)
+        UpdateController()
+        geterrorhandler()(message)
     end
     Tick = function()
         if not inWorld then return end
         age = age + (tonumber(arg1) or 0)
-        if age < REFRESH_SECONDS then
+        -- Finish a regular draw even when a slow frame makes the next read due.
+        if not primed and (presentation.drawPending or age < (options.refreshSeconds or REFRESH_SECONDS)) then
+            if presentation.drawPending then
+                local ok, message = pcall(DrawPending)
+                if not ok then
+                    Fault(message)
+                    return
+                end
+            end
             if hovered and hovered.entry then
                 if
                     not hovered:IsVisible()
@@ -1605,21 +1665,11 @@ local function BuildMeter()
             end
             return
         end
-        age = 0
-        local ok, message = pcall(Refresh)
+        local immediate = primed
+        age, primed = 0, false
+        local ok, message = pcall(Refresh, immediate)
         ClearReadPass()
-        if not ok then
-            faulted = true
-            dps.Clear()
-            session.Clear()
-            ClearSourceGroups()
-            if api then api.Clear() end
-            resetPending = false
-            Release()
-            SetShown(false)
-            UpdateController()
-            geterrorhandler()(message)
-        end
+        if not ok then Fault(message) end
     end
     for _, name in ipairs({
         "PLAYER_ENTERING_WORLD",
@@ -1630,7 +1680,8 @@ local function BuildMeter()
     end
     controller:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
-            inWorld, faulted, age = true, false, REFRESH_SECONDS
+            inWorld, faulted = true, false
+            Prime()
             UpdateController()
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
@@ -1638,7 +1689,7 @@ local function BuildMeter()
             UpdateController()
         elseif event == "CVAR_UPDATE" then
             if native.Observe(arg1) then
-                age = REFRESH_SECONDS
+                Prime()
                 UpdateController()
             end
         elseif event == "CHAT_MSG_ADDON" and enabled then
