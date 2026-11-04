@@ -120,6 +120,12 @@ do
         context.reads.guardians == 1 and not context.reads.clock and snapshot.rows[1].healthFraction == 0.65,
         "a fighting guardian did not resume fresh health reads"
     )
+    phase = "choosing"
+    context:ResetCounts()
+    assert(not roster.GetSnapshot(snapshot, false), "cards did not defer the living-only tracker")
+    assert(not roster.GetSnapshot(snapshot, true), "cards did not defer the all-lairs tracker")
+    assert(context.reads.phase == 2 and not context.reads.guardians and not context.reads.clock)
+    assert(roster.GetSnapshot(snapshot).status == "ready", "cards retired the full guardian roster")
     phase = "ready"
     context:ResetCounts()
     snapshot = roster.GetSnapshot(snapshot)

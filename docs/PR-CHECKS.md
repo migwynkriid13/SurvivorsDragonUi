@@ -9,9 +9,13 @@ branch protection by itself.
 
 The rarity odds fixture drives the production panel with mocked phase, run
 and stats feeds. It covers the shared quest header, the compact reward table,
-known estimates by reward type, level caps, zero
+single-line caption fitting and resize recovery, known odds by reward type, level caps, zero
 and invalid Luck, preview/Confirm/Cancel/reset, stale data across run
-boundaries, overlay readback failures and hidden or unchanged work. The
+boundaries, reward-card suppression and hidden or unchanged work. The
+hover cases cover the luck breakdown, source-specific per-roll odds, changed-only
+refresh and tooltip ownership across Layout and card transitions. Guardian
+fixtures cover hiding the complete tracker, deferring tracker-only health and
+countdown reads, and reusing rows and filters when choices close. The
 minimap fixtures also cover the nearest off-map cache arrow, artwork retry,
 in-range handoff, rounded distance and tooltip ownership. These fixtures do
 not establish the installed game's odds, rendering or input behavior.

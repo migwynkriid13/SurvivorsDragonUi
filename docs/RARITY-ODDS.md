@@ -5,9 +5,13 @@ a side handle to widen the panel or a corner to scale it. It shares the visible
 default width and gold title style of Guardians and the DPS meter. The panel
 centers between the tracker and the space reserved for the meter, or sits beside
 that stack when the viewport is too short. Layout keeps the geometry you save.
-The panel automatically stays above reward cards when the game's frame layer
-API is available. The setting uses the existing preview, Confirm, Cancel,
-profiles and reset paths.
+The panel hides while upgrade or jewelry reward cards are open. It returns
+automatically when play resumes. The setting uses the existing preview, Confirm,
+Cancel, profiles and reset paths.
+
+Hover the title to see how character luck and the level bonus combine. Hover a
+reward row to see its full name and its Rare, Epic and Legendary chances as
+one-in-N odds.
 
 ## What the numbers measure
 
@@ -43,20 +47,22 @@ and three textures. The two [Quest Tracker header strips](../third_party/Guardia
 share the guardian tracker's layout and alpha. The Bonus Objective star uses
 its original transparency directly over the header. Four text rows sit
 directly over the world, with the shared text outline and shadow for contrast.
-Reward names can wrap. The side handles resize the header and all columns, with
-the default 240-unit width as the minimum for full percentages.
+Reward names fit on one line, and Legendary has the widest odds column. Caption
+measurements use the active font and refresh with changes to language, font or
+panel size. The side handles resize the header and all columns from the shared
+default width.
 Both Performance Mode states use this static presentation. The controller
 samples at most four times per second while permitted. Unchanged roll strength
 skips odds formatting and text writes. A language change refreshes captions on
 the next permitted update. Off, Layout hiding, world leave and logout detach
 the reader.
 
-Playing, paused and eligible card selection show the panel. On supported
-builds SDUI verifies that its named frame is above the cards before showing it
-there. Invalid data, disabled visibility, world leave and reload hide the
-panel and release its registration. The panel accepts no clicks. The feature
-adds no separate SavedVariable. Mock coverage runs in PR CI.
-Appearance and layering in the installed game remain unverified.
+Playing and paused phases show the panel when valid data is available. Native
+`choosing` hides the entire panel on its next existing sample and defers
+odds and cursor work. Hover details use the shared game tooltip and sample cadence.
+They close when the panel hides or Layout opens and yield to other UI and its
+tooltips. The feature adds no separate SavedVariable. Mock coverage runs in PR CI.
+Appearance in the installed game remains unverified.
 
 The star is Blizzard Entertainment artwork from `bonus-objective-star` in
 The War Within build `11.0.2.56162`. Its [512×512 WorldQuest BLP](https://wago.tools/api/casc/1339312?build=11.0.2.56162)

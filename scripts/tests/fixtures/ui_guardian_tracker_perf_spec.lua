@@ -16,6 +16,7 @@ local function Tracker()
     env.DFRL.guardians = {
         GetSnapshot = function(snapshot, trackerShowDead)
             assert(trackerShowDead == context.settings.guardianShowDead, "tracker lost the current dead-row filter")
+            if context.choiceHidden then return end
             context.reads.snapshot = (context.reads.snapshot or 0) + 1
             snapshot.status, snapshot.rows = "ready", context.entries
             snapshot.revision, snapshot.generation = context.revision, context.generation
@@ -139,6 +140,18 @@ for _, performance in ipairs({ false, true }) do
         listUpdates == 0 and row.status:GetText() == "Respawns in 1:00",
         "roster reuse held countdowns or refiltered"
     )
+    context.choiceHidden = true
+    context:Tick()
+    local tracker = env.DFRL_GuardianTracker
+    assert(not tracker:IsShown() and not row:IsVisible(), "upgrade cards retained tracker artwork or rows")
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+    context.choiceHidden = false
+    context.entry.remaining = 59
+    context:Tick()
+    assert(tracker:IsShown() and row:IsVisible() and row.status:GetText() == "Respawns in 0:59")
+    assert(listUpdates == 0, "closing cards retired the existing guardian filter")
     context.entries[2] = { key = "2:8", index = 2, id = 8, name = "New guardian", state = "asleep", status = "asleep" }
     context.revision = 2
     context:Tick()

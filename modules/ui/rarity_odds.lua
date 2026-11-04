@@ -2,30 +2,35 @@ DFRL:NewMod("RarityOdds", 5, function()
     local style, SCALE = T.RightHudStyle, 0.85
     local INTERVAL, WIDTH, GAP = 0.25, style.width / SCALE, 8
     local TITLE_SIZE, TITLE_HEIGHT = style.titleSize / SCALE, 19
-    local HEADER_HEIGHT, ROW_HEIGHT, COLUMN_LEFT = WIDTH / 8, 25, 88
+    local HEADER_HEIGHT, ROW_HEIGHT, COLUMN_LEFT = style.questHeaderHeight / SCALE, 19, 100
+    local BODY_SIZE = 10
     local TIERS = {
-        { "Rare", 0.28, 0.65, 1, 45 },
-        { "Epic", 0.76, 0.49, 1, 45 },
-        { "Legendary", 1, 0.64, 0.28, 56 },
+        { "Rare", 0.28, 0.65, 1, 39 },
+        { "Epic", 0.76, 0.49, 1, 39 },
+        { "Legendary", 1, 0.64, 0.28, 60 },
     }
     -- Source modifiers for a base roll. A new amulet adds 0.50; the
     -- guardian reward path adds 0.25 to either jewelry category.
     local REWARDS = {
-        { "Spells / cache jewelry", 0 },
+        { "Spells / cache jewelry", 0, "Spells / cache" },
         { "Guardian jewelry", 0.25 },
         { "Cache amulets", 0.5 },
         { "Guardian amulets", 0.75 },
     }
-    local HEIGHT = HEADER_HEIGHT + 21 + table.getn(REWARDS) * ROW_HEIGHT
+    local ROW_TOP, ROW_COUNT = HEADER_HEIGHT + 19, table.getn(REWARDS)
+    local HEIGHT = ROW_TOP + ROW_COUNT * ROW_HEIGHT + 2
     local display, layout, locale = DFRL.display, DFRL.layout, DFRL.locale
     local enabled = display.Get("rarityOdds")
     local meterRows = display.Get("meterRows")
+    local fontChoice, fontFile, fontOutline =
+        display.Get("uiFont"), display.Get("uiCustomFont"), display.Get("uiFontOutline")
     local inWorld, permitted, elapsed = true, not layout.IsHidden("rarityOdds"), INTERVAL
-    local labels, language, registeredTop, shown
+    local labels, language, shown
+    local tooltipArea, tooltipValue, tooltipBonus, tooltipLanguage
     local width, drawnWidth, Reflow = WIDTH, nil, nil
     local retiredRun, retiredStats, paintedStrength
     local lastRun, lastStats, lastZone, lastClock
-    local pendingFonts = {}
+    local pendingFonts, pendingFits = {}, {}
     local controller = CreateFrame("Frame", nil, UIParent)
     local panel = CreateFrame("Frame", "SurvivorsDragonUiRarityOdds", UIParent)
     panel:Hide()
@@ -36,6 +41,23 @@ DFRL:NewMod("RarityOdds", 5, function()
     panel:EnableMouse(false)
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
+    local function QueueCaptionFit()
+        if not labels then return end
+        pendingFits[labels.title] = TITLE_SIZE
+        for _, heading in ipairs(labels.tiers) do
+            pendingFits[heading] = BODY_SIZE
+        end
+        for _, row in ipairs(labels.rows) do
+            pendingFits[row.name] = BODY_SIZE
+        end
+    end
+
+    local function HideTooltip()
+        if tooltipArea and GameTooltip and GameTooltip:IsOwned(panel) then GameTooltip:Hide() end
+        tooltipArea = nil
+    end
+    panel:SetScript("OnHide", HideTooltip)
+
     layout.Register("rarityOdds", panel, function(frame)
         local height = UIParent:GetHeight()
         if not Number(height) or height < 0 then height = 0 end
@@ -66,6 +88,11 @@ DFRL:NewMod("RarityOdds", 5, function()
         onResize = function(_, nextWidth)
             width = nextWidth
             if shown then Reflow() end
+            QueueCaptionFit()
+            elapsed = INTERVAL
+        end,
+        onEdit = function(editing)
+            if editing then HideTooltip() end
         end,
     })
 
@@ -86,14 +113,8 @@ DFRL:NewMod("RarityOdds", 5, function()
         if type(AZS_GetPhase) ~= "function" then return end
         local ok, phase = pcall(AZS_GetPhase)
         if not ok then return end
-        if phase ~= "playing" and phase ~= "paused" and phase ~= "choosing" then
+        if phase ~= "playing" and phase ~= "paused" then
             if phase == "ready" then Retire() end
-            return
-        end
-        if
-            phase == "choosing"
-            and (type(AZS_SetOnTopOfScreens) ~= "function" or type(AZS_IsOnTopOfScreens) ~= "function")
-        then
             return
         end
         local run, stats, runStamp, zoneStamp = AZS_RUN, AZS_STATS, AZS_RUN_UPDATED, AZS_ZONE_UPDATED
@@ -118,7 +139,7 @@ DFRL:NewMod("RarityOdds", 5, function()
         if strength <= 0 or not Number(100 * (strength + 0.75) ^ 4) then return end
         retiredRun, retiredStats = nil, nil
         lastRun, lastStats, lastZone, lastClock = runStamp, stats, Number(zoneStamp) and zoneStamp or lastZone, run.t
-        return strength, phase == "choosing"
+        return strength, luck, bonus
     end
 
     local function Label(parent, size, color, justify, height)
@@ -149,16 +170,28 @@ DFRL:NewMod("RarityOdds", 5, function()
         }
         labels.title:SetPoint("TOPLEFT", panel, "TOPLEFT", 36, -(HEADER_HEIGHT - TITLE_HEIGHT) / 2)
         for index, tier in ipairs(TIERS) do
-            labels.tiers[index] = Label(panel, 10, { tier[2], tier[3], tier[4] }, "CENTER")
+            labels.tiers[index] = Label(panel, BODY_SIZE, { tier[2], tier[3], tier[4] }, "CENTER")
         end
-        for index = 1, table.getn(REWARDS) do
-            local row = { name = Label(panel, 10, style.bodyColor, "LEFT", ROW_HEIGHT) }
-            row.name:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -HEADER_HEIGHT - 19 - (index - 1) * ROW_HEIGHT)
+        for index = 1, ROW_COUNT do
+            local row = { name = Label(panel, BODY_SIZE, style.bodyColor, "LEFT") }
+            row.name:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, -ROW_TOP - (index - 1) * ROW_HEIGHT)
             for column = 1, table.getn(TIERS) do
-                row[column] = Label(panel, 10, style.bodyColor, "CENTER", ROW_HEIGHT)
+                row[column] = Label(panel, BODY_SIZE, style.bodyColor, "CENTER")
             end
             labels.rows[index] = row
         end
+    end
+
+    local function FitCaption(label, size)
+        if not T.SetFont(label, size, "") then return false end
+        local available = label:GetWidth() - 2
+        local measured = label:GetStringWidth()
+        while Number(measured) and measured > available and size > 1 do
+            size = math.max(1, math.min(math.ceil(size) - 1, math.floor(size * available / measured)))
+            if not T.SetFont(label, size, "") then return false end
+            measured = label:GetStringWidth()
+        end
+        return Number(measured) and measured > 0
     end
 
     Reflow = function()
@@ -178,39 +211,97 @@ DFRL:NewMod("RarityOdds", 5, function()
             heading:SetWidth(columnWidth)
             for rowIndex, row in ipairs(labels.rows) do
                 local label = row[index]
-                label:SetPoint("TOPLEFT", panel, "TOPLEFT", left, -HEADER_HEIGHT - 19 - (rowIndex - 1) * ROW_HEIGHT)
+                label:SetPoint("TOPLEFT", panel, "TOPLEFT", left, -ROW_TOP - (rowIndex - 1) * ROW_HEIGHT)
                 label:SetWidth(columnWidth)
             end
             left = left + columnWidth
         end
     end
 
-    local function SetTop(wanted)
-        if wanted and registeredTop == true then return true end
-        if not wanted and not registeredTop then return true end
-        local setter = AZS_SetOnTopOfScreens
-        if type(setter) ~= "function" then return false end
-        local ok, result = pcall(setter, panel, wanted)
-        local getter = AZS_IsOnTopOfScreens
-        if type(getter) == "function" then
-            local checked, state = pcall(getter, panel)
-            if checked and state == wanted then
-                registeredTop = wanted
-                return true
-            end
-        elseif not wanted and ok and result ~= false then
-            registeredTop = false
-            return true
-        end
-        -- A partial write can still have entered the native registry.
-        if wanted then registeredTop = "pending" end
-        return false
-    end
-
     local function Hide()
         if shown then panel:Hide() end
         shown = false
-        SetTop(false)
+    end
+
+    local function RollWeights(k)
+        local square = k * k
+        local rare, epic, legendary = 10 * square, 4 * square * k, square * square
+        return rare, epic, legendary, 60 + 25 * k + rare + epic + legendary
+    end
+
+    local function HoverArea()
+        if
+            not GameTooltip
+            or not panel:IsVisible()
+            or layout.IsEditing()
+            or type(GetCursorPosition) ~= "function"
+            or type(_G.GetMouseFocus) ~= "function"
+        then
+            return
+        end
+        local x, y = GetCursorPosition()
+        local scale, left, top = panel:GetEffectiveScale(), panel:GetLeft(), panel:GetTop()
+        if not Number(x) or not Number(y) or not Number(scale) or scale <= 0 or not Number(left) or not Number(top) then
+            return
+        end
+        x, y = x / scale - left, top - y / scale
+        if x < 0 or x >= width or y < 0 or y >= HEIGHT then return end
+        local focus = _G.GetMouseFocus()
+        if focus and focus ~= WorldFrame and focus ~= UIParent then return end
+        if y < HEADER_HEIGHT then return 0 end
+        local rowOffset = y - ROW_TOP
+        if rowOffset >= 0 and rowOffset < ROW_HEIGHT * ROW_COUNT then return 1 + math.floor(rowOffset / ROW_HEIGHT) end
+    end
+
+    local function OneIn(weight, total)
+        if weight <= 0 then return "—" end
+        local rolls = total / weight
+        if not Number(rolls) then return "—" end
+        local format = rolls < 2 and "%.1f" or rolls < 1000000 and "%.0f" or "%.3g"
+        return string.format(locale.Text("1 in %s"), string.format(format, rolls))
+    end
+
+    local function UpdateTooltip(strength, luck, levelBonus)
+        local area = HoverArea()
+        if not area then
+            HideTooltip()
+            return
+        end
+        local owned = GameTooltip:IsOwned(panel)
+        local visible = GameTooltip:IsVisible()
+        if visible and not owned then
+            tooltipArea = nil
+            return
+        end
+        local value = area == 0 and luck or strength
+        local bonus = area == 0 and levelBonus or 0
+        if
+            owned
+            and visible
+            and tooltipArea == area
+            and tooltipValue == value
+            and tooltipBonus == bonus
+            and tooltipLanguage == language
+        then
+            return
+        end
+        GameTooltip:SetOwner(panel, "ANCHOR_LEFT")
+        if area == 0 then
+            GameTooltip:SetText(locale.Text("Rarity odds"))
+            GameTooltip:AddDoubleLine(locale.Text("Character luck"), string.format("%.1f%%", luck * 100))
+            GameTooltip:AddDoubleLine(locale.Text("Level bonus"), string.format("+%.0f%%", levelBonus * 100))
+            GameTooltip:AddDoubleLine(locale.Text("Effective luck"), string.format("%.1f%%", (luck + levelBonus) * 100))
+        else
+            local reward = REWARDS[area]
+            local rare, epic, legendary, total = RollWeights(strength + reward[2])
+            GameTooltip:SetText(locale.Text(reward[1]))
+            GameTooltip:AddLine(locale.Text("Chance per roll"), 1, 1, 1)
+            GameTooltip:AddDoubleLine(locale.Text("Rare"), OneIn(rare, total))
+            GameTooltip:AddDoubleLine(locale.Text("Epic"), OneIn(epic, total))
+            GameTooltip:AddDoubleLine(locale.Text("Legendary"), OneIn(legendary, total))
+        end
+        tooltipArea, tooltipValue, tooltipBonus, tooltipLanguage = area, value, bonus, language
+        GameTooltip:Show()
     end
 
     local function Paint(strength)
@@ -221,16 +312,14 @@ DFRL:NewMod("RarityOdds", 5, function()
                 T.SetTextIfChanged(labels.tiers[index], locale.Text(tier[1]))
             end
             for index, reward in ipairs(REWARDS) do
-                T.SetTextIfChanged(labels.rows[index].name, locale.Text(reward[1]))
+                T.SetTextIfChanged(labels.rows[index].name, locale.Text(reward[3] or reward[1]))
             end
             language = currentLanguage
+            QueueCaptionFit()
         end
         if paintedStrength == strength then return end
         for index, reward in ipairs(REWARDS) do
-            local k = strength + reward[2]
-            local square = k * k
-            local rare, epic, legendary = 10 * square, 4 * square * k, square * square
-            local total = 60 + 25 * k + rare + epic + legendary
+            local rare, epic, legendary, total = RollWeights(strength + reward[2])
             local row = labels.rows[index]
             T.SetTextIfChanged(row[1], string.format("%.1f%%", 100 * rare / total))
             T.SetTextIfChanged(row[2], string.format("%.1f%%", 100 * epic / total))
@@ -240,7 +329,7 @@ DFRL:NewMod("RarityOdds", 5, function()
     end
 
     local function Update()
-        local strength, choosing = Read()
+        local strength, luck, levelBonus = Read()
         if not strength then
             Hide()
             return
@@ -251,15 +340,15 @@ DFRL:NewMod("RarityOdds", 5, function()
             if label:GetFont() then pendingFonts[label] = nil end
         end
         if next(pendingFonts) then return end
-        if not SetTop(choosing) then
-            Hide()
-            return
-        end
         if not shown then PlaceDefault() end
         Reflow()
         Paint(strength)
+        for label, size in pairs(pendingFits) do
+            if FitCaption(label, size) then pendingFits[label] = nil end
+        end
         if not shown then panel:Show() end
         shown = true
+        UpdateTooltip(strength, luck, levelBonus)
     end
 
     local function Tick()
@@ -289,6 +378,12 @@ DFRL:NewMod("RarityOdds", 5, function()
         Sync()
     end)
     display.Listen(function()
+        local choice, file, outline = display.Get("uiFont"), display.Get("uiCustomFont"), display.Get("uiFontOutline")
+        if choice ~= fontChoice or file ~= fontFile or outline ~= fontOutline then
+            fontChoice, fontFile, fontOutline = choice, file, outline
+            QueueCaptionFit()
+            elapsed = INTERVAL
+        end
         local rows = display.Get("meterRows")
         if meterRows ~= rows then
             meterRows = rows

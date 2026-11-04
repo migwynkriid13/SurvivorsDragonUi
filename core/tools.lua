@@ -1,8 +1,9 @@
 setfenv(1, DFRL:GetEnv())
 
--- Default width and title size in UIParent units, independent of panel scale.
+-- Default dimensions in UIParent units, independent of panel scale.
 DFRL.tools.RightHudStyle = {
     width = 204,
+    questHeaderHeight = 25.5,
     titleSize = 10.4,
     titleColor = { 1, 0.82, 0 },
     bodyColor = { 1, 1, 1 },
