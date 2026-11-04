@@ -131,6 +131,7 @@ DFRL:NewMod("Target", 1, function()
     end
     T.BindUnitLabelVisibility(TargetFrame.name, "showTargetName")
     T.BindUnitLabelVisibility(TargetLevelText, "showTargetLevel")
+    T.BindRaidMarkMenu(TargetFrame, TargetFrameHealthBar, "target")
 
     local borderTexture
     local function UpdateClassification(force)

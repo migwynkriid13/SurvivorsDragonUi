@@ -92,6 +92,8 @@ The SDUI action bar starts on. Under **Action bar**, turn off **Use SDUI action 
 
 Portraits use 2D images by default. Under **Unit frames**, choose **Experimental 3D portraits** or **Hide portraits** for bars without portraits.
 
+Right-click the player, target or a party member's portrait or health bar to open the raid icons. Pick an icon or choose **None** to clear the unit's mark.
+
 **Show health** and **Show health percentage** choose the text on unit health bars. A single value is centered. Enable both for health on the left and percentage on the right, or disable both to hide the text. On the player bar, blue `+` numbers show remaining shield (absorb). Its percentage uses maximum HP: 7K shield with 1K maximum HP is `+700%`. **Shorten health numbers** starts on; turn it off for full numbers without K/M/B/T. **Encounters** → **Boss bars** and **Guardian tracker** each have their own shortening and percentage switches; percentages start off. **Class-colored health** uses each character's class color for player and party health bars.
 
 ### Profiles and tooltips

@@ -224,24 +224,6 @@ DFRL:NewMod("Player", 1, function()
         end
     end
 
-    local function FixPlayerClick()
-        -- The multiplayer SELF dropdown is unused in Survivors and can
-        -- overflow its native button pool. Right-click opens our fixed menu.
-        local original = _G.PlayerFrame_OnClick
-        _G.PlayerFrame_OnClick = function(button)
-            if button == "RightButton" and not SpellIsTargeting() then
-                ToggleGameMenu(true)
-                return
-            end
-            if original then original(button) end
-        end
-        _G.PlayerFrameDropDown_Initialize = function() end
-        if PlayerFrameDropDown then
-            PlayerFrameDropDown.initialize = _G.PlayerFrameDropDown_Initialize
-            PlayerFrameDropDown:Hide()
-        end
-    end
-
     local function CreateRestingIcon()
         local indicator = CreateFrame("Frame", nil, PlayerFrame)
         indicator:SetPoint(
@@ -365,7 +347,7 @@ DFRL:NewMod("Player", 1, function()
         end
         UpdatePortraitShape()
         CreateRestingIcon()
-        FixPlayerClick()
+        T.BindRaidMarkMenu(PlayerFrame, PlayerFrameHealthBar, "player")
         UpdateValues()
         DFRL.layout.Register("playerFrame", PlayerFrame, nil, {
             region = editRegion,

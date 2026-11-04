@@ -61,6 +61,19 @@ packet handoffs, exact aliases/collisions, hidden recovery, retirement and
 accepted target precedence. Local source review and pinned formatting do not
 establish native event order or in-game appearance.
 
+## Raid target icons
+
+The player, target and party frames share one cursor-anchored native dropdown.
+Right-click on the portrait or health bar opens the eight native marks and
+**None**. The check mark and click use the clicked frame's unit token. The client
+and server handle marking permissions. Spell targeting retains the original
+right-click cancel action.
+
+The addon creates one hidden dropdown owner on the first eligible click and
+reuses the native menu rows and icon artwork. The menu closes if the owning frame
+hides, its target changes, the group changes or the player leaves the world. No
+polling, new artwork or saved settings are used.
+
 ## Target health and compact numbers
 
 **Shorten health numbers** in `/sdui` → **Unit frames** defaults on. Off shows

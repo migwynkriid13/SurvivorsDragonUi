@@ -359,6 +359,121 @@ function DFRL.tools.GetUnitHealth(unit, currentOnly)
     return UnitHealth(unit), UnitHealthMax(unit)
 end
 
+local raidMarkMenu
+
+local function CloseRaidMarkMenu()
+    if raidMarkMenu.unit and _G.UIDROPDOWNMENU_OPEN_MENU == raidMarkMenu:GetName() then CloseDropDownMenus() end
+end
+
+local function CreateRaidMarkMenu()
+    local menu = CreateFrame("Frame", "SurvivorsDragonUiRaidMarks", UIParent)
+    menu:Hide()
+    menu.displayMode = "MENU"
+    local function Select(index, unit)
+        if
+            menu.unit == unit
+            and _G.UIDROPDOWNMENU_OPEN_MENU == menu:GetName()
+            and DropDownList1:IsVisible()
+            and not DFRL.layout.IsEditing()
+            and UnitExists(unit)
+        then
+            SetRaidTargetIcon(unit, index)
+        end
+    end
+    menu.initialize = function()
+        local unit = menu.unit
+        if not unit then return end
+        local selected = GetRaidTargetIndex(unit) or 0
+        for row = 1, 9 do
+            local index = row == 9 and 0 or row
+            local key = index == 0 and "RAID_TARGET_NONE" or ("RAID_TARGET_" .. index)
+            local mark = UnitPopupButtons[key]
+            if mark then
+                local color = mark.color
+                UIDropDownMenu_AddButton({
+                    text = mark.text,
+                    textR = color and color.r,
+                    textG = color and color.g,
+                    textB = color and color.b,
+                    icon = mark.icon,
+                    tCoordLeft = mark.tCoordLeft,
+                    tCoordRight = mark.tCoordRight,
+                    tCoordTop = mark.tCoordTop,
+                    tCoordBottom = mark.tCoordBottom,
+                    checked = selected == index and 1 or nil,
+                    func = Select,
+                    arg1 = index,
+                    arg2 = unit,
+                })
+            end
+        end
+    end
+    menu:SetScript("OnEvent", CloseRaidMarkMenu)
+    HookScript(DropDownList1, "OnHide", function()
+        if not menu.unit then return end
+        menu.unit = nil
+        menu:UnregisterAllEvents()
+    end)
+    return menu
+end
+
+local function OpenRaidMarkMenu(unit)
+    raidMarkMenu = raidMarkMenu or CreateRaidMarkMenu()
+    local sameUnit = raidMarkMenu.unit == unit and DropDownList1:IsVisible()
+    CloseDropDownMenus()
+    if sameUnit then return end
+    raidMarkMenu.unit = unit
+    ToggleDropDownMenu(1, nil, raidMarkMenu, "cursor", 0, 0)
+    if not DropDownList1:IsVisible() then
+        raidMarkMenu.unit = nil
+        return
+    end
+    if unit == "target" then raidMarkMenu:RegisterEvent("PLAYER_TARGET_CHANGED") end
+    raidMarkMenu:RegisterEvent("PARTY_MEMBERS_CHANGED")
+    raidMarkMenu:RegisterEvent("PARTY_LEADER_CHANGED")
+    raidMarkMenu:RegisterEvent("RAID_ROSTER_UPDATE")
+    raidMarkMenu:RegisterEvent("PLAYER_LEAVING_WORLD")
+    raidMarkMenu:RegisterEvent("PLAYER_LOGOUT")
+end
+
+function DFRL.tools.BindRaidMarkMenu(frame, healthBar, unit)
+    if
+        not DropDownList1
+        or type(UnitPopupButtons) ~= "table"
+        or type(UIDropDownMenu_AddButton) ~= "function"
+        or type(ToggleDropDownMenu) ~= "function"
+        or type(CloseDropDownMenus) ~= "function"
+        or type(GetRaidTargetIndex) ~= "function"
+        or type(SetRaidTargetIcon) ~= "function"
+    then
+        return
+    end
+
+    local function HandleRightClick(button)
+        if button ~= "RightButton" or SpellIsTargeting() then return false end
+        if frame:IsVisible() and not DFRL.layout.IsEditing() and UnitExists(unit) then OpenRaidMarkMenu(unit) end
+        return true
+    end
+    local click = frame:GetScript("OnClick")
+    frame:SetScript("OnClick", function(button)
+        if not HandleRightClick(arg1 or button) and click then click(button) end
+    end)
+    local release = healthBar:GetScript("OnMouseUp")
+    healthBar:EnableMouse(true)
+    healthBar:SetScript("OnMouseUp", function(button)
+        local mouseButton = arg1 or button
+        if HandleRightClick(mouseButton) then return end
+        if release then
+            release(button)
+        elseif mouseButton == "LeftButton" or mouseButton == "RightButton" then
+            frame:Click(mouseButton)
+        end
+    end)
+    HookScript(frame, "OnHide", function()
+        if raidMarkMenu and raidMarkMenu.unit == unit then CloseRaidMarkMenu() end
+    end)
+end
+
 -- Preserve the effective class-health choice when native updates recolor a bar.
 function DFRL.tools.BindClassHealthColor(bar, unit)
     local healthR, healthG, healthB = 0, 1, 0

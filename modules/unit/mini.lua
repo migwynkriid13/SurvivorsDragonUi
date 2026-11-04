@@ -397,6 +397,7 @@ DFRL:NewMod("Mini", 1, function()
         if frame and health and mana then
             local values = AddValues(frame, health, nil, "party" .. i, true)
             values.updateHealthColor = T.BindClassHealthColor(health, values.unit)
+            T.BindRaidMarkMenu(frame, health, values.unit)
             if partyRoot then
                 -- Keep native row/pet anchors and visibility; the passive owner
                 -- supplies only the shared layout transform and hidden flag.
