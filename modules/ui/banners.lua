@@ -200,13 +200,13 @@ DFRL:NewMod("RunBanners", 4, function()
         local choosing
         if type(AZS_GetPhase) == "function" then
             local ok, phase = pcall(AZS_GetPhase)
-            if ok and (phase == "dead" or phase == "victory") then return "end" end
+            if ok and (phase == "dead" or phase == "victory") then return "terminal" end
             choosing = ok and phase == "choosing"
         end
         if type(AZS_GetRunSummary) == "function" then
             local ok, summary = pcall(AZS_GetRunSummary)
             local result = ok and type(summary) == "table" and summary.result
-            if result == "defeat" or result == "victory" or result == "left" then return "end" end
+            if result == "defeat" or result == "victory" or result == "left" then return "terminal" end
         end
         if choosing then return "choice" end
     end
