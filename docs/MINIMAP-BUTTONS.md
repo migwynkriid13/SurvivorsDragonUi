@@ -1,10 +1,11 @@
 # Minimap buttons
 
 The gold Dragonflight glyph beside the minimap toggles the existing `/sdui` editor.
-It uses the selected **05 Small square button** background: a compact dark plate
-with a gold edge, centered behind the unchanged glyph. The background is static;
-the glyph uses additive blending, so its source image's black backing contributes
-no visible color. Hover changes only the glyph's alpha, without a separate glow
+It uses a cleaned version of the selected **05 Small square button** background.
+The compact dark plate keeps its gold edge, with the inner top and right lines
+removed. The glyph is centered in the gold opening. The background is static.
+The glyph uses additive blending, which makes its black backing invisible.
+Hover changes only the glyph's alpha, without a separate glow
 or animation. The translated **Layout** caption and `/sdui` command identify the
 action in its tooltip.
 
@@ -146,11 +147,11 @@ from the Lua frame tree are outside this adapter. Required native controls and
 guardian/cache/player pins retain their existing placement and input.
 
 The launcher allocates one button and two textures, bound once. The background
-uses the exact `(0,3)-(29,29)` region of Blizzard's 32-square normal button image,
-displayed at 37 by 33 units to match the chosen preview. The glyph and native
-input bounds remain 34-square. This adds one persistent background region and
-its normal alpha overlap beneath the glyph; it adds no animation or recurring
-texture/geometry work. Both textures inherit minimap hiding and scale, and the
+uses the `(0,3)-(29,29)` crop of the cleaned 32-square plate at 37 by 33 units.
+The glyph and native input bounds remain 34-square. The glyph artwork sits
+1.2 units right and 1.3 units down from the hitbox center to match the chosen
+preview. The two regions overlap with normal alpha blending on the background.
+Both textures inherit minimap hiding and scale, and the
 same static artwork remains in Performance Mode. It adds no
 idle updater, gameplay reads, logs, SavedVariable or runtime library. Hook records
 are allocated once per eligible external button. Full-resolution TGAs are
