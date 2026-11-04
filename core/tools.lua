@@ -566,6 +566,12 @@ function DFRL.tools.NewActionBarState(ignored)
     return owner
 end
 
+function DFRL.tools.NormalizeCustomFontFile(value)
+    if type(value) ~= "string" or string.len(value) > 80 then return end
+    if value == "" then return value end
+    if string.find(value, '^[^/\\:<>"|?*%c]+%.[Tt][Tt][Ff]$') then return value end
+end
+
 -- Original 1.12.1 FrameXML/Fonts.xml RAID_CLASS_COLORS:
 -- https://github.com/MOUZU/Blizzard-WoW-Interface/blob/master/1.12.1/FrameXML/Fonts.xml
 local classColors = {
@@ -582,7 +588,63 @@ local classColors = {
 
 function DFRL.tools.GetClassColor(class) return type(class) == "string" and classColors[string.upper(class)] or nil end
 
+function DFRL.tools.MatchesClassColor(red, green, blue)
+    for _, color in pairs(classColors) do
+        if T.NearlyEqual(red, color[1]) and T.NearlyEqual(green, color[2]) and T.NearlyEqual(blue, color[3]) then
+            return true
+        end
+    end
+    return false
+end
+
+local runPlayer = {}
+local runClassPhases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
+
+function DFRL.tools.RetireRunPlayer()
+    runPlayer.retiredZone, runPlayer.retiredStamp = AZS_ZONE, AZS_ZONE_UPDATED
+    runPlayer.observedZone, runPlayer.observedStamp = nil, nil
+    runPlayer.zone, runPlayer.color = nil, nil
+end
+
+function DFRL.tools.GetRunPlayerColor(name)
+    local zone, stamp = AZS_ZONE, AZS_ZONE_UPDATED
+    if
+        type(zone) ~= "table"
+        or type(stamp) ~= "number"
+        or stamp < 0
+        or stamp - stamp ~= 0
+        or (name ~= nil and (name == "" or name ~= zone.hero))
+        or type(AZS_GetPhase) ~= "function"
+    then
+        return
+    end
+    local runStamp = AZS_RUN_UPDATED
+    if runPlayer.zone == zone and runPlayer.stamp == stamp and runPlayer.runStamp == runStamp then
+        return runPlayer.color
+    end
+    local ok, phase = pcall(AZS_GetPhase)
+    if not ok then return end
+    runPlayer.zone, runPlayer.stamp, runPlayer.runStamp = zone, stamp, runStamp
+    runPlayer.color = nil
+    if not runClassPhases[phase] then
+        if runPlayer.observedZone then
+            runPlayer.retiredZone, runPlayer.retiredStamp = runPlayer.observedZone, runPlayer.observedStamp
+            runPlayer.observedZone, runPlayer.observedStamp = nil, nil
+        end
+        return
+    end
+    if zone == runPlayer.retiredZone and stamp == runPlayer.retiredStamp then return end
+    runPlayer.observedZone, runPlayer.observedStamp = zone, stamp
+    -- UnitClass can still describe the character-selection record after a switch.
+    runPlayer.color = T.GetClassColor(zone.class)
+    return runPlayer.color
+end
+
 function DFRL.tools.GetUnitClassColor(unit)
+    if unit == "player" then
+        local color = T.GetRunPlayerColor()
+        if color then return color end
+    end
     if type(UnitClass) ~= "function" then return end
     local _, class = UnitClass(unit)
     return T.GetClassColor(class)

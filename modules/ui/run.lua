@@ -1237,6 +1237,7 @@ DFRL:NewMod("RunTimers", 5, function()
         { label = "Arial Narrow", face = "Fonts\\ARIALN.TTF" },
         { label = "Morpheus", face = "Fonts\\MORPHEUS.TTF" },
         { label = "Skurri", face = "Fonts\\SKURRI.TTF" },
+        { label = "Custom", face = "custom" },
     }
     local fontOutlines = {
         { label = "None", value = "" },
@@ -1332,6 +1333,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local selected, outline = DFRL.display.Get("uiFont"), DFRL.display.Get("uiFontOutline")
             fontEditor.uiFontDropdown:SetValue(selected)
             fontEditor.uiFontOutlineDropdown:SetValue(outline)
+            if fontEditor.RefreshCustomFont then fontEditor.RefreshCustomFont() end
             if fontEditor.uiFont ~= selected or fontEditor.uiFontOutline ~= outline then
                 fontEditor.uiFont, fontEditor.uiFontOutline = selected, outline
                 if fontEditor.RefreshOptionLayout then fontEditor.RefreshOptionLayout() end
@@ -1460,8 +1462,13 @@ DFRL:NewMod("RunTimers", 5, function()
         T.SetFont(text, settings.size, settings.outline, true)
         -- Translated run captions with non-ASCII glyphs use the game face;
         -- retain the user's saved font choice for the other languages.
-        if settings.face ~= "DEFAULT" and not string.find(DFRL.locale.Text(caption or "RUN"), "[\128-\255]") then
-            pcall(text.SetFont, text, settings.face, settings.size, settings.outline)
+        local face = settings.face
+        if face == "custom" then face = settings.customFace end
+        if face and face ~= "DEFAULT" and not string.find(DFRL.locale.Text(caption or "RUN"), "[\128-\255]") then
+            local ok, loaded = pcall(text.SetFont, text, face, settings.size, settings.outline)
+            if not ok or (not loaded and text:GetFont() ~= face) then
+                T.SetFont(text, settings.size, settings.outline, true)
+            end
         end
         text:SetShadowColor(0, 0, 0, settings.shadow and 1 or 0)
         text:SetShadowOffset(settings.shadow and 1 or 0, settings.shadow and -1 or 0)
@@ -1690,6 +1697,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local style = fontSampleClock.editorStyle or {}
         if
             style.face ~= currentFont.face
+            or style.customFile ~= currentFont.customFile
             or style.size ~= currentFont.size
             or style.outline ~= currentFont.outline
             or style.shadow ~= currentFont.shadow
@@ -1699,7 +1707,7 @@ DFRL:NewMod("RunTimers", 5, function()
             local defaultFace = T.GetDefaultFont()
             local function FontReady(label)
                 local face, size, flags = label:GetFont()
-                return (face == currentFont.face or face == defaultFace)
+                return (face == currentFont.face or face == currentFont.customFace or face == defaultFace)
                     and size == currentFont.size
                     and (flags or "") == currentFont.outline
             end
@@ -1709,6 +1717,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             if ready then
                 style.face, style.size, style.outline = currentFont.face, currentFont.size, currentFont.outline
+                style.customFile = currentFont.customFile
                 style.shadow, style.language = currentFont.shadow, DFRL.locale.code
                 fontSampleClock.editorStyle = style
             end
@@ -1726,11 +1735,23 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function PreviewFont(settings)
         currentFont = FontSettings(settings)
+        if currentFont.face == "custom" then
+            currentFont.customFile = DFRL.display.Get("uiCustomFont")
+            currentFont.customFace = T.GetCustomFontFace(currentFont.customFile)
+        end
         StyleClockLabel(runClock, currentFont, runClock.visible)
         StyleClockLabel(bossClock, currentFont, bossClock.visible)
         RefreshTimerCaptions()
         UpdateRunFontBounds()
         RefreshFontControls()
+    end
+
+    local function RefreshDisplayTimerFont()
+        if currentFont.face == "custom" and currentFont.customFile ~= DFRL.display.Get("uiCustomFont") then
+            PreviewFont(fontDraft or _G.SurvivorsDragonUiRunFont)
+        else
+            RefreshTimerCaptions()
+        end
     end
 
     DFRL.runFont = {
@@ -2393,6 +2414,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
                 { key = "uiFontOutline", label = "Outline", offset = 338 },
                 { key = "uiFontShadow", label = "Black shadow", offset = 454 },
+                {
+                    key = "uiCustomFont",
+                    label = "Custom font file",
+                    description = "Add a .ttf file to media/fonts. Enter its filename, then choose Custom in either font menu.",
+                    offset = 490,
+                },
             },
             combat = {
                 { key = "outgoing", label = "Outgoing damage", offset = 0 },
@@ -2654,7 +2681,7 @@ DFRL:NewMod("RunTimers", 5, function()
         performance.label:SetHeight(28)
         displayControls.performanceMode = performance
         builders.layout = function(page)
-            page:SetHeight(490)
+            page:SetHeight(602)
             DFRL.layout.CreateControls(page, contentWidth, function() SelectPage("layout") end)
             local choiceWidth = (contentWidth - gap) / 2
             local fontLabel = FontEditorLabel(page, captions.uiFont.label, 0, -captions.uiFont.offset, 12)
@@ -2696,6 +2723,50 @@ DFRL:NewMod("RunTimers", 5, function()
             shadow:SetHeight(28)
             shadow:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -captions.uiFontShadow.offset)
             displayControls.uiFontShadow = shadow
+
+            local record = captions.uiCustomFont
+            FontEditorLabel(page, record.label, 0, -record.offset, 12)
+            local status = FontEditorLabel(page, record.description, 0, -554, 9)
+            status:SetWidth(contentWidth)
+            status:SetHeight(40)
+            status:SetJustifyH("LEFT")
+            status:SetJustifyV("TOP")
+            local preview = T.CreateEditorButton(page, "Preview font", choiceWidth, 26)
+            preview:SetPoint("TOPRIGHT", page, "TOPRIGHT", 0, -520)
+            local input = T.CreateEditorInput(page, choiceWidth, 26)
+            input:SetMaxLetters(80)
+            input:SetPoint("TOPLEFT", page, "TOPLEFT", 0, -520)
+            local shownFile
+            fontEditor.RefreshCustomFont = function()
+                local filename = DFRL.display.Get("uiCustomFont")
+                if shownFile == filename then return end
+                shownFile = filename
+                T.SetTextIfChanged(input, filename)
+                T.SetTextIfChanged(status, record.description)
+            end
+            local function ApplyCustomFont()
+                local filename = T.NormalizeCustomFontFile(input:GetText() or "")
+                if not filename or (filename ~= "" and not T.GetCustomFontFace(filename)) then
+                    T.SetTextIfChanged(status, "Could not load that .ttf file from media/fonts.")
+                    return
+                end
+                DFRL.display.Set("uiCustomFont", filename)
+                T.SetTextIfChanged(status, record.description)
+                input:ClearFocus()
+            end
+            preview:SetScript("OnClick", ApplyCustomFont)
+            input:SetScript("OnEnterPressed", ApplyCustomFont)
+            input:SetScript("OnEscapePressed", function()
+                shownFile = nil
+                fontEditor.RefreshCustomFont()
+                input:ClearFocus()
+            end)
+            HookScript(page, "OnShow", fontEditor.RefreshCustomFont)
+            HookScript(page, "OnHide", function()
+                shownFile = nil
+                input:ClearFocus()
+            end)
+            fontEditor.RefreshCustomFont()
         end
         builders.profiles = function(page) DFRL.profiles.CreateControls(page, contentWidth) end
 
@@ -5086,7 +5157,7 @@ DFRL:NewMod("RunTimers", 5, function()
         SyncReplacements()
         run.affixes:SyncAttachment()
         UpdateDisplayLabels()
-        RefreshTimerCaptions()
+        RefreshDisplayTimerFont()
         refreshRows = true
         local combined = DFRL.display.Get("bossCombineBars")
         local capacity = DFRL.display.Get("bossRows")

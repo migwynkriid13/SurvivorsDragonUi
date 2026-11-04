@@ -1,5 +1,7 @@
 # Settings editor
 
+Layout stores one custom `.ttf` filename in the existing display settings. The Layout and Run timer font menus select it independently. The filename refers to a file directly inside `media/fonts`. The editor checks the file before previewing it, and a saved choice whose file is unavailable uses the game font. Profiles and Confirm/Cancel use the existing display draft.
+
 `/sdui` uses Blizzard’s Dragonflight plain metal settings frame, gold accents,
 compact category rows, checkbox artwork and
 Confirm/Cancel footer. The wider content column and nine categories replace

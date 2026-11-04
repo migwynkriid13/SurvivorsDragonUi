@@ -8,6 +8,7 @@ DFRL:NewMod("Display", 0, function()
         meterRows = 6,
         layoutShowGrid = true,
         uiFont = "default",
+        uiCustomFont = "",
         uiFontOutline = "OUTLINE",
         uiFontShadow = true,
         layoutSnapEnabled = true,
@@ -147,6 +148,7 @@ DFRL:NewMod("Display", 0, function()
         { value = "arial", label = "Arial Narrow", face = "Fonts\\ARIALN.TTF" },
         { value = "morpheus", label = "Morpheus", face = "Fonts\\MORPHEUS.TTF" },
         { value = "skurri", label = "Skurri", face = "Fonts\\SKURRI.TTF" },
+        { value = "custom", label = "Custom" },
     }
     display.jewelrySlots = {
         { value = "1", label = "Ring 1" },
@@ -302,6 +304,7 @@ DFRL:NewMod("Display", 0, function()
         if key == "sctFont" then return NormalizeSctFont(value) or defaults[key] end
         if key == "sctGroupWindow" then return NormalizeSctGroupWindow(value) or defaults[key] end
         if key == "uiFont" then return NormalizeUiFont(value) or defaults[key] end
+        if key == "uiCustomFont" then return T.NormalizeCustomFontFile(value) or defaults[key] end
         if key == "uiFontOutline" then return NormalizeUiFontOutline(value) or defaults[key] end
         if key == "sctStyle" then
             local style = NormalizeSctStyle(value)
@@ -388,6 +391,9 @@ DFRL:NewMod("Display", 0, function()
             if not value then return end
         elseif key == "uiFont" then
             value = NormalizeUiFont(value)
+            if not value then return end
+        elseif key == "uiCustomFont" then
+            value = T.NormalizeCustomFontFile(value)
             if not value then return end
         elseif key == "uiFontOutline" then
             value = NormalizeUiFontOutline(value)

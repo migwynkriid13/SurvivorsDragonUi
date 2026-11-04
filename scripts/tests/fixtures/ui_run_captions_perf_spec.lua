@@ -156,3 +156,12 @@ api.Update(60.125, 1300, true, false)
 assert(env.bossClock.source:GetText() == "BOSS: 0:30", "native countdown boundary waited for the elapsed clock")
 assert(context.formats > 0)
 print("PASS native boss countdown changes at its own whole-second boundary")
+
+local customPath = "Interface\\AddOns\\SurvivorsDragonUi\\media\\fonts\\VAG Rounded.ttf"
+api.Style(env.runClock, { face = "custom", customFace = customPath, size = 16, outline = "OUTLINE" }, true)
+assert(
+    env.runClock.source:GetFont() == customPath and env.runClock.ruler:GetFont() == customPath,
+    "independent run font did not bind the custom file for display and measurement"
+)
+api.Style(env.runClock, { face = "custom", size = 16, outline = "OUTLINE" }, true)
+assert(env.runClock.source:GetFont() == "DEFAULT_TEST", "missing custom font left the run caption unbound")

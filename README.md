@@ -110,6 +110,8 @@ The DPS meter is off by default. Turn on **Enable damage meter** under **Damage 
 
 Use **Encounters** → **Run timer** to change its text and font. In **Boss bars** in the same category, **Guardians in boss bar** adds fighting guardians to the boss bars; it starts off. You can also mirror either guide to put its arrow on the other side. Under **Map & navigation** → **Minimap**, **Keep defeated guardian icons** keeps lair icons visible while guardians are down; it starts off.
 
+To use your own font, put a `.ttf` file in `SurvivorsDragonUi/media/fonts`. In **Layout**, enter its filename, including `.ttf`, under **Custom font file** and click **Preview font**. Choose **Custom** in **Layout**, **Encounters** → **Run timer**, or both, then Confirm.
+
 ## Help
 
 [Open an issue](https://github.com/migwynkriid13/SurvivorsDragonUi/issues) with your game version, addon version and a screenshot or error message. Use `/copy enable` before reproducing a problem, then `/copy` to include diagnostic text. It opens a small page with recent messages; use `<` and `>` to browse the rest. Banner status appears at the top.

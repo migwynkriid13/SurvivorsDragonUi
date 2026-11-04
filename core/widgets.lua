@@ -376,14 +376,15 @@ function DFRL.tools.BindClassHealthColor(bar, unit)
         end
     end
     bar.SetStatusBarColor = Apply
-    local function Update()
+    local function Update(onlyChanged)
         local color
         if DFRL.display.Get("classHealth") then color = T.GetUnitClassColor(unit) end
+        local r, g, b = 0, 1, 0
         if color then
-            healthR, healthG, healthB = unpack(color)
-        else
-            healthR, healthG, healthB = 0, 1, 0
+            r, g, b = unpack(color)
         end
+        if onlyChanged and r == healthR and g == healthG and b == healthB then return end
+        healthR, healthG, healthB = r, g, b
         Apply()
     end
     DFRL.display.Listen(Update)

@@ -22,7 +22,8 @@ if not defaultFace then error("SurvivorsDragonUi: the client has no usable defau
 local managed = setmetatable({}, { __mode = "k" })
 local pendingOwners = setmetatable({}, { __mode = "k" })
 local usableFaces = {}
-local selectedFace, selectedChoice, selectedOutline, selectedShadow
+local selectedFace, selectedChoice, selectedOutline, selectedShadow, selectedCustomFile
+local lastCustomFile, lastCustomFace
 local flagCache = {}
 local function FontFlags(flags)
     flags = flags or ""
@@ -73,6 +74,18 @@ local function UsableFace(face)
     usableFaces[face] = loaded
     return loaded
 end
+
+function DFRL.tools.GetCustomFontFace(filename)
+    filename = DFRL.tools.NormalizeCustomFontFile(filename)
+    if not filename or filename == "" then return end
+    if filename == lastCustomFile then return lastCustomFace end
+    local face = TryDefault(DFRL:GetInfoOrCons("path") .. "media\\fonts\\" .. filename)
+    if face then
+        lastCustomFile, lastCustomFace = filename, face
+    end
+    return face
+end
+
 local function Bind(object, face, size, flags)
     if object.GetFont then
         local currentFace, currentSize, currentFlags = object:GetFont()
@@ -129,14 +142,26 @@ local function Defer(object)
 end
 local function RefreshFonts()
     local choice = DFRL.display.Get("uiFont")
+    local customFile = choice == "custom" and DFRL.display.Get("uiCustomFont") or nil
     local outline = DFRL.display.Get("uiFontOutline")
     local shadow = DFRL.display.Get("uiFontShadow")
-    if selectedChoice == choice and selectedOutline == outline and selectedShadow == shadow then return end
+    if
+        selectedChoice == choice
+        and selectedCustomFile == customFile
+        and selectedOutline == outline
+        and selectedShadow == shadow
+    then
+        return
+    end
     if selectedOutline ~= outline then flagCache = {} end
-    selectedChoice, selectedFace = choice, nil
+    selectedChoice, selectedCustomFile, selectedFace = choice, customFile, nil
     selectedOutline, selectedShadow = outline, shadow
-    for _, entry in ipairs(DFRL.display.fonts) do
-        if entry.value == choice and entry.face then selectedFace = UsableFace(entry.face) end
+    if customFile then
+        selectedFace = DFRL.tools.GetCustomFontFace(customFile) or defaultFace
+    else
+        for _, entry in ipairs(DFRL.display.fonts) do
+            if entry.value == choice and entry.face then selectedFace = UsableFace(entry.face) end
+        end
     end
     local face = selectedFace or defaultFace
     globals.STANDARD_TEXT_FONT, globals.UNIT_NAME_FONT = face, face

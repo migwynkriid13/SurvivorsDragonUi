@@ -383,7 +383,13 @@ DFRL:NewMod("Player", 1, function()
     end
 
     local frame = CreateFrame("Frame")
+    local function RefreshRunHealthColor()
+        frame:SetScript("OnUpdate", nil)
+        if PlayerFrameHealthBar:IsVisible() then UpdateHealthColor(true) end
+    end
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    frame:RegisterEvent("PLAYER_LEAVING_WORLD")
+    frame:RegisterEvent("CHAT_MSG_ADDON")
     frame:RegisterEvent("UNIT_HEALTH")
     frame:RegisterEvent("UNIT_MAXHEALTH")
     frame:RegisterEvent("UNIT_LEVEL")
@@ -391,13 +397,23 @@ DFRL:NewMod("Player", 1, function()
     frame:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
             Initialize()
-            frame:UnregisterEvent("PLAYER_ENTERING_WORLD")
+            UpdateHealthColor()
+        elseif event == "PLAYER_LEAVING_WORLD" then
+            frame:SetScript("OnUpdate", nil)
+            T.RetireRunPlayer()
+            UpdateHealthColor()
+        elseif event == "CHAT_MSG_ADDON" then
+            if
+                (arg1 == "AZSZONE" or arg1 == "AZSRUN")
+                and DFRL.display.Get("classHealth")
+                and PlayerFrameHealthBar:IsVisible()
+            then
+                -- The native parser may publish its tables after our receipt.
+                frame:SetScript("OnUpdate", RefreshRunHealthColor)
+            end
         elseif event == "PLAYER_LEVEL_UP" or arg1 == "player" then
             UpdateValues()
         end
     end)
-    if UnitExists("player") then
-        Initialize()
-        frame:UnregisterEvent("PLAYER_ENTERING_WORLD")
-    end
+    if UnitExists("player") then Initialize() end
 end)

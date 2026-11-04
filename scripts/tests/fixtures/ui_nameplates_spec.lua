@@ -1438,3 +1438,33 @@ do
     end
 end
 print("PASS plates cache fixed native metrics per incarnation and callbacks sample fresh shared geometry")
+
+do
+    local current = Plates()
+    local env = current.env
+    current:SetSetting("nameplatesBossGuardiansOnly", false)
+    current:SetSetting("classHealth", true)
+    local player = current:MakePlate("Hero", 1000)
+    player.nativeBar.color = { 0, 1, 0 }
+    local other = current:MakePlate("Other Hero", 1000)
+    other.nativeBar.color = { 0, 1, 0 }
+    env.AZS_ZONE, env.AZS_ZONE_UPDATED = { hero = "Hero", class = "mage" }, 1
+    current:Tick(0.21)
+    local function AssertPlayerColor(class)
+        local r, g, b = player.fixture.style.name:GetTextColor()
+        local color = env.T.GetClassColor(class)
+        assert(r == color[1] and g == color[2] and b == color[3], "player plate lost the run class tint")
+    end
+    AssertPlayerColor("mage")
+    env.AZS_ZONE, env.AZS_ZONE_UPDATED = { hero = "Hero", class = "shaman" }, 2
+    current:Tick(0.21)
+    AssertPlayerColor("shaman")
+    local r, g, b = other.fixture.style.name:GetTextColor()
+    assert(r == 0 and g == 1 and b == 0, "another hero's nameplate inherited the player's class")
+    r, g, b = player.nativeBar:GetStatusBarColor()
+    assert(r == 0 and g == 1 and b == 0, "nameplate skin modified the native tint")
+    player.nativeBar.color = { 1, 0, 0 }
+    current:Tick(0.21)
+    r, g, b = player.fixture.style.name:GetTextColor()
+    assert(r == 1 and g == 0 and b == 0, "a hostile plate with the hero's name inherited the player class")
+end

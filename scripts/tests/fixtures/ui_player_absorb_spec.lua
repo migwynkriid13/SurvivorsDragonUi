@@ -138,6 +138,40 @@ local function Player(performance)
     return context, controller, bar, label, labels, overlay
 end
 
+Test("player class tint follows the run while native selection and party classes stay separate", function()
+    local context, _, bar = Player()
+    local env, phase = context.env, "playing"
+    env.AZS_GetPhase = function() return phase end
+    env.UnitClass = function(unit)
+        if unit == "player" then return "Warrior", "WARRIOR" end
+        return "Priest", "PRIEST"
+    end
+    function bar:GetStatusBarColor() return unpack(self.color or { 0, 1, 0, 1 }) end
+    local update = env.T.BindClassHealthColor(bar, "player")
+    env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "mage" }, 1
+    env.AZS_RUN_UPDATED = 2
+    context:SetSetting("classHealth", true)
+    local function AssertColor(class)
+        local color = env.T.GetClassColor(class)
+        local r, g, b = bar:GetStatusBarColor()
+        assert(r == color[1] and g == color[2] and b == color[3], "player bar lost " .. class .. " tint")
+    end
+    AssertColor("mage")
+    phase, env.AZS_RUN_UPDATED = "ready", 3
+    update(true)
+    AssertColor("warrior")
+    phase, env.AZS_RUN_UPDATED = "playing", 4
+    update(true)
+    AssertColor("warrior")
+    env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "shaman" }, 5
+    update(true)
+    AssertColor("shaman")
+    assert(env.T.GetUnitClassColor("party1") == env.T.GetClassColor("priest"))
+    env.T.RetireRunPlayer()
+    update(true)
+    AssertColor("warrior")
+end)
+
 Test("silver shields retain a dark bounded edge over mage and default health colours", function()
     local context, _, bar, _, _, overlay = Player()
     local env = context.env
