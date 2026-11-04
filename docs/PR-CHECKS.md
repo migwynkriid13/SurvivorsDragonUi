@@ -1471,3 +1471,45 @@ icon defaults. Full waypoint, native-position and minimap lifecycle fixtures
 explicitly opt into the guidance they exercise, retaining preview/Cancel,
 profile, native-read, pooling and cleanup assertions. These cases remain
 CI-only; no local tests or game execution were run.
+
+## Stepped rotation, plate metrics and deferred refreshes
+
+`ui_rotation_steps_spec.lua` checks that `T.RotateTexture` reproduces the former
+eight-coordinate equation at step angles, skips writes within one of its 128
+steps, wraps negative, large and half-step angles, ignores non-finite angles and
+repaints after `T.ClearRotation`. The waypoint frame fixture turns a guide for
+60 samples and allows at most 14 UV writes while keeping the exact bearing and
+heading equation. `ui_minimap_arrow_steps_spec.lua` drives the production
+legacy minimap arrow from native `AZS_RUN.pf` packets: its offset follows every
+heading, its UVs change only per step and an unchanged heading writes nothing.
+The gold glow fixture allows at most 129 distinct ray crops over five seconds
+and requires a restart to repaint the rays.
+
+The nameplate fixture requires a settled plate to sample its position every
+frame without rereading effective scale, width or height. A health callback
+reads WorldFrame geometry afresh, a WorldFrame scale change rereads the plate
+metrics once and a reused plate starts a new origin with fresh metrics. Missing
+scale and missing, zero or invalid dimensions stay uncached until the next
+valid sample on the same plate. These mocks count reads and writes only.
+They do not measure Lua allocation, renderer materials or FPS, and no local
+tests or game execution were run.
+
+The native meter view fixture's regular tick now runs the read frame and a
+zero-elapsed draw frame. New cases require a regular read to make exactly one
+snapshot call and to paint only on the next frame, in both Performance Mode
+states. Primed reads (mouse wheel, settings) paint in the same frame; hiding
+or disabling between read and draw paints nothing and detaches cleanly; a
+deferred draw failure reaches the existing fault path. The fixture checks
+half-second and two-second settings and verifies that a frame longer than the
+quarter-second refresh interval draws the pending result before another
+regular read, preserving elapsed time for that read.
+
+`ui_health_spec.lua` loads the production target color, border and
+refresh-scheduling code against the real health owner. A burst of target
+signals yields exactly one deferred full pass, the native recolor is repaired
+synchronously, and selection, world entry and Show stay immediate; Hide, world
+leave and logout cancel pending work. `ui_mini_health_spec.lua` checks
+per-record coalescing of unit events and bar callbacks, synchronous roster
+refreshes, cancellation and an idle controller without `OnUpdate`. These are
+CI-only operation counts over mocks; they do not prove native event order,
+client timing or FPS.

@@ -114,20 +114,6 @@ DFRL:NewMod("Waypoints", 3, function()
         return tracker.entries
     end
 
-    local function Rotate(texture, angle)
-        local c, s = math.cos(angle) / 2, math.sin(angle) / 2
-        texture:SetTexCoord(
-            0.5 - c - s,
-            0.5 + s - c,
-            0.5 - c + s,
-            0.5 + s + c,
-            0.5 + c - s,
-            0.5 - s - c,
-            0.5 + c + s,
-            0.5 - s + c
-        )
-    end
-
     local UpdateMinimapPins, ClearMinimapPins, DirtyMinimapScale, StopMinimapPins
     do
         local PIN_SIZE = 20
@@ -521,7 +507,7 @@ DFRL:NewMod("Waypoints", 3, function()
             end
             local ratio = math.max(math.abs(x), math.abs(y)) / edge
             x, y = x / ratio, y / ratio
-            if pin.drawnX ~= x or pin.drawnY ~= y then Rotate(pin.art, math.atan2(x, y)) end
+            if pin.drawnX ~= x or pin.drawnY ~= y then T.RotateTexture(pin.art, math.atan2(x, y)) end
             pin.cacheDistance = distance
             PlacePin(pin, x, y)
         end
@@ -1231,7 +1217,7 @@ DFRL:NewMod("Waypoints", 3, function()
             -- Native heading is counterclockwise, destination bearing clockwise.
             local angle = bearing + facing
             if tracker.pointerAngle ~= angle then
-                Rotate(tracker.pointer, angle)
+                T.RotateTexture(tracker.pointer, angle)
                 tracker.pointerAngle = angle
             end
             if not tracker.pointer:IsShown() then tracker.pointer:Show() end

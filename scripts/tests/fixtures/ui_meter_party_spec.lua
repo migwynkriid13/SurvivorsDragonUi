@@ -211,10 +211,12 @@ local function Meter(configure)
         end
     end
     context:AttachMeter()
+    -- Regular one-second reads draw on the following frame; primed reads draw immediately.
     function context:Tick(elapsed)
         local step = elapsed or 1.01
         self.now = self.now + step
         self:Call(self.controller, "OnUpdate", step)
+        self:Call(self.controller, "OnUpdate", 0)
     end
     function context:Cycle(direction)
         self:Call(self.header, "OnClick", direction or "LeftButton")

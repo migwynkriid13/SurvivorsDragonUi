@@ -844,4 +844,146 @@ Test("player targets retain native health and visibility controls", function()
     assert(label:GetText() == "500" and percent:GetText() == "50%", "friendly target lost native health outside a run")
 end)
 
+-- Production target color, border and refresh scheduling over the real health owner.
+local function TargetView(context, labels)
+    local env, bar = context.env, context.env.TargetFrameHealthBar
+    env.tex = "InterfaceAddOnsSurvivorsDragonUimedia\tex\unitframes\\"
+    env.UnitIsUnit = function() return false end
+    env.UnitClassification = function()
+        context.reads.classification = (context.reads.classification or 0) + 1
+        return "elite"
+    end
+    env.UpdateBorderTexture = function(path) context.borderPath = path end
+    env.ResizeHealth = function() context.reads.resize = (context.reads.resize or 0) + 1 end
+    env.healthLabels = labels
+    bar.color = { 1, 0, 0, 1 }
+    function bar:GetStatusBarColor() return unpack(self.color) end
+    function bar:SetStatusBarColor(r, g, b)
+        context.writes.color = (context.writes.color or 0) + 1
+        self.color = { r, g, b, 1 }
+    end
+    -- Native HealthBar_OnValueChanged runs before addon hooks and resets the gradient.
+    env.HookScript(bar, "OnValueChanged", function() bar.color = { 0, 1, 0, 1 } end)
+    local health = env.DFRL.targetHealth
+    local listen = health.Listen
+    health.Listen = function(callback)
+        context.targetListener = callback
+        return listen(callback)
+    end
+    local file = assert(io.open("modules/unit/target.lua", "r"))
+    local source = file:read("*a")
+    file:close()
+    local colorFirst = assert(string.find(source, "    local setHealthColor =", 1, true))
+    local colorLast = assert(string.find(source, "    local UpdateBorderTexture,", colorFirst, true))
+    local first = assert(string.find(source, "    local borderTexture", colorLast, true))
+    local last = assert(string.find(source, "    editRegion.includeFrames", first, true))
+    local chunk = assert(
+        loadstring(string.sub(source, colorFirst, colorLast - 1) .. string.sub(source, first, last - 1), "@target-view")
+    )
+    setfenv(chunk, env)
+    chunk()
+    health.Listen = listen
+    return context:Controller("UNIT_FACTION")
+end
+
+local function SelectedTarget()
+    local context, controller, bar, label, _, _, _, labels = Target(70e12, 70e12)
+    local view = TargetView(context, labels)
+    context.nativeHealth, context.nativeMaximum = 500, 1000
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:Event(view, "PLAYER_TARGET_CHANGED")
+    context:Call(controller, "OnUpdate", 0.01)
+    context:Call(view, "OnUpdate", 0.01)
+    assert(view:GetScript("OnUpdate") == nil, "idle target view kept an OnUpdate")
+    return context, controller, view, bar, label
+end
+
+local function Burst(context, view, bar)
+    context:Event(view, "UNIT_HEALTH", "target")
+    context:Call(bar, "OnValueChanged")
+    context:Call(bar, "OnValueChanged")
+    context.targetListener()
+    context:Event(view, "UNIT_MAXHEALTH", "target")
+end
+
+Test("burst of target health signals runs one full update", function()
+    local context, _, view, bar, label = SelectedTarget()
+    context:ResetCounts()
+    context:Event(view, "PARTY_MEMBERS_CHANGED")
+    local reference = context.reads.maximum or 0
+    assert(context.reads.resize == 1 and context.reads.classification == 1, "reference refresh was not one pass")
+    context:ResetCounts()
+    Burst(context, view, bar)
+    assert(not context.reads.resize and not context.reads.classification, "target signals refreshed synchronously")
+    assert(view:GetScript("OnUpdate"), "target signals did not schedule a refresh")
+    local before = context.reads.maximum or 0
+    context:Call(view, "OnUpdate", 0.01)
+    assert(context.reads.resize == 1 and context.reads.classification == 1, "burst ran more than one full update")
+    assert((context.reads.maximum or 0) - before == reference, "burst flush read native health more than once")
+    assert(view:GetScript("OnUpdate") == nil, "the owner's own bar write queued another pass")
+    context:ResetCounts()
+    context:Call(view, "OnUpdate", 0.01)
+    assert(not context.reads.resize, "a settled target flush ran again")
+
+    context.nativeHealth = 400
+    Burst(context, view, bar)
+    context:ResetCounts()
+    context:Call(view, "OnUpdate", 0.01)
+    assert(context.reads.resize == 1 and context.reads.classification == 1, "changed health ran extra full updates")
+    assert(bar:GetValue() == 0.4 and label:GetText() == "400", "coalesced refresh lost the latest native health")
+    assert(bar.color[1] == 1 and bar.color[2] == 0 and bar.color[3] == 0, "coalesced refresh lost enemy red")
+    assert(view:GetScript("OnUpdate") == nil, "changed fill write queued another pass")
+end)
+
+Test("native recolor is corrected synchronously", function()
+    local context, _, view, bar = SelectedTarget()
+    for _ = 1, 3 do
+        context:ResetCounts()
+        context:Call(bar, "OnValueChanged")
+        assert(bar.color[1] == 1 and bar.color[2] == 0 and bar.color[3] == 0, "native gradient survived the hook")
+        assert(not context.reads.resize, "color repair ran the full target update")
+    end
+    context:Call(view, "OnUpdate", 0.01)
+    assert(view:GetScript("OnUpdate") == nil, "color repair left pending work")
+end)
+
+Test("target change stays immediate", function()
+    local context, controller, view, bar, label = SelectedTarget()
+    context.targetName, context.nativeHealth, context.nativeMaximum = "New guardian", 750, 1000
+    context.borderPath = nil
+    context:ResetCounts()
+    context:Event(controller, "PLAYER_TARGET_CHANGED")
+    context:Event(view, "PLAYER_TARGET_CHANGED")
+    assert(context.reads.resize == 1 and context.reads.classification == 1, "selection waited for the next frame")
+    assert(label:GetText() == "750" and bar:GetValue() == 0.75, "selection blanked the current native health")
+    assert(context.borderPath == context.env.tex .. "UI-TargetingFrame-Elite.blp", "selection did not force the border")
+    assert(view:GetScript("OnUpdate") == nil, "immediate selection kept the listener's deferred pass")
+    context:ResetCounts()
+    context:Event(view, "PLAYER_ENTERING_WORLD")
+    assert(context.reads.resize == 1, "world entry waited for the next frame")
+    context.env.TargetFrame:Hide()
+    context:ResetCounts()
+    context.env.TargetFrame:Show()
+    assert(context.reads.resize == 1 and view:GetScript("OnUpdate") == nil, "Show waited for the next frame")
+end)
+
+Test("hidden or departing targets cancel pending refreshes", function()
+    local context, _, view, bar = SelectedTarget()
+    Burst(context, view, bar)
+    context.env.TargetFrame:Hide()
+    assert(view:GetScript("OnUpdate") == nil, "hidden target kept pending work")
+    context:ResetCounts()
+    Burst(context, view, bar)
+    assert(view:GetScript("OnUpdate") == nil and not context.reads.resize, "hidden target scheduled work")
+    context.env.TargetFrame:Show()
+    for _, eventName in ipairs({ "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT" }) do
+        Burst(context, view, bar)
+        context:Event(view, eventName)
+        assert(view:GetScript("OnUpdate") == nil, eventName .. " kept pending target work")
+        context:ResetCounts()
+        context:Call(view, "OnUpdate", 0.01)
+        assert(not context.reads.resize, eventName .. " replayed cancelled target work")
+    end
+end)
+
 print("PASS " .. passed .. " target health scenarios")

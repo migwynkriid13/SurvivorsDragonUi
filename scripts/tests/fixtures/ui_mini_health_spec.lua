@@ -55,6 +55,18 @@ local function CompactContext()
     end
     return context
 end
+-- The coalescing worker's script swaps are scheduling, not presentation writes.
+local function Coalescer(context)
+    local controller = context:Controller("UNIT_FLAGS")
+    function controller:SetScript(name, callback) self.scripts[name] = callback end
+    context.controller = controller
+    return controller
+end
+local function Tick(context) context:Call(context.controller, "OnUpdate", 0.01) end
+local function Deliver(context, eventName, unit)
+    context:Event(context.controller, eventName, unit)
+    Tick(context)
+end
 local context = CompactContext()
 local env = context.env
 
@@ -91,6 +103,7 @@ env.TargetofTargetTexture = root:CreateTexture(nil, "OVERLAY")
 env.TargetofTargetDeadText = root:CreateFontString(nil, "OVERLAY")
 context:Load("core/widgets.lua")
 context:Load("modules/unit/mini.lua", "Mini")
+Coalescer(context)
 
 local label, percentage, border
 for _, object in ipairs(context.objects) do
@@ -173,9 +186,11 @@ assert(root.name:GetText() == "Long tar...", "native target name lost its existi
 CaptionBounds()
 context.dead = true
 context:Call(bar, "OnValueChanged")
+Tick(context)
 assert(label:GetText() == "" and percentage:GetText() == "", "dead target-of-target retained health captions")
 context.dead = false
 context:Call(bar, "OnValueChanged")
+Tick(context)
 assert(label:GetText() == "1.2K" and percentage:GetText() == "100%", "native health did not recover")
 
 context:SetSetting("performanceMode", true)
@@ -189,12 +204,15 @@ assert(not loss and animator, "Performance Mode prepared an unused health-loss o
 local withoutLoss = #context.objects
 context.current = 900
 context:Call(bar, "OnValueChanged")
+Tick(context)
 assert(#context.objects == withoutLoss and animator:GetScript("OnUpdate") == nil)
 assert(label:GetText() == "900" and percentage:GetText() == "75%", "deferred trail delayed native health")
 context:SetSetting("healthLossAnimation", false)
 context:SetSetting("performanceMode", false)
 context.current = 1200
 context:Call(bar, "OnValueChanged")
+Tick(context)
+assert(label:GetText() == "1.2K", "coalesced compact refresh skipped recovered health")
 assert(#context.objects == withoutLoss, "disabled loss trails prepared their overlay")
 context:SetSetting("healthLossAnimation", true)
 for _, object in ipairs(context.objects) do
@@ -204,6 +222,7 @@ assert(#context.objects == withoutLoss + 2, "enabled trail did not prepare one r
 assert(loss and animator and loss:GetTexture() == bar.fill:GetTexture(), "loss trail restored the old shaded fill")
 context.current = 900
 context:Call(bar, "OnValueChanged")
+Tick(context)
 assert(loss:IsShown() and loss:GetWidth() == bar:GetWidth() / 4, "real damage lost its original proportional trail")
 context:SetSetting("performanceMode", true)
 assert(not loss:IsShown() and animator:GetScript("OnUpdate") == nil, "Performance Mode retained trail work")
@@ -281,7 +300,7 @@ local function PartyContext()
         assert(entry.label and entry.percentage, "native party row did not bind its existing health labels")
         assert(entry.percentage:GetText() == "50%", "numeric-zero flags incorrectly marked a living party member dead")
     end
-    party.controller = party:Controller("UNIT_FLAGS")
+    Coalescer(party)
     assert(party.controller.events.UNIT_CONNECTION, "party connection transitions do not refresh captions")
     return party
 end
@@ -295,7 +314,7 @@ for _, performance in ipairs({ false, true }) do
         local entry = party.units[unit]
         entry.dead = index == 1 and true or 1
         party:ResetCounts()
-        party:Event(party.controller, "UNIT_FLAGS", unit)
+        Deliver(party, "UNIT_FLAGS", unit)
         assert(
             entry.label:GetText() == "Dead" and entry.percentage:GetText() == "",
             "death retained stale positive health"
@@ -314,16 +333,16 @@ for _, performance in ipairs({ false, true }) do
             end
         end
         party:ResetCounts()
-        party:Event(party.controller, "UNIT_FLAGS", unit)
+        Deliver(party, "UNIT_FLAGS", unit)
         party:NoPresentationWrites()
         entry.ghost = index == 1 and true or 1
-        party:Event(party.controller, "UNIT_FLAGS", unit)
+        Deliver(party, "UNIT_FLAGS", unit)
         assert(
             entry.label:GetText() == "Ghost" and entry.percentage:GetText() == "",
             "ghost did not take priority over dead"
         )
         entry.dead, entry.ghost = 0, 0
-        party:Event(party.controller, "UNIT_FLAGS", unit)
+        Deliver(party, "UNIT_FLAGS", unit)
         assert(
             entry.label:GetText() == tostring(entry.current) and entry.percentage:GetText() == "50%",
             "resurrection did not restore native health captions"
@@ -337,7 +356,7 @@ end
 
 local member = party.units.party1
 member.dead = true
-party:Event(party.controller, "UNIT_CONNECTION", "party1")
+Deliver(party, "UNIT_CONNECTION", "party1")
 party:SetSetting("showHealthValue", false)
 party:SetSetting("showHealthPercentage", false)
 assert(
@@ -348,17 +367,17 @@ party.language = "fr"
 party:NotifyLocale()
 assert(member.label:GetText() == "Mort", "language change retained the previous party death caption")
 member.ghost = true
-party:Event(party.controller, "UNIT_CONNECTION", "party1")
+Deliver(party, "UNIT_CONNECTION", "party1")
 assert(member.label:GetText() == "Fantôme", "connection-only refresh did not reflect current ghost state")
 member.exists = false
-party:Event(party.controller, "UNIT_CONNECTION", "party1")
+Deliver(party, "UNIT_CONNECTION", "party1")
 assert(
     member.label:GetText() == "" and member.percentage:GetText() == "",
     "missing native unit retained its prior death caption"
 )
 member.exists, member.dead, member.ghost = true, false, false
 party:ResetCounts()
-party:Event(party.controller, "UNIT_CONNECTION", "party1")
+Deliver(party, "UNIT_CONNECTION", "party1")
 assert(member.label:GetText() == "" and member.percentage:GetText() == "", "revival discarded disabled numeric choices")
 assert(
     party.reads["party1:dead"] and party.reads["party1:ghost"],
@@ -376,7 +395,7 @@ party:SetLayoutHidden(true)
 party:ResetCounts()
 member.dead, member.ghost = true, true
 party.language = nil
-party:Event(party.controller, "UNIT_FLAGS", "party1")
+Deliver(party, "UNIT_FLAGS", "party1")
 party:NotifyLocale()
 party:NoPresentationWrites()
 assert(not next(party.reads), "hidden party frames read health or death presentation")
@@ -388,3 +407,57 @@ assert(
 assert(table.getn(party.objects) == prepared, "party death transitions allocated new UI objects")
 assert(party.controller:GetScript("OnUpdate") == nil, "party death captions added an idle updater")
 print("PASS party Dead/Ghost flags, localized reused labels, numeric choices, resurrection and hidden recovery")
+
+local burst = PartyContext()
+local first, second = burst.units.party1, burst.units.party2
+local function Reads(unit) return burst.reads[unit .. ":current"] or 0 end
+burst:ResetCounts()
+Deliver(burst, "UNIT_HEALTH", "party1")
+local single = Reads("party1")
+assert(single > 0, "one coalesced party refresh did not read native health")
+assert(burst.controller:GetScript("OnUpdate") == nil, "idle compact controller kept an OnUpdate")
+first.current, second.current = 700, 650
+burst:ResetCounts()
+burst:Event(burst.controller, "UNIT_HEALTH", "party1")
+burst:Event(burst.controller, "UNIT_MAXHEALTH", "party1")
+burst:Call(first.health, "OnValueChanged")
+burst:Call(first.health, "OnValueChanged")
+burst:Event(burst.controller, "UNIT_HEALTH", "party2")
+assert(Reads("party1") == 0 and Reads("party2") == 0, "unit signals refreshed before the next frame")
+assert(burst.controller:GetScript("OnUpdate"), "visible unit signals did not schedule one flush")
+Tick(burst)
+assert(Reads("party1") == single and Reads("party2") == single, "a record refreshed more than once per frame")
+assert(Reads("party3") == 0 and Reads("party4") == 0, "coalescing refreshed unrelated party rows")
+assert(first.label:GetText() == "700" and second.label:GetText() == "650", "flush lost the latest native health")
+assert(burst.controller:GetScript("OnUpdate") == nil, "flushed compact controller kept an OnUpdate")
+burst:ResetCounts()
+Tick(burst)
+assert(not next(burst.reads), "a settled flush replayed its records")
+
+first.current = 600
+burst:Event(burst.controller, "UNIT_HEALTH", "party1")
+burst:ResetCounts()
+burst:Event(burst.controller, "PARTY_MEMBERS_CHANGED")
+assert(first.label:GetText() == "600" and Reads("party1") == single, "roster transitions waited for the next frame")
+burst:ResetCounts()
+Tick(burst)
+assert(Reads("party1") == 0, "synchronous roster refresh left its record pending")
+
+for _, eventName in ipairs({ "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT" }) do
+    burst:Event(burst.controller, "UNIT_HEALTH", "party1")
+    assert(burst.controller:GetScript("OnUpdate"), "visible unit signal did not schedule")
+    burst:ResetCounts()
+    burst:Event(burst.controller, eventName)
+    assert(burst.controller:GetScript("OnUpdate") == nil, eventName .. " kept pending compact work")
+    Tick(burst)
+    assert(not next(burst.reads), eventName .. " replayed cancelled compact work")
+end
+
+burst:SetLayoutHidden(true)
+burst:ResetCounts()
+burst:Event(burst.controller, "UNIT_HEALTH", "party1")
+burst:Call(first.health, "OnValueChanged")
+assert(burst.controller:GetScript("OnUpdate") == nil, "hidden compact frames scheduled a flush")
+assert(not next(burst.reads), "hidden compact frames read native state")
+burst:SetLayoutHidden(false)
+print("PASS compact frames coalesce unit events and bar callbacks per record, idle and cancelled on world leave")

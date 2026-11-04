@@ -89,6 +89,7 @@ DFRL:NewMod("Mini", 1, function()
     end
 
     local function UpdateValues(values)
+        values.dirty = nil
         if not values.frame:IsVisible() then return end
         if values.resize then values.resize() end
         local unit = values.unit
@@ -121,6 +122,31 @@ DFRL:NewMod("Mini", 1, function()
             end
         elseif values.updateHealthColor then
             values.updateHealthColor()
+        end
+    end
+
+    -- Unit events and native bar callbacks for one record can arrive several
+    -- times per frame. Mark the record and refresh it once on the next frame.
+    local controller, pending
+    local function Flush()
+        controller:SetScript("OnUpdate", nil)
+        pending = false
+        for _, values in ipairs(units) do
+            if values.dirty then UpdateValues(values) end
+        end
+    end
+    local function Schedule(values)
+        if not values.frame:IsVisible() then return end
+        values.dirty = true
+        if pending or not controller then return end
+        pending = true
+        controller:SetScript("OnUpdate", Flush)
+    end
+    local function Cancel()
+        if pending then controller:SetScript("OnUpdate", nil) end
+        pending = false
+        for _, values in ipairs(units) do
+            values.dirty = nil
         end
     end
 
@@ -198,8 +224,8 @@ DFRL:NewMod("Mini", 1, function()
             original()
             UpdatePet()
         end end
-        HookScript(PetFrameHealthBar, "OnValueChanged", function() UpdateValues(pet) end)
-        HookScript(PetFrameManaBar, "OnValueChanged", function() UpdateValues(pet) end)
+        HookScript(PetFrameHealthBar, "OnValueChanged", function() Schedule(pet) end)
+        HookScript(PetFrameManaBar, "OnValueChanged", function() Schedule(pet) end)
         HookScript(PetFrame, "OnShow", UpdatePet)
         UpdatePet()
     end
@@ -349,7 +375,7 @@ DFRL:NewMod("Mini", 1, function()
                 UpdateTarget()
             end
         end
-        HookScript(TargetofTargetHealthBar, "OnValueChanged", function() UpdateValues(target) end)
+        HookScript(TargetofTargetHealthBar, "OnValueChanged", function() Schedule(target) end)
         HookScript(TargetofTargetFrame, "OnShow", UpdateTarget)
         UpdateTarget()
     end
@@ -505,7 +531,7 @@ DFRL:NewMod("Mini", 1, function()
             values.resize = UpdateResources
             UpdateResources()
             if _G[prefix .. "HealthBarText"] then _G[prefix .. "HealthBarText"]:SetAlpha(0) end
-            HookScript(health, "OnValueChanged", function() UpdateValues(values) end)
+            HookScript(health, "OnValueChanged", function() Schedule(values) end)
         end
     end
 
@@ -556,7 +582,10 @@ DFRL:NewMod("Mini", 1, function()
     }
     if table.getn(units) == 0 then return end
     local frame = CreateFrame("Frame")
+    controller = frame
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    frame:RegisterEvent("PLAYER_LEAVING_WORLD")
+    frame:RegisterEvent("PLAYER_LOGOUT")
     frame:RegisterEvent("UNIT_HEALTH")
     frame:RegisterEvent("UNIT_MAXHEALTH")
     frame:RegisterEvent("UNIT_MANA")
@@ -571,9 +600,11 @@ DFRL:NewMod("Mini", 1, function()
     frame:RegisterEvent("UNIT_FLAGS")
     frame:RegisterEvent("UNIT_CONNECTION")
     frame:SetScript("OnEvent", function()
-        if unitEvents[event] and type(arg1) == "string" and arg1 ~= "" then
+        if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            Cancel()
+        elseif unitEvents[event] and type(arg1) == "string" and arg1 ~= "" then
             for _, values in ipairs(units) do
-                if values.unit == arg1 or UnitIsUnit(values.unit, arg1) then UpdateValues(values) end
+                if values.unit == arg1 or UnitIsUnit(values.unit, arg1) then Schedule(values) end
             end
         else
             -- Ownership and target transitions can invalidate several aliases.

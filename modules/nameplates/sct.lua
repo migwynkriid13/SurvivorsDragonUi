@@ -160,6 +160,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local shownPlates = {}
     local origins = {}
     local originIndex = { names = {}, dirty = {}, queries = {}, queryPool = {}, queryCount = 0, lossRevision = 0 }
+    -- Reused root-geometry records: scans share one per pass, callbacks
+    -- invalidate theirs on each call so they still sample afresh.
+    originIndex.scanGeometry, originIndex.callbackGeometry = {}, {}
     local activeTexts = {}
     local textPool = {}
     local TEXT_STRATA = "LOW"
@@ -624,20 +627,30 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if not IsFiniteNumber(x) or not IsFiniteNumber(y) then return end
         geometry = SampleWorldGeometry(geometry)
         if not geometry.valid then return end
-        local plateScale = plate:GetEffectiveScale() or geometry.scale
-        if not IsFiniteNumber(plateScale) or plateScale <= 0 then return end
-        local ratio = plateScale / geometry.scale
+        -- Native plates keep their size and scale for an incarnation. Reread
+        -- them only for a new origin or a changed WorldFrame scale.
+        local ratio, halfWidth, halfHeight = origin.metricsRatio, origin.metricsHalfWidth, origin.metricsHalfHeight
+        if origin.metricsScale ~= geometry.scale then
+            local plateScale = plate:GetEffectiveScale()
+            local scale = plateScale or geometry.scale
+            if not IsFiniteNumber(scale) or scale <= 0 then return end
+            ratio = scale / geometry.scale
+            halfWidth = (plate:GetWidth() or 0) * ratio * 0.5
+            halfHeight = (plate:GetHeight() or 0) * ratio * 0.5
+            if not IsFiniteNumber(halfWidth) or not IsFiniteNumber(halfHeight) or halfWidth < 0 or halfHeight < 0 then
+                return
+            end
+            -- Unavailable dimensions and scale can recover on the same plate.
+            if plateScale and halfWidth > 0 and halfHeight > 0 then
+                origin.metricsScale, origin.metricsRatio = geometry.scale, ratio
+                origin.metricsHalfWidth, origin.metricsHalfHeight = halfWidth, halfHeight
+            end
+        end
         x, y = x * ratio - geometry.left, y * ratio - geometry.bottom
         local width, height = geometry.width, geometry.height
-        local halfWidth = (plate:GetWidth() or 0) * ratio * 0.5
-        local halfHeight = (plate:GetHeight() or 0) * ratio * 0.5
         if
             not IsFiniteNumber(x)
             or not IsFiniteNumber(y)
-            or not IsFiniteNumber(halfWidth)
-            or not IsFiniteNumber(halfHeight)
-            or halfWidth < 0
-            or halfHeight < 0
             or x < -halfWidth
             or x > width + halfWidth
             or y < -halfHeight
@@ -834,9 +847,13 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             shownPlates[plate] = data
             RetirePlate(plate)
             -- Revisit descendants on reuse, including children added while hidden.
-            RefreshPlate(plate, data, GetTime(), true)
+            originIndex.callbackGeometry.valid = false
+            RefreshPlate(plate, data, GetTime(), true, originIndex.callbackGeometry)
         end)
-        HookScript(bar, "OnValueChanged", function() RefreshPlate(plate, data, GetTime()) end)
+        HookScript(bar, "OnValueChanged", function()
+            originIndex.callbackGeometry.valid = false
+            RefreshPlate(plate, data, GetTime(), nil, originIndex.callbackGeometry)
+        end)
         RefreshPlate(plate, data, now, nil, geometry)
     end
 
@@ -844,7 +861,10 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         count = count or WorldFrame:GetNumChildren() or 0
         if count < discoveredChildren then discoveredChildren = 0 end
         if force or count > discoveredChildren then
-            geometry = geometry or {}
+            if not geometry then
+                geometry = originIndex.scanGeometry
+                geometry.valid = false
+            end
             local children = { WorldFrame:GetChildren() }
             local first = force and 1 or discoveredChildren + 1
             for index = first, count do
@@ -864,7 +884,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- Share root geometry only inside this synchronous pass. Show/health
         -- callbacks keep sampling afresh, including later in the same frame.
         -- Retry invalid geometry and retain each origin's last usable point.
-        local geometry = UsesPlateOrigins() and {} or nil
+        local geometry = UsesPlateOrigins() and originIndex.scanGeometry or nil
+        if geometry then geometry.valid = false end
         DiscoverPlates(force, now, geometry, childCount)
         -- Snapshot on every frame, rather than every tenth of a second: a
         -- one-shot enemy can disappear between two of the old scans.

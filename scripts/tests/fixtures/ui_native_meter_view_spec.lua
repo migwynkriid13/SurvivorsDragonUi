@@ -148,10 +148,14 @@ local function View(configure)
         if object.kind == "FontString" and object.parent == c.header then c.title = object end
         if object.kind == "FontString" and object.parent == c.root then c.status = object end
     end
+    function c:Frame(elapsed)
+        self.now = self.now + elapsed
+        self:Call(self.controller, "OnUpdate", elapsed)
+    end
+    -- Regular one-second reads draw on the following frame; primed reads draw immediately.
     function c:Tick(elapsed)
-        local step = elapsed or 1.01
-        self.now = self.now + step
-        self:Call(self.controller, "OnUpdate", step)
+        self:Frame(elapsed or 1.01)
+        self:Frame(0)
     end
     function c:Cycle(direction)
         self:Call(self.header, "OnClick", direction or "LeftButton")
@@ -1778,4 +1782,132 @@ Test("native upgraded ranks reuse one displayed ability in both Performance Mode
         assert(state.calls.snapshot == snapshots and not c.controller:GetScript("OnUpdate"))
         c:NoPresentationWrites()
     end
+end)
+
+local function ChangeSecondAmount(state, amount, revision)
+    state.records[2].amount, state.context.counterRevision = amount, revision
+end
+
+Test("regular refresh draws on the following frame", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, state = View(function(context) context.settings.performanceMode = performance end)
+        local second = c:Row(2)
+        assert(second.bar.value == 0.4)
+        c:Tick(0.5)
+        ChangeSecondAmount(state, 80, "regular-split-read")
+        local reads = state.calls.snapshot
+        c:Frame(0.51)
+        assert(state.calls.snapshot == reads + 1, "regular refresh did not read exactly once")
+        assert(second.bar.value == 0.4, "regular refresh drew in its read frame")
+        c:Frame(0.016)
+        assert(second.bar.value == 0.8, "regular refresh did not draw on the following frame")
+        assert(state.calls.snapshot == reads + 1, "deferred draw collected another native snapshot")
+        c:Frame(0.016)
+        assert(second.bar.value == 0.8 and state.calls.snapshot == reads + 1)
+    end
+end)
+
+Test("a slow frame paints the pending read before another regular read", function()
+    local c, state = View(function(context) context.settings.meterRefreshRate = 0.25 end)
+    local second = c:Row(2)
+    ChangeSecondAmount(state, 80, "slow-frame-read")
+    local reads = state.calls.snapshot
+    c:Frame(0.3)
+    assert(state.calls.snapshot == reads + 1 and second.bar.value == 0.4)
+    c:Frame(0.3)
+    assert(state.calls.snapshot == reads + 1 and second.bar.value == 0.8, "slow frame lost the pending draw")
+    c:Frame(0.016)
+    assert(state.calls.snapshot == reads + 2, "drawing discarded the elapsed time for the next read")
+end)
+
+Test("primed refresh draws in the same frame", function()
+    local c, state = View()
+    local second = c:Row(2)
+    ChangeSecondAmount(state, 80, "primed-wheel-read")
+    local reads = state.calls.snapshot
+    c:Call(c.root, "OnMouseWheel", 0)
+    c:Frame(0.01)
+    assert(state.calls.snapshot > reads and second.bar.value == 0.8, "wheel priming waited a frame")
+    ChangeSecondAmount(state, 60, "primed-setting-read")
+    reads = state.calls.snapshot
+    c:SetSetting("meterShowTotal", true)
+    c:Frame(0.01)
+    assert(state.calls.snapshot > reads and second.bar.value == 0.6, "settings priming waited a frame")
+end)
+
+Test("hide between read and draw drops the pending draw", function()
+    local c, state = View()
+    local second = c:Row(2)
+    c:Tick(0.5)
+    ChangeSecondAmount(state, 80, "hidden-pending-read")
+    local reads = state.calls.snapshot
+    c:Frame(0.51)
+    assert(state.calls.snapshot == reads + 1 and second.bar.value == 0.4)
+    c:SetLayoutHidden(true)
+    c:Frame(0.016)
+    assert(second.bar.value == 0.4, "hidden meter painted its pending read")
+    c:SetLayoutHidden(false)
+    assert(second.bar.value == 0.4, "showing replayed a dropped pending draw")
+    c:Frame(0.01)
+    assert(state.calls.snapshot > reads + 1, "showing did not prime a fresh read")
+    assert(second.bar.value == 0.8, "showing did not draw in the priming frame")
+end)
+
+Test("disable between read and draw detaches cleanly", function()
+    local c, state = View()
+    local second = c:Row(2)
+    c:Tick(0.5)
+    ChangeSecondAmount(state, 80, "disabled-pending-read")
+    c:Frame(0.51)
+    assert(second.bar.value == 0.4)
+    c:SetSetting("meterEnabled", false)
+    assert(not c.controller:GetScript("OnUpdate"), "disabling retained the pending draw updater")
+    local reads = state.calls.snapshot
+    c:Frame(0.016)
+    assert(state.calls.snapshot == reads and second.bar.value ~= 0.8 and not second.active)
+    assert(not c.root:IsShown(), "disabled meter painted its pending read")
+end)
+
+Test("draw failure uses existing fault path", function()
+    local c, state = View()
+    local second = c:Row(2)
+    c:Tick(0.5)
+    ChangeSecondAmount(state, 80, "failed-pending-draw")
+    local setValue, failing = second.bar.SetValue, true
+    second.bar.SetValue = function(self, value)
+        if failing then
+            failing = false
+            error("deferred draw failure")
+        end
+        return setValue(self, value)
+    end
+    c:Frame(0.51)
+    assert(failing and c.controller:GetScript("OnUpdate"), "read frame drew or faulted early")
+    local ok, failure = pcall(function() c:Frame(0.016) end)
+    assert(not ok and string.find(tostring(failure), "deferred draw failure", 1, true))
+    assert(not c.controller:GetScript("OnUpdate") and not c.root:IsShown(), "draw failure retained the reader")
+end)
+
+Test("refresh rate sets the regular read cadence", function()
+    local c, state = View(function(context) context.settings.meterRefreshRate = 0.5 end)
+    local second = c:Row(2)
+    c:Tick(0.5)
+    ChangeSecondAmount(state, 80, "half-second-read")
+    local reads = state.calls.snapshot
+    c:Frame(0.3)
+    assert(state.calls.snapshot == reads, "a half-second cadence read too early")
+    c:Frame(0.25)
+    assert(state.calls.snapshot == reads + 1, "a half-second cadence did not read after 0.5 seconds")
+    c:Frame(0.016)
+    assert(second.bar.value == 0.8, "a half-second read did not draw on the following frame")
+    c:SetSetting("meterRefreshRate", 2)
+    c:Frame(0.016)
+    reads = state.calls.snapshot
+    ChangeSecondAmount(state, 60, "two-second-read")
+    c:Frame(1.5)
+    assert(state.calls.snapshot == reads, "a two-second cadence read too early")
+    c:Frame(0.6)
+    assert(state.calls.snapshot == reads + 1, "a two-second cadence did not read after two seconds")
+    c:Frame(0.016)
+    assert(second.bar.value == 0.6)
 end)

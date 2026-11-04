@@ -101,6 +101,32 @@ end
 
 do
     local c, _, entry, api = Fixture()
+    api.Set(true)
+    local rays = entry.glowLights[1].rays
+    assert(rays.rotationStep == 0, "starting gold glow did not paint its rays")
+    local sets, writes = {}, 0
+    function rays:SetTexCoord(...)
+        writes = writes + 1
+        sets[table.concat({ ... }, ",")] = true
+    end
+    for _ = 1, 150 do
+        c:Call(entry.content, "OnUpdate", 1 / 30)
+    end
+    local unique = 0
+    for _ in pairs(sets) do
+        unique = unique + 1
+    end
+    assert(writes > 0 and unique <= 129, "gold rays wrote more UV sets than their rotation steps")
+    assert(writes <= 129, "gold rays rewrote an unchanged rotation step")
+    api.Set(false)
+    assert(not entry.glowRunning)
+    writes = 0
+    api.Set(true)
+    assert(entry.glowRunning and writes == 1 and rays.rotationStep == 0, "restarted gold glow did not repaint its rays")
+end
+
+do
+    local c, _, entry, api = Fixture()
     local baseline = #c.objects
     c.rejectTexture = true
     assert(not pcall(api.Set, true) and not entry.glowPrepared)

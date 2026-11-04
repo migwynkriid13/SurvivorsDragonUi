@@ -125,6 +125,23 @@ maximum health or spawn identity also resets the effect. Damage still uses the
 original full counters and the existing half-second fade, never abbreviated
 text or combat messages.
 
+Target, target-of-target, pet and party frames run at most one full refresh
+per frame. Target `UNIT_HEALTH`, `UNIT_MAXHEALTH`, `UNIT_FACTION` and
+`UNIT_CLASSIFICATION_CHANGED`, native `OnValueChanged` callbacks and health
+owner notifications only arm a one-shot `OnUpdate` on the existing target event
+frame. The native callback still repairs enemy red synchronously, because
+`HealthBar_OnValueChanged` repaints the gradient before the hook runs. The
+health owner's own bar write during that refresh cannot queue a second pass.
+Selection, world entry, party changes and Show paint immediately with their
+existing border force, which cancels any pending pass. Compact frames mark the
+matching record dirty and flush dirty records on the next frame from their
+existing event frame; ownership, target and roster transitions still refresh
+all records synchronously. Hidden frames schedule nothing; target Hide, world
+leave and logout cancel pending work, using `PLAYER_LEAVING_WORLD` and
+`PLAYER_LOGOUT` registrations on both existing event frames. No frame, region,
+updater or setting is added. CI-only mocks cover
+the coalescing; native event order and client timing remain unverified.
+
 With shortening enabled, unit-health and boss/guardian current/maximum labels share K, M, B and T
 for thousands, millions, billions and trillions. Examples are `1.2K`, `15.1B`
 and `70T`; values below 1,000 remain whole numbers. Formatting truncates to at

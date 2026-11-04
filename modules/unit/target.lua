@@ -174,29 +174,59 @@ DFRL:NewMod("Target", 1, function()
         UpdateClassification(forceBorder)
     end
 
-    HookScript(TargetFrameHealthBar, "OnValueChanged", function() UpdateTarget() end)
-    if DFRL.targetHealth then DFRL.targetHealth.Listen(function() UpdateTarget() end) end
-    HookScript(TargetFrame, "OnShow", function() UpdateTarget(true) end)
+    -- Health events, both native bar callbacks and the health owner can arrive
+    -- in one frame. Coalesce them into one deferred pass; selection, world entry
+    -- and Show still paint immediately so the new target never shows blank.
     local frame = CreateFrame("Frame")
+    local pending, painting = false, false
+    local function Cancel()
+        if pending then frame:SetScript("OnUpdate", nil) end
+        pending = false
+    end
+    local function Paint(forceBorder)
+        Cancel()
+        -- The health owner's own bar writes re-enter OnValueChanged here.
+        painting = true
+        UpdateTarget(forceBorder)
+        painting = false
+    end
+    local function Flush() Paint() end
+    local function Schedule()
+        if pending or painting or not TargetFrame:IsVisible() then return end
+        pending = true
+        frame:SetScript("OnUpdate", Flush)
+    end
+
+    HookScript(TargetFrameHealthBar, "OnValueChanged", function()
+        -- Native HealthBar_OnValueChanged recolors first; repair it before drawing.
+        if UnitExists("target") then TargetFrameHealthBar:SetStatusBarColor(1, 0, 0) end
+        Schedule()
+    end)
+    if DFRL.targetHealth then DFRL.targetHealth.Listen(Schedule) end
+    HookScript(TargetFrame, "OnShow", function() Paint(true) end)
+    HookScript(TargetFrame, "OnHide", Cancel)
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    frame:RegisterEvent("PLAYER_LEAVING_WORLD")
+    frame:RegisterEvent("PLAYER_LOGOUT")
     frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
     frame:RegisterEvent("UNIT_HEALTH")
     frame:RegisterEvent("UNIT_MAXHEALTH")
     frame:RegisterEvent("UNIT_FACTION")
     frame:RegisterEvent("UNIT_CLASSIFICATION_CHANGED")
     frame:SetScript("OnEvent", function()
-        if
-            event == "PLAYER_TARGET_CHANGED"
-            or event == "PLAYER_ENTERING_WORLD"
-            or event == "PARTY_MEMBERS_CHANGED"
-            or arg1 == "target"
-        then
-            UpdateTarget(event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_ENTERING_WORLD")
+        if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            Cancel()
+        elseif event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
+            Paint(true)
+        elseif event == "PARTY_MEMBERS_CHANGED" then
+            Paint()
+        elseif arg1 == "target" then
+            Schedule()
         end
     end)
     UpdateClassification()
-    UpdateTarget()
+    Paint()
     editRegion.includeFrames = function() return T.GetUnitAuraIcons("target") end
     DFRL.layout.Register("targetFrame", TargetFrame, nil, {
         region = editRegion,

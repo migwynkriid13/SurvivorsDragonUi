@@ -1376,3 +1376,65 @@ for _, missing in ipairs({ "MouselookStart", "MouselookStop", "IsMouselooking", 
     current:Event(current.controller, "PLAYER_LEAVING_WORLD")
 end
 print("PASS missing native camera APIs preserve original plate input without partial camera control")
+
+do
+    local current = Plates()
+    current:Publish(Entries())
+    current:Tick(0.21)
+    local plate, world = current.guardian, current.env.WorldFrame
+    local reads = {}
+    local function Count(object, method, key)
+        local original = object[method]
+        object[method] = function(self, ...)
+            reads[key] = (reads[key] or 0) + 1
+            return original(self, ...)
+        end
+    end
+    Count(plate, "GetEffectiveScale", "scale")
+    Count(plate, "GetWidth", "width")
+    Count(plate, "GetHeight", "height")
+    Count(plate, "GetCenter", "center")
+    Count(world, "GetEffectiveScale", "world")
+    local origin = plate.fixture.origin
+    assert(origin and origin.metricsScale == 1, "a live plate did not cache its native metrics")
+    for _ = 1, 100 do
+        current:Tick(1 / 60)
+    end
+    assert(reads.center and reads.center >= 100, "settled plates stopped sampling their native position")
+    assert(not reads.scale and not reads.width and not reads.height, "settled plates reread their fixed native metrics")
+
+    local scale = 2
+    world.GetEffectiveScale = function()
+        reads.world = (reads.world or 0) + 1
+        return scale
+    end
+    reads.world = 0
+    current:Call(plate.nativeBar, "OnValueChanged")
+    assert(reads.world == 1, "a health callback reused an earlier geometry sample")
+    assert(reads.scale == 1 and reads.width == 1 and reads.height == 1, "a UI scale change kept stale plate metrics")
+    assert(plate.fixture.origin.metricsScale == 2)
+    current:Call(plate.nativeBar, "OnValueChanged")
+    assert(reads.world == 2 and reads.scale == 1, "repeated callbacks reread unchanged plate metrics")
+
+    plate:Hide()
+    current:Call(plate, "OnHide")
+    plate:Show()
+    current:Call(plate, "OnShow")
+    assert(plate.fixture.origin ~= origin and reads.scale == 2, "a reused plate kept its retired metrics")
+
+    for _, case in ipairs({ { "GetWidth", -1 }, { "GetWidth", 0 }, { "GetHeight" }, { "GetEffectiveScale" } }) do
+        local method, value = unpack(case)
+        local original = plate[method]
+        plate[method] = function() return value end
+        plate:Hide()
+        current:Call(plate, "OnHide")
+        plate:Show()
+        current:Call(plate, "OnShow")
+        local incomplete = plate.fixture.origin
+        assert(incomplete and incomplete.metricsScale == nil, method .. " cached incomplete native metrics")
+        plate[method] = original
+        current:Tick(1 / 60)
+        assert(incomplete.metricsScale == 2 and incomplete.x, method .. " did not recover on the next sample")
+    end
+end
+print("PASS plates cache fixed native metrics per incarnation and callbacks sample fresh shared geometry")

@@ -245,7 +245,14 @@ do
     context:ResetCounts()
     Update(cache, 1, 40, true)
     context:NoPresentationWrites()
-    cache.entries[2].y = -10
+    cache.entries[2].x = 1
+    Update(cache, 1, 40, true)
+    assert(arrow.drawnX > 0 and not context.writes.SetTexCoord, "same rotation step rewrote the cache arrow UVs")
+    context:ResetCounts()
+    cache.entries[2].x = 6
+    Update(cache, 1, 40, true)
+    assert(context.writes.SetTexCoord == 1, "crossing a step did not turn the cache arrow")
+    cache.entries[2].x, cache.entries[2].y = 0, -10
     Update(cache, 1, 40, true)
     assert(not arrow:IsShown() and cache.minimapPins.near:IsShown(), "in-range cache did not replace the edge arrow")
     assert(cache.minimapPins.near.cacheDistance == 100 and not cache.minimapPins.far)

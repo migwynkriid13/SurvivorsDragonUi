@@ -27,6 +27,31 @@ function DFRL.tools.TextureAssigned(loaded, assigned, wanted)
     return type(wanted) == "string" and assigned == string.gsub(wanted, "%.[^%.]*$", "")
 end
 
+-- Rotations snap to fixed steps, so each texture reuses a bounded set of UV
+-- crops and skips the write while its step is unchanged.
+local ROTATION_STEPS = 128
+local ROTATION_STEP = 2 * math.pi / ROTATION_STEPS
+function DFRL.tools.RotateTexture(texture, angle)
+    if type(angle) ~= "number" or angle - angle ~= 0 then return end
+    local step = math.mod(math.floor(angle / ROTATION_STEP + 0.5), ROTATION_STEPS)
+    if step < 0 then step = step + ROTATION_STEPS end
+    if texture.rotationStep == step then return end
+    texture.rotationStep = step
+    local c, s = math.cos(step * ROTATION_STEP) / 2, math.sin(step * ROTATION_STEP) / 2
+    texture:SetTexCoord(
+        0.5 - c - s,
+        0.5 + s - c,
+        0.5 - c + s,
+        0.5 + s + c,
+        0.5 + c - s,
+        0.5 - s - c,
+        0.5 + c + s,
+        0.5 - s + c
+    )
+end
+
+function DFRL.tools.ClearRotation(texture) texture.rotationStep = nil end
+
 -- Wide artwork uses equal source strips with a neighbouring pixel at each
 -- join. All pieces share their parent's lifecycle; no frame or updater is used.
 function DFRL.tools.CreateArtworkStrip(parent, layer, count)
