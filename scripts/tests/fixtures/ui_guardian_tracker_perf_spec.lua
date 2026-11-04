@@ -99,8 +99,23 @@ local function Tracker()
     end
     -- Settle the shared measurement label's font after initial column sizing.
     context:Tick()
+    local tracker = env.DFRL_GuardianTracker
+    assert(env.T.NearlyEqual(tracker:GetWidth() * tracker:GetEffectiveScale(), 204), "guardian default width diverged")
+    local title
+    for _, object in ipairs(context.objects) do
+        if object.parent == tracker and object.kind == "FontString" and object:GetText() == "Guardians" then
+            title = object
+            break
+        end
+    end
+    assert(title, "title case guardian caption was not drawn")
+    local r, g, b = title:GetTextColor()
+    assert(r == 1 and g == 0.82 and b == 0, "guardian header lost the meter's gold")
+    local row = context:Row()
+    r, g, b = row.name:GetTextColor()
+    assert(r == 0.87 and g == 0.74 and b == 0.49, "guardian names lost their original pale gold")
     context:ResetCounts()
-    return context, context:Row()
+    return context, row
 end
 
 for _, performance in ipairs({ false, true }) do

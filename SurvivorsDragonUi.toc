@@ -59,6 +59,7 @@ modules\ui\banners.lua
 modules\ui\revive.lua
 modules\ui\run.lua
 modules\ui\levels.lua
+modules\ui\rarity_odds.lua
 modules\unit\player.lua
 modules\unit\portraits.lua
 modules\unit\resources.lua

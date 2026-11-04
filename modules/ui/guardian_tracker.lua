@@ -22,15 +22,19 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local showPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true
     local shortenHealth = DFRL.display.Get("guardianShortHealth") ~= false
     local guardianArt = DFRL.display.GuardianIcon()
-    local DEFAULT_SCALE = 0.85
+    local style, DEFAULT_SCALE = T.RightHudStyle, 0.85
     local ROW_INSET, NAME_WIDTH, COLUMN_GAP = 12, 120, 16 * 0.9
     local HEALTH_RIGHT_OFFSET = 4
     local TITLE_LEFT = 44
+    local TITLE_SIZE = style.titleSize / DEFAULT_SCALE
     local TITLE_PADDING = TITLE_LEFT + ROW_INSET
     local WIDTH, ROW_HEIGHT = 128 + NAME_WIDTH + COLUMN_GAP + 2 * ROW_INSET, 26
+    -- The health pill's right edge aligns with the default minimap edge.
+    local defaults = { top = 252, right = minimapDefaults.right + (ROW_INSET - HEALTH_RIGHT_OFFSET) * DEFAULT_SCALE }
+    DFRL.guardianTrackerDefaults = defaults
     local visibleRows, rowOffset = DFRL.display.Get("guardianRows"), 0
     local preferredStatusWidth, headerHeight = 128, WIDTH / 8
-    local width, statusWidth = 240, 128
+    local width, statusWidth = style.width / DEFAULT_SCALE, 128
     local healthWidth = 0
     local presentation = { snapshot = { rows = {}, counts = {} }, shown = false, activeRows = 0 }
     local frame = CreateFrame("Frame", "DFRL_GuardianTracker", UIParent)
@@ -42,12 +46,16 @@ DFRL:NewMod("GuardianTracker", 4, function()
     frame:EnableMouseWheel(true)
     frame:Hide()
 
-    local function Label(parent, size, justify)
+    local function Label(parent, size, justify, isTitle)
         local label = parent:CreateFontString(nil, "OVERLAY")
-        T.SetFont(label, size, "OUTLINE")
+        T.SetFont(label, size, isTitle and "" or "OUTLINE")
         label:SetJustifyH(justify or "LEFT")
         label:SetJustifyV("MIDDLE")
-        label:SetTextColor(0.87, 0.74, 0.49)
+        if isTitle then
+            label:SetTextColor(unpack(style.titleColor))
+        else
+            label:SetTextColor(0.87, 0.74, 0.49)
+        end
         T.SetChatShadow(label)
         return label
     end
@@ -59,16 +67,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
         texture:SetTexCoord(0, right or 1, 0, bottom or 1)
         return texture
     end
-    local header = T.CreateArtworkStrip(frame, "BACKGROUND", 2)
-    header:SetTextures(path .. "guardians\\", { "Header.blp", "Header_2.blp" })
-    header:SetWidth(width)
-    header:SetHeight(headerHeight)
-    header:SetTexCoord(1 / 512, 281 / 512, 0, 70 / 128)
-    header:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
-    header:SetAlpha(0.8)
+    local header = T.CreateQuestTrackerHeader(frame, width, headerHeight)
     local icon = Texture(frame, nil, "ARTWORK", 28, 28, 65 / 128, 65 / 128)
     icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 9, -6)
-    local title = Label(frame, 14)
+    local title = Label(frame, TITLE_SIZE, nil, true)
     title:SetPoint("TOPLEFT", frame, "TOPLEFT", TITLE_LEFT, -8)
     title:SetHeight(23)
     local measure = Label(frame, 12)
@@ -255,7 +257,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         for _, source in pairs(captions) do
             preferredStatusWidth = math.max(preferredStatusWidth, CaptionWidth(source) + 16)
         end
-        local titleWidth = CaptionWidth("GUARDIANS", nil, 14)
+        local titleWidth = CaptionWidth("Guardians", nil, TITLE_SIZE)
         if titleWidth <= 0 then return false end
         headerHeight = math.max(
             WIDTH,
@@ -341,7 +343,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
             header:SetHeight(headerHeight)
             presentation.headerHeight = headerHeight
         end
-        T.SetTextIfChanged(title, DFRL.locale.Text("GUARDIANS"))
+        T.SetTextIfChanged(title, DFRL.locale.Text("Guardians"))
         local filtered, count = presentation.filtered or {}, 0
         presentation.filtered = filtered
         if
@@ -439,7 +441,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
         end
         RetireRows(used)
         local height = headerHeight + 12 + (visibleRows > 0 and visibleRows or used) * ROW_HEIGHT
-        if not T.NearlyEqual(frame:GetHeight(), height) then frame:SetHeight(height) end
+        if not T.NearlyEqual(frame:GetHeight(), height) then
+            frame:SetHeight(height)
+            if DFRL.RefreshRarityOddsPlacement then DFRL.RefreshRarityOddsPlacement() end
+        end
     end
     local function ScrollRows(direction)
         if visibleRows == 0 then return end
@@ -451,10 +456,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
     end
     frame:SetScript("OnMouseWheel", function() ScrollRows(arg1) end)
     DFRL.layout.Register("guardianTracker", frame, function()
-        -- Match the health pill's right edge to the default minimap right edge.
-        local right = minimapDefaults.right / DEFAULT_SCALE + ROW_INSET - HEALTH_RIGHT_OFFSET
         frame:ClearAllPoints()
-        frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", right, -252 / DEFAULT_SCALE)
+        frame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", defaults.right / DEFAULT_SCALE, -defaults.top / DEFAULT_SCALE)
     end, {
         labelAbove = true,
         refreshDefault = true,

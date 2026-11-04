@@ -2,9 +2,13 @@
 -- media/tex/meter/LICENSE.txt. Pinned source: third_party/DetailsTWW-ARTWORK.md.
 -- Reset glyph: Blizzard Entertainment; provenance in the same source notes.
 -- The existing gold ring retains third_party/Jewelry-ARTWORK.md's provenance.
+local meterDefaults = { scale = 0.8, header = 32, row = 32, footer = 32 }
+meterDefaults.width = DFRL.tools.RightHudStyle.width / meterDefaults.scale
+DFRL.damageMeterDefaults = meterDefaults
+
 local function BuildMeter()
-    local HEADER, ROW_HEIGHT, FOOTER, REFRESH_SECONDS = 32, 32, 32, 1
-    local width, fontSize = 240, DFRL.display.Get("meterFontSize")
+    local HEADER, ROW_HEIGHT, FOOTER, REFRESH_SECONDS = meterDefaults.header, meterDefaults.row, meterDefaults.footer, 1
+    local width, fontSize = meterDefaults.width, DFRL.display.Get("meterFontSize")
     local nameFontSize = DFRL.display.Get("meterNameFontSize")
     local enabled = DFRL.display.Get("meterEnabled")
     local visible = DFRL.display.Get("meterRows")
@@ -160,7 +164,7 @@ local function BuildMeter()
     local tooltipState = {}
     local hovered
     local root = CreateFrame("Frame", "DFRL_DamageMeter", UIParent)
-    root:SetScale(0.8)
+    root:SetScale(meterDefaults.scale)
     root:SetWidth(width)
     root:SetHeight(HEADER + visible * ROW_HEIGHT + FOOTER)
     root:SetFrameStrata("MEDIUM")
@@ -245,7 +249,7 @@ local function BuildMeter()
         if not label:GetFont() then ready = false end
         label:SetJustifyH(justify or "LEFT")
         label:SetJustifyV("MIDDLE")
-        label:SetTextColor(1, 1, 1)
+        label:SetTextColor(unpack(T.RightHudStyle.bodyColor))
         T.SetChatShadow(label)
         return label
     end
@@ -503,7 +507,7 @@ local function BuildMeter()
     total:SetPoint("LEFT", header, "LEFT", 14, 1)
     total:SetWidth(width - 52)
     total:SetHeight(fontSize + 9)
-    total:SetTextColor(1, 0.82, 0)
+    total:SetTextColor(unpack(T.RightHudStyle.titleColor))
     local function DrawHeader(amount, rate)
         amount = options.total and amount or nil
         rate = options.totalDps and rate or nil

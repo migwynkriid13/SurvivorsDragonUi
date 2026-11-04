@@ -2050,6 +2050,18 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
             {
+                key = "rarityOdds",
+                label = "Rarity odds",
+                options = {
+                    {
+                        "rarityOdds",
+                        "Show rarity odds",
+                        "Estimate the rarity of spell and jewelry rewards.",
+                        wide = true,
+                    },
+                },
+            },
+            {
                 key = "guardians",
                 label = "Guardian tracker",
                 options = {
@@ -2344,7 +2356,11 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Map & navigation",
                 sections = { "waypoints", "cacheIcons", "bossIcons", "minimap" },
             },
-            { key = "interface", label = "Interface", sections = { "chat", "loot", "tooltip", "banners" } },
+            {
+                key = "interface",
+                label = "Interface",
+                sections = { "chat", "loot", "rarityOdds", "tooltip", "banners" },
+            },
             { key = "profiles", label = "Profiles", sections = { "profiles" } },
         }
         local byKey, sections = {}, {}

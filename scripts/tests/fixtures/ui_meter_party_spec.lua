@@ -272,6 +272,7 @@ Test("disabled meter defers all view construction until live first enable", func
         c:SetSetting("meterEnabled", true)
         c:AttachMeter()
         assert(c.root and c.header and c.controller, "live preview did not construct the view")
+        assert(c.env.T.NearlyEqual(c.root:GetWidth() * c.root:GetEffectiveScale(), 204), "meter default width diverged")
         c:Tick(0.01)
         assert(c.root:IsVisible() and c:Row(1).entry, "first enable waited for another interval")
         local root, used = c.root, #c.objects

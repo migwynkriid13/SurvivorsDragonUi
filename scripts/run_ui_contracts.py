@@ -45,13 +45,13 @@ def main():
             "nativeParts", "TakeOver", "Restore", "SyncReplacements",
         ])
         run_hud = run_hud.rsplit("\nreturn ", 1)[0] + "\nreturn { TakeOver = TakeOver, Restore = Restore, Sync = SyncReplacements }\n"
-        guardian_hover = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
-            "PIN_SIZE", "Number", "HideGuardianTooltip", "UpdateGuardianTooltip",
+        minimap_hover = "local hoveredPin, hoveredName, hoveredDistance, hoveredLanguage\n" + extract_source("modules/map/waypoints.lua", [
+            "Number", "HideMinimapTooltip", "PinHit", "UpdateMinimapTooltip",
         ])
-        guardian_timers = "local hoveredPin, hoveredName\n" + extract_source("modules/map/waypoints.lua", [
-            "PIN_SIZE", "guardianArt", "BindGuardianIcon", "Number", "Native", "FrameVisible", "MinimapEntries", "HideGuardianTooltip",
+        guardian_timers = "local hoveredPin, hoveredName, hoveredDistance, hoveredLanguage\n" + extract_source("modules/map/waypoints.lua", [
+            "PIN_SIZE", "guardianArt", "BindGuardianIcon", "Number", "Native", "FrameVisible", "MinimapEntries", "HideMinimapTooltip", "HideCacheEdge", "Rotate",
             "HideGuardianTimer", "UpdateGuardianTimer", "RecyclePins", "MakeMinimapPin", "PlacePin",
-            "Offset", "DrawTrackedPin", "UpdateTrackerPins",
+            "Offset", "DrawTrackedPin", "DrawCacheEdge", "UpdateTrackerPins",
         ])
         guardian_placement = "local tooltip, root = GameTooltip, tooltipRoot\nlocal inWorld, editing = true, false\nlocal lastIconOwner, lastIconIsDetail\nlocal ownerMiss, iconRegistryRevision = {}, 0\nlocal nativeScale = tooltip:GetScale()\n" + extract_source("core/tooltips.lua", [
             "IconOwner", "PlaceTooltip",
@@ -171,7 +171,7 @@ def main():
             ("jewelry-visibility-source.lua", jewelry_cache, "ui_jewelry_visibility_spec.lua"),
             ("jewelry-rarity-source.lua", jewelry_rarity, "ui_jewelry_rarity_spec.lua"),
             ("jewelry-order-source.lua", jewelry_order, "ui_jewelry_order_spec.lua"),
-            ("guardian-hover-source.lua", guardian_hover, "ui_guardian_hover_spec.lua"),
+            ("minimap-hover-source.lua", minimap_hover, "ui_guardian_hover_spec.lua"),
             ("guardian-timers-source.lua", guardian_timers, "ui_guardian_timer_spec.lua"),
             ("border-modes-source.lua", border_modes, "ui_border_spec.lua"),
             ("debuff-tooltip-source.lua", debuff_tooltip, "ui_debuff_tooltip_spec.lua"),
@@ -211,7 +211,7 @@ def main():
                     source_file.write_text(body, encoding="utf-8")
                     command.append(str(source_file))
             run_fixture(command, fixture)
-        for fixture in ("ui_3d_portraits_spec.lua", "ui_menu_native_spec.lua", "ui_dropdown_compat_spec.lua", "ui_artwork_strip_spec.lua", "ui_fonts_spec.lua", "ui_retail_edit_spec.lua", "ui_retail_layout_spec.lua", "ui_default_chat_spec.lua", "ui_health_spec.lua", "ui_player_absorb_spec.lua", "ui_mini_health_spec.lua", "ui_sct_spec.lua", "ui_sct_areas_spec.lua", "ui_native_sct_api_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_native_meter_api_spec.lua", "ui_native_meter_view_spec.lua", "ui_native_portrait_circle_spec.lua", "ui_native_language_spec.lua", "ui_live_position_api_spec.lua", "ui_downed_party_api_spec.lua", "ui_world_marker_api_spec.lua", "ui_party_waypoint_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_default_action_bar_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_target_classification_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
+        for fixture in ("ui_rarity_odds_spec.lua", "ui_3d_portraits_spec.lua", "ui_menu_native_spec.lua", "ui_dropdown_compat_spec.lua", "ui_artwork_strip_spec.lua", "ui_fonts_spec.lua", "ui_retail_edit_spec.lua", "ui_retail_layout_spec.lua", "ui_default_chat_spec.lua", "ui_health_spec.lua", "ui_player_absorb_spec.lua", "ui_mini_health_spec.lua", "ui_sct_spec.lua", "ui_sct_areas_spec.lua", "ui_native_sct_api_spec.lua", "ui_nameplates_spec.lua", "ui_marks_spec.lua", "ui_meter_party_spec.lua", "ui_native_meter_api_spec.lua", "ui_native_meter_view_spec.lua", "ui_native_portrait_circle_spec.lua", "ui_native_language_spec.lua", "ui_live_position_api_spec.lua", "ui_downed_party_api_spec.lua", "ui_world_marker_api_spec.lua", "ui_party_waypoint_spec.lua", "ui_banners_perf_spec.lua", "ui_layout_spec.lua", "ui_pets_totems_spec.lua", "ui_guardian_tracker_perf_spec.lua", "ui_revive_perf_spec.lua", "ui_core_idle_cadence_spec.lua", "ui_cooldown_lifecycle_spec.lua", "ui_default_action_bar_spec.lua", "ui_tooltip_style_perf_spec.lua", "ui_target_color_perf_spec.lua", "ui_target_classification_spec.lua", "ui_passive_cadence_spec.lua", "ui_projection_cache_perf_spec.lua", "ui_sct_metadata_perf_spec.lua"):
             run_fixture(["lua5.1", "scripts/tests/fixtures/" + fixture], fixture)
     if failures:
         print("Failed UI fixtures:", file=sys.stderr)

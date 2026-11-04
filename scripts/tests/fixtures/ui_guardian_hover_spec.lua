@@ -4,6 +4,7 @@ local function Fixture()
     local state = { writes = 0, cursorX = 0, cursorY = 0 }
     local pin = { guardianName = "Kobold Taskmaster", visible = true, drawnX = 0, drawnY = 0 }
     function pin:IsVisible() return self.visible end
+    function pin:GetWidth() return 20 end
     local minimap = {}
     function minimap:GetCenter() return 0, 0 end
     function minimap:GetEffectiveScale() return 1.5 end
@@ -34,12 +35,20 @@ local function Fixture()
     local env = setmetatable({
         GameTooltip = tooltip,
         Minimap = minimap,
-        trackers = { {}, { minimapPins = { ["1:10"] = pin } } },
+        trackers = { { entries = {}, minimapPins = {} }, { minimapPins = { ["1:10"] = pin } } },
         MinimapEntries = function() return entries end,
         GetCursorPosition = function() return state.cursorX, state.cursorY end,
         T = { GetLocalSize = function() return 100, 100 end },
         navigation = { MinimapSize = function() return 100, 100 end },
         DFRL = {
+            locale = {
+                code = "en",
+                Text = function(text) return text end,
+                Native = function(key, fields)
+                    assert(key == "common.yards")
+                    return fields.n .. " yd"
+                end,
+            },
             layout = {
                 IsEditing = function() return state.editing end,
                 IsHidden = function() return state.hidden end,
@@ -106,6 +115,27 @@ state.pin.visible = false
 state.Update()
 assert(not state.tooltip.shown, "retired marker retained its tooltip")
 print("PASS guardian hover naming, unchanged work and retired-marker cleanup")
+
+state = Fixture()
+local cache = { drawnX = 20, drawnY = 0, cacheDistance = 400 }
+function cache:GetWidth() return 16 end
+function cache:IsVisible() return true end
+local cacheTracker = state.env.trackers[1]
+cacheTracker.entries[1] = { key = "cache1" }
+cacheTracker.minimapPins.cache1 = cache
+state.cursorX = 30
+state.Update()
+assert(state.tooltip.text == "Cache · 20 yd" and state.tooltip:IsOwned(cache))
+state.writes = 0
+cache.cacheDistance = 408
+state.Update()
+assert(state.writes == 0, "same rounded distance repainted the cache tooltip")
+cache.cacheDistance = 441
+state.Update()
+assert(state.tooltip.text == "Cache · 21 yd", "changed distance failed to refresh the cache tooltip")
+cacheTracker.minimapPins.cache1 = nil
+state.Update()
+assert(not state.tooltip.shown, "removed cache retained its tooltip")
 
 state = Fixture()
 state.pin.drawnX, state.cursorX = 20, 30

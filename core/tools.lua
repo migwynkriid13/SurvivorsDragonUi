@@ -1,5 +1,13 @@
 setfenv(1, DFRL:GetEnv())
 
+-- Default width and title size in UIParent units, independent of panel scale.
+DFRL.tools.RightHudStyle = {
+    width = 204,
+    titleSize = 10.4,
+    titleColor = { 1, 0.82, 0 },
+    bodyColor = { 1, 1, 1 },
+}
+
 -- Native screen-unit setters now round through 24-bit floats. Their getters
 -- need not return the exact Lua number that was set, even at a fixed viewport.
 function DFRL.tools.NearlyEqual(a, b)
@@ -107,6 +115,19 @@ function DFRL.tools.CreateArtworkStrip(parent, layer, count)
         end
     end
     return view
+end
+
+-- The packaged Quest Tracker crop is shared by the guardian and reward HUDs.
+-- See third_party/GuardianTracker-ARTWORK.md for the original art and notice.
+function DFRL.tools.CreateQuestTrackerHeader(parent, width, height)
+    local header = T.CreateArtworkStrip(parent, "BACKGROUND", 2)
+    header:SetTextures(DFRL:GetInfoOrCons("tex"), { "guardians\\Header.blp", "guardians\\Header_2.blp" })
+    header:SetWidth(width)
+    header:SetHeight(height)
+    header:SetTexCoord(1 / 512, 281 / 512, 0, 70 / 128)
+    header:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, 0)
+    header:SetAlpha(0.8)
+    return header
 end
 
 -- The original two horizontal halves are stacked in a legal 512x512 atlas.

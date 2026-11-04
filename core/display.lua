@@ -40,6 +40,7 @@ DFRL:NewMod("Display", 0, function()
         bossCombineBars = false,
         lootMode = "sdui",
         lootShowMarks = true,
+        rarityOdds = false,
         petRows = 6,
         petSpacing = 4,
         hidePetNames = false,
