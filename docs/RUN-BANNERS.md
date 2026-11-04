@@ -1,13 +1,38 @@
 # Run banners
 
 `modules/ui/banners.lua` displays native notices in its own **Banners** frame. It
-uses the same resolved DEFAULT face, size 12, OUTLINE and black shadow as chat,
-through the shared helpers in `core/fonts.lua`. The supplied translated text is
-displayed unchanged except for the requested full guardian-death wording below.
-The native `boss` flag selects red text; other notices use
-gold. No icon, backdrop, sound or gameplay lookup is added. The Layout caption
-uses the existing fourteen-language source/runtime catalogs.
+uses the same resolved DEFAULT face, size 12, OUTLINE and black shadow as chat
+for ordinary notices. The supplied translated text is displayed as received,
+with the full guardian-death wording described below. The native `boss` flag
+selects red text. Other ordinary notices use gold.
 Received affix warnings use the same red warning style and banner lifetime.
+
+## Achievement toasts
+
+When an achievement is earned, the Banners group shows its localized title
+with the retail achievement frame, icon and points shield. The
+[achievement payload contract](CODEX-ACHIEVEMENT-BANNER-API-PROPOSAL.md)
+adds the stable key, texture path and awarded points to the existing callback.
+The addon validates the metadata and snapshots the display fields at receipt.
+The existing banner ID identifies each notification, including awards with the
+same title. Zero points use the emblem shield. An unknown amount leaves the
+shield hidden.
+
+Older callbacks can supply the title and amount through the exact localized
+achievement message. On clients without the full banner API, Custom banners
+listens for that complete message on `CHAT_MSG_SYSTEM` while in the world.
+This path leaves native banners and chat under game ownership. It needs the
+game to emit the award as a system message. Both legacy paths use exact
+localized Codex titles to resolve the two known icons. Other awards without
+art use the neutral question mark. A notice without a usable title keeps the
+ordinary text presentation.
+
+Achievement cards reuse the same three queue slots, group placement, lifetime
+and Performance Mode behavior. Each slot lazily adds one frame, four textures
+and three text regions, only when it presents a visible achievement. Hidden
+awards can expire before allocating a card. The system-message fallback uses
+the existing controller while a toast is pending and detaches it at expiry.
+See [retail artwork provenance](../third_party/AchievementToast-ARTWORK.md).
 
 ## Placement and lifetime
 
@@ -76,7 +101,7 @@ newest 20 publications, oldest first; this addon does not consume that history.
 | `cache`       | Cache hints and purchase feedback |
 | `rune`        | Rune notification                 |
 
-All supplied kinds use the same text path, including future unknown kinds.
+Ordinary banners and future unknown kinds use the text path.
 Guardian-slain notices also have `boss == true`; the flag is not used to infer
 an entity type, spawn, health, reward or encounter state. No message is inferred
 from chat, a boss list, a countdown or an item acquisition.

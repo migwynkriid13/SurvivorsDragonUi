@@ -1,10 +1,11 @@
 -- CI only: production banner controller over explicit native handler/HUD mocks.
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
-local function NewBannerContext()
+local function NewBannerContext(chatOnly)
     local context = H.New()
     local env = context.env
     context:Load("core/messages.lua")
     context.settings.customBanners = false
+    context:Load("core/localization.lua")
     context:Load("localization/data.lua")
     env.DFRL.CleanerChat = nil -- Default chat has no custom chat/capture namespace.
     env.DFRL.layout.Place = function() end
@@ -30,6 +31,9 @@ local function NewBannerContext()
         context.reads.hud = (context.reads.hud or 0) + 1
         return context.nativeShown
     end
+    if chatOnly then
+        env.AZS_RegisterBannerHandler, env.AZS_UnregisterBannerHandler = nil, nil
+    end
     context.errors = {}
     context.originalError = function(owner, text, r, g, b, id, hold)
         table.insert(context.errors, { owner = owner, text = text, r = r, g = g, b = b, id = id, hold = hold })
@@ -44,6 +48,86 @@ local function NewBannerContext()
 end
 
 local context = NewBannerContext()
+local function AchievementCard(current, title)
+    for _, object in ipairs(current.objects) do
+        if object.kind == "Frame" and object.title and object.title:GetText() == title then return object end
+    end
+end
+local iconPath = "Interface\\Icons\\INV_Test_Achievement"
+for _, performance in ipairs({ false, true }) do
+    local current = NewBannerContext()
+    current:SetSetting("customBanners", true)
+    current:SetSetting("performanceMode", performance)
+    local service = current:Controller("CVAR_UPDATE")
+    assert(not service.events.CHAT_MSG_SYSTEM, "callback and chat fallback were both listening")
+    local notice = {
+        id = 1,
+        kind = "achievement",
+        name = "Every Bauble",
+        text = "Achievement earned: Every Bauble (+25)",
+        achievement = { key = "test:full-codex", icon = iconPath, points = 30 },
+    }
+    current:SetLayoutHidden(true)
+    local allocated = table.getn(current.objects)
+    current.handler(notice)
+    current.handler(notice)
+    assert(table.getn(current.objects) == allocated, "hidden or duplicate award allocated its view")
+    notice.achievement.icon, notice.achievement.points = "changed", 50
+    current:SetLayoutHidden(false)
+    local card = assert(AchievementCard(current, "Every Bauble"), "structured award did not show a toast")
+    assert(card.icon:GetTexture() == iconPath and card.points:GetText() == "30", "award used mutable or legacy fields")
+    assert(card:GetAlpha() == (performance and 1 or 0), "award used the wrong animation mode")
+    assert(table.getn(current.objects) == allocated + 8, "award allocated outside the one pooled slot")
+    current.env.DFRL.banners.Clear()
+    assert(not card:IsShown() and not card.icon:GetTexture(), "award view held its dynamic icon after clear")
+    notice.achievement = { key = "test:zero", icon = iconPath, points = 0 }
+    current.handler(notice)
+    assert(AchievementCard(current, "Every Bauble") == card, "award did not reuse its card")
+    assert(card.shield:IsShown() and card.points:GetText() == "", "zero award did not use the emblem shield")
+    current.env.DFRL.banners.Clear()
+    notice.text, notice.achievement = "Award without points", { key = "test:unknown", icon = iconPath, points = -1 }
+    current.handler(notice)
+    assert(not card.shield:IsShown() and card.points:GetText() == "", "unknown reward displayed a stale amount")
+    current:Event(service, "PLAYER_LEAVING_WORLD")
+    assert(not card:IsShown() and current.nativeShown, "world cleanup failed to retire the award or restore native HUD")
+end
+
+local legacy = NewBannerContext()
+legacy:SetSetting("customBanners", true)
+local languages = 0
+for code in pairs(legacy.env.DFRL.locale.data) do
+    local locale = legacy.env.DFRL.locale
+    locale.Select(code)
+    local name = locale.Native("Jeweler's Eye")
+    legacy.handler({
+        id = 1,
+        kind = "achievement",
+        text = locale.Native("Achievement earned: {name} (+{n})", { name = name, n = 10 }),
+    })
+    local card = assert(AchievementCard(legacy, name), "old callback did not parse the award for " .. code)
+    assert(card.icon:GetTexture() == "Interface\\Icons\\INV_Jewelry_Ring_15" and card.points:GetText() == "10")
+    legacy.env.DFRL.banners.Clear()
+    languages = languages + 1
+end
+assert(languages == 14, "legacy awards omitted a native language")
+
+local chatOnly = NewBannerContext(true)
+chatOnly:SetSetting("customBanners", true)
+local chatService = chatOnly:Controller("CHAT_MSG_SYSTEM")
+assert(chatOnly.nativeShown and not chatService:GetScript("OnUpdate"), "chat fallback acquired the HUD or idle work")
+chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "Unrelated: Achievement earned: Every Bauble (+25)")
+chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "Achievement earned: Every Bauble (+-25)")
+assert(not AchievementCard(chatOnly, "Every Bauble"), "chat fallback accepted malformed or partial templates")
+chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "Achievement earned: Every Bauble (+25)")
+local chatCard = assert(AchievementCard(chatOnly, "Every Bauble"), "chat-only award did not show")
+assert(chatCard.points:GetText() == "25" and chatService:GetScript("OnUpdate"), "chat award lost points or expiry")
+chatOnly.now = chatOnly.now + 4.11
+chatOnly:Call(chatService, "OnUpdate", 4.11)
+assert(not chatCard:IsShown() and not chatService:GetScript("OnUpdate"), "chat toast retained idle work after expiry")
+chatOnly:SetSetting("customBanners", false)
+assert(not chatService.events.CHAT_MSG_SYSTEM and not chatOnly.handler, "disabled fallback retained its listener")
+print("PASS achievement awards retain official metadata, exact legacy messages, pooled presentation and idle cleanup")
+
 for _, performance in ipairs({ false, true }) do
     local current = NewBannerContext()
     current:SetSetting("customBanners", true)
