@@ -23,10 +23,21 @@ text. Custom banners also recognizes the game's chat format, such as
 `Achievement earned: [Regular] (10 points)`. On clients without the full banner
 API, it listens for complete award messages on `CHAT_MSG_SYSTEM` while in the world.
 This path leaves native banners and chat under game ownership. It needs the
-game to emit the award as a system message. Both legacy paths use exact
-localized Codex titles to resolve the two known icons. Other awards without
-art use the neutral question mark. A notice without a usable title keeps the
-ordinary text presentation.
+game to emit the award as a system message. When a notice lacks an icon,
+both paths look up its exact localized title and awarded points. The lookup
+uses the game's 0.141.0 achievement records in all fourteen languages. Missing
+or ambiguous matches use the neutral question mark. A notice without a usable
+title keeps the ordinary text presentation.
+
+The [fallback source table](../localization/achievement-icons.tsv) records
+131 definitions. The native constructor at `0x145e4d620` in the pinned client
+builds the name, points and icon together. For example, the **Regular** record
+binds `INV_Misc_Note_01` at `0x145e55946` and stores 10 points at `0x145e55958`.
+The two **Champion of Naxxramas** rewards differ by points and retain their own
+icons. The two 10-point **Overtime** records have different icons and share one
+legacy lookup key, so the generated lookup omits that key. All selected icon
+paths were found in the installed archives. Regenerate the localized data
+with `scripts/generate_localization.py --client <exe> --refresh-achievements-only`.
 
 Achievement cards reuse the same three queue slots, group placement, lifetime
 and Performance Mode behavior. Each slot lazily adds one frame, four textures

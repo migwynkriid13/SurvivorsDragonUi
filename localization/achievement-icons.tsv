@@ -1,0 +1,132 @@
+name	points	icon	zone	class
+A Million Dead	50	Spell_Shadow_RaiseDead		
+Against All Odds	50	Spell_Holy_DivineIntervention		
+Against the Odds	50	Spell_Holy_DivineIntervention		
+Armory of Legends	50	INV_Chest_Plate02		
+Bad Dragon!	25	INV_Misc_Head_Dragon_Black		
+Bare Knuckles	25	INV_Shirt_White_01		
+Better Together	10	Spell_Holy_PrayerOfHealing02		
+Beyond the Vault	10	INV_Misc_Gem_Variety_01		
+Blue Screen of Death	25	Spell_Arcane_StarFire		
+Bonk the Bonker	10	INV_Mace_01		
+Boss Hunter	10	INV_Misc_Head_Dragon_01		
+Cache Cracker	10	INV_Box_02		
+Carnage	25	Spell_Shadow_DeathScream		
+Champion of Naxxramas	50	INV_Misc_Head_Dragon_Black		
+Champion of {zone}	25	Ability_Hunter_Pet_Raptor	zone.ungoro.name	
+Champion of {zone}	25	Ability_Warrior_SavageBlow	zone.feralas.name	
+Champion of {zone}	25	INV_BannerPVP_02	zone.wsg.name	
+Champion of {zone}	25	INV_Misc_AhnQirajTrinket_01	zone.aq.name	
+Champion of {zone}	25	INV_Misc_Bandana_03	zone.elwynn.name	
+Champion of {zone}	25	INV_Misc_Book_01	zone.scholomance.name	
+Champion of {zone}	25	INV_Misc_Head_Dragon_Black	zone.brm.name	
+Champion of {zone}	25	INV_Misc_Head_Dragon_Blue	zone.av.name	
+Champion of {zone}	25	INV_Misc_Head_Scourge_01	zone.naxx.name	
+Champion of {zone}	25	INV_Misc_Head_Troll_01	zone.arena.name	
+Champion of {zone}	25	INV_Misc_Head_Troll_02	zone.ab.name	
+Champion of {zone}	25	Spell_Holy_HolySmite	zone.sm.name	
+Champion of {zone}	25	Spell_Shadow_RaiseDead	zone.duskwood.name	
+Clever Girl	25	Ability_Hunter_Pet_Raptor		
+Collector	10	INV_Chest_Chain		
+Conqueror	25	INV_BannerPVP_01		
+Curator	25	INV_Helmet_08		
+Danger Money	50	INV_Misc_Coin_03		
+Deathless Hour	50	Spell_Nature_TimeStop		
+Dragonslayers	25	INV_Misc_Head_Dragon_Blue		
+Empowered	25	Spell_Holy_PowerInfusion		
+Every Bauble	25	INV_Jewelry_Necklace_AhnQiraj_02		
+Exterminator	10	INV_Sword_04		
+Eye Caramba!	50	INV_Misc_AhnQirajTrinket_01		
+Five Stars	25	INV_Misc_Gem_Diamond_02		
+Five of a Kind	25	Spell_Holy_PowerInfusion		
+For the Team	10	INV_BannerPVP_02		
+Fully Talented	25	INV_Misc_Book_11		
+Hakkar Smoothie	50	Ability_Whirlwind		
+Hazard Pay	25	INV_Misc_Coin_04		
+Heroic Across Azeroth	50	INV_Misc_Map_01		
+Heroic Debut	10	Ability_Warrior_BattleShout		
+Heroic Resolve	25	Ability_Warrior_DefensiveStance		
+Hoarder	10	INV_Chest_Plate16		
+Holy Frame Drops	50	Spell_Holy_InnerFire		
+Honed	10	INV_Misc_Gem_Variety_02		
+Humble Beginnings	25	INV_Shirt_05		
+Jeweler's Eye	10	INV_Jewelry_Ring_15		
+Jurassic Pack	25	Ability_Hunter_Pet_Raptor		
+Lair Breaker	25	Ability_Hunter_Pet_Bear		
+Lair Raider	10	Ability_Hunter_Pet_Wolf		
+Legendary	25	INV_Sword_39		
+Marked	10	INV_Misc_Coin_02		
+Master of All	50	INV_Misc_Book_07		
+Matched	10	INV_Chest_Chain_15		
+Matching Outfits	25	INV_Shirt_GuildTabard_01		
+Never Ending	25	Spell_Nature_TimeStop		
+Not Today, Satan	25	Spell_Holy_HolySmite		
+Overtime	10	INV_Misc_PocketWatch_01		
+Overtime	10	Spell_Holy_BorrowedTime		
+Pocket Change	10	INV_Misc_Coin_02		
+Polished	10	INV_Misc_Gem_Variety_01		
+Quartermaster	50	INV_Misc_Coin_02		
+Radiant Armory	50	Spell_Fire_SealOfFire		
+Raid Night	25	INV_Misc_Head_Dragon_Black		
+Regular	10	INV_Misc_Note_01		
+Rest in Photosynthesis	50	Spell_Nature_Tranquility		
+Scourge of Azeroth	25	INV_Sword_39		
+Shared Wisdom	25	INV_Misc_Book_09		
+Slaughterhouse	10	Ability_Whirlwind		
+Spin to Win	25	Ability_Whirlwind		
+Stitches Get Stitches	10	Ability_Gouge		
+Stop Hitting Yourself	25	Spell_Nature_Thorns		
+Stormstrike Graduation	25	Spell_Holy_SealOfMight		
+Straight A's	25	INV_Misc_Note_01		
+Suck It, Hakkar!	25	Spell_Shadow_LifeDrain02		
+Suited Up	10	INV_Chest_Plate03		
+The Brotherhood Falls	25	INV_Misc_Bandana_03		
+The Insane	50	Spell_Shadow_UnholyFrenzy		
+The Old Gods Have No Friends	50	INV_Misc_AhnQirajTrinket_01		
+The Whole Armory	50	INV_Helmet_74		
+Things That Go Bump in the Night	25	Ability_Mount_BlackDireWolf		
+Thrifty	25	INV_Box_01		
+Together, To the End	50	INV_Misc_Head_Scourge_01		
+Totem'ly Balanced	50	Spell_Fire_SelfDestruct		
+Treasure Hunter	25	INV_Misc_Coin_01		
+Unending	25	INV_Misc_PocketWatch_02		
+Unpolished	25	INV_Gauntlets_04		
+Veteran	10	INV_Misc_Book_09		
+Warden's Bane	25	Ability_Hunter_Pet_Gorilla		
+Wardrobe	25	INV_Chest_Cloth_23		
+Well Paid	25	INV_Misc_Coin_02		
+Yes, I am prepared!	50	INV_Misc_Book_01		
+You Are Not Prepared!	50	INV_Misc_Book_11		
+You're Fired	10	Spell_Fire_Fireball02		
+no u	25	Spell_Frost_FrostBolt02		
+zone.ab.name	10	INV_Misc_Head_Troll_02		
+zone.aq.name	25	INV_Misc_AhnQirajTrinket_01		
+zone.arena.name	15	INV_Misc_Head_Troll_01		
+zone.av.name	15	INV_Misc_Head_Dragon_Blue		
+zone.brm.name	20	INV_Misc_Head_Dragon_Black		
+zone.duskwood.name	10	Spell_Shadow_RaiseDead		
+zone.elwynn.name	10	INV_Misc_Bandana_03		
+zone.feralas.name	15	Ability_Warrior_SavageBlow		
+zone.naxx.name	30	INV_Misc_Head_Scourge_01		
+zone.scholomance.name	20	INV_Misc_Book_01		
+zone.sm.name	15	Spell_Holy_HolySmite		
+zone.ungoro.name	10	Ability_Hunter_Pet_Raptor		
+zone.wsg.name	10	INV_BannerPVP_02		
+{class} Victorious	10	Ability_Druid_Maul		class.druid.name
+{class} Victorious	10	INV_Staff_13		class.mage.name
+{class} Victorious	10	INV_Staff_30		class.priest.name
+{class} Victorious	10	INV_Sword_27		class.warrior.name
+{class} Victorious	10	INV_ThrowingKnife_04		class.rogue.name
+{class} Victorious	10	INV_Weapon_Bow_07		class.hunter.name
+{class} Victorious	10	Spell_Holy_HolyBolt		class.paladin.name
+{class} Victorious	10	Spell_Nature_BloodLust		class.shaman.name
+{class} Victorious	10	Spell_Nature_FaerieFire		class.warlock.name
+{class} of the Scarab Wall	25	Ability_Druid_Maul		class.druid.name
+{class} of the Scarab Wall	25	INV_Staff_13		class.mage.name
+{class} of the Scarab Wall	25	INV_Staff_30		class.priest.name
+{class} of the Scarab Wall	25	INV_Sword_27		class.warrior.name
+{class} of the Scarab Wall	25	INV_ThrowingKnife_04		class.rogue.name
+{class} of the Scarab Wall	25	INV_Weapon_Bow_07		class.hunter.name
+{class} of the Scarab Wall	25	Spell_Holy_HolyBolt		class.paladin.name
+{class} of the Scarab Wall	25	Spell_Nature_BloodLust		class.shaman.name
+{class} of the Scarab Wall	25	Spell_Nature_FaerieFire		class.warlock.name

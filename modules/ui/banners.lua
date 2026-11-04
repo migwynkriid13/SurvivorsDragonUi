@@ -46,10 +46,6 @@ DFRL:NewMod("RunBanners", 4, function()
     local ACHIEVEMENT_MESSAGE = "Achievement earned: {name} (+{n})"
     local ACHIEVEMENT_POINTS = "{n} points"
     local ACHIEVEMENT_ICON_ROOT = "Interface\\Icons\\"
-    local CODEX_ICONS = {
-        ["Jeweler's Eye"] = ACHIEVEMENT_ICON_ROOT .. "INV_Jewelry_Ring_15",
-        ["Every Bauble"] = ACHIEVEMENT_ICON_ROOT .. "INV_Jewelry_Necklace_AhnQiraj_02",
-    }
     local AFFIX_WARNINGS = { "An Explosive Orb appears! Destroy it before it bursts!" }
     local native = T.NewHudOwner("banners", "hudBanners")
     local controller = CreateFrame("Frame")
@@ -491,13 +487,11 @@ DFRL:NewMod("RunBanners", 4, function()
             end
         end
         if not name or not string.find(name, "%S") then return end
-        if not icon and not keyed then
-            for canonical, path in pairs(CODEX_ICONS) do
-                if name == DFRL.locale.Native(canonical) then
-                    icon = path
-                    break
-                end
-            end
+        if not icon and points ~= nil then
+            local catalog = DFRL.locale.data[DFRL.locale.code]
+            local icons = catalog and catalog.achievementIcons
+            local basename = icons and icons[name .. "\n" .. tostring(points)]
+            if basename then icon = ACHIEVEMENT_ICON_ROOT .. basename end
         end
         return { name = name, icon = icon, points = points }
     end

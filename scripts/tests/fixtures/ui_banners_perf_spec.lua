@@ -64,8 +64,8 @@ for _, performance in ipairs({ false, true }) do
         id = 1,
         kind = "achievement",
         name = "Every Bauble",
-        text = "Achievement earned: Every Bauble (+25)",
-        achievement = { key = "test:full-codex", icon = iconPath, points = 30 },
+        text = "Achievement earned: Every Bauble (+10)",
+        achievement = { key = "test:full-codex", icon = iconPath, points = 25 },
     }
     current:SetLayoutHidden(true)
     local allocated = table.getn(current.objects)
@@ -75,7 +75,7 @@ for _, performance in ipairs({ false, true }) do
     notice.achievement.icon, notice.achievement.points = "changed", 50
     current:SetLayoutHidden(false)
     local card = assert(AchievementCard(current, "Every Bauble"), "structured award did not show a toast")
-    assert(card.icon:GetTexture() == iconPath and card.points:GetText() == "30", "award used mutable or legacy fields")
+    assert(card.icon:GetTexture() == iconPath and card.points:GetText() == "25", "award used mutable or legacy fields")
     assert(card:GetAlpha() == (performance and 1 or 0), "award used the wrong animation mode")
     assert(table.getn(current.objects) == allocated + 8, "award allocated outside the one pooled slot")
     current.env.DFRL.banners.Clear()
@@ -126,6 +126,19 @@ for code in pairs(legacy.env.DFRL.locale.data) do
     languages = languages + 1
 end
 assert(languages == 14, "legacy awards omitted a native language")
+legacy.env.DFRL.locale.Select("en")
+for _, award in ipairs({
+    { "Champion of Naxxramas", 25, "INV_Misc_Head_Scourge_01" },
+    { "Champion of Naxxramas", 50, "INV_Misc_Head_Dragon_Black" },
+    { "Overtime", 10, "INV_Misc_QuestionMark" },
+    { "Regular", 50, "INV_Misc_QuestionMark" },
+}) do
+    local name, points, icon = unpack(award)
+    legacy.handler({ id = 3, kind = "achievement", text = "Achievement earned: " .. name .. " (+" .. points .. ")" })
+    local card = assert(AchievementCard(legacy, name), "legacy award did not display")
+    assert(card.icon:GetTexture() == "Interface\\Icons\\" .. icon, "legacy award picked the wrong icon for " .. name)
+    legacy.env.DFRL.banners.Clear()
+end
 
 local chatOnly = NewBannerContext(true)
 chatOnly:SetSetting("customBanners", true)
@@ -139,6 +152,7 @@ assert(not AchievementCard(chatOnly, "Every Bauble"), "chat fallback accepted ma
 chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "|cffffff00Achievement earned: [Regular]|r |cffaaaaaa(10 points)|r")
 local chatCard = assert(AchievementCard(chatOnly, "Regular"), "chat-only award did not show")
 assert(chatCard.points:GetText() == "10" and chatService:GetScript("OnUpdate"), "chat award lost points or expiry")
+assert(chatCard.icon:GetTexture() == "Interface\\Icons\\INV_Misc_Note_01", "chat award lost the game's Regular icon")
 chatOnly.now = chatOnly.now + 4.11
 chatOnly:Call(chatService, "OnUpdate", 4.11)
 assert(not chatCard:IsShown() and not chatService:GetScript("OnUpdate"), "chat toast retained idle work after expiry")
