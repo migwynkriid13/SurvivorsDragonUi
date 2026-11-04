@@ -33,6 +33,14 @@ class SourceContractTests(unittest.TestCase):
         result = self.scan('DFRL.display.Set("enabled", true)')
         self.assertEqual(result["unusedSettings"], ["enabled"])
 
+    def test_display_accessor_counts_as_a_reader_but_dynamic_reads_do_not(self):
+        accessor = '\nfunction display.Icon() return DFRL.display.Get("enabled") end\n'
+        result = self.scan("", display=DISPLAY + accessor)
+        self.assertEqual(result["failures"], [])
+        self.assertEqual(result["unusedSettings"], [])
+        dynamic = '\nfor _, key in ipairs({"enabled"}) do DFRL.display.Get(key) end\n'
+        self.assertEqual(self.scan("", display=DISPLAY + dynamic)["unusedSettings"], ["enabled"])
+
     def test_native_closure_limit_accepts_32_and_rejects_33_distinct_bindings(self):
         for count in (32, 33):
             names = ", ".join(f"value{index}" for index in range(count))

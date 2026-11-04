@@ -1380,7 +1380,7 @@ for _ in pairs(pages) do
     pageCount = pageCount + 1
 end
 assert(
-    pageCount == 22 and pages.cacheIcons and pages.bossIcons and layoutBuilds == 1,
+    pageCount == 23 and pages.cacheIcons and pages.bossIcons and pages.rarityOdds and layoutBuilds == 1,
     "full category walk lost or rebuilt sections"
 )
 local allCategoryObjects = #context.objects

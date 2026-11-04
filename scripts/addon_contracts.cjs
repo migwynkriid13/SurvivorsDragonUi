@@ -291,7 +291,9 @@ function analyze(sources, captions = []) {
           failures.push(`${location}: unknown setting ${literal}`);
         if (literal === undefined)
           dynamic.push({ location, api, candidates: names.filter((name) => settings.has(name)) });
-        if (api.endsWith('.Get') && file !== 'core/display.lua') {
+        // The display owner also has concrete readers, such as icon accessors.
+        // Keep excluding its dynamic reads, which can traverse every setting.
+        if (api.endsWith('.Get') && (file !== 'core/display.lua' || literal !== undefined)) {
           for (const name of names) {
             if (settings.has(name)) consumed.get(name).push(location);
           }

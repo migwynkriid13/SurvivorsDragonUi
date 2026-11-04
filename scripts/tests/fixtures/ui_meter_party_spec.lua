@@ -547,8 +547,12 @@ Test("numeric reservation follows the final caption instead of fixed empty colum
     context:Tick()
     context:Cycle()
     local row = context:Row(1)
+    local availableWithIcons = context.root:GetWidth() - 53
     assert(row.value:GetText() == "10" and row.value.measuredText == "10", "layout measured the previous caption")
-    assert(row.value:GetWidth() == 9 and row.name:GetWidth() == 173, "short DPS retained a fixed numeric deadzone")
+    assert(
+        row.value:GetWidth() == 9 and row.name:GetWidth() == availableWithIcons - 14,
+        "short DPS retained a fixed numeric deadzone"
+    )
     local allocated = #context.objects
     local nameWidth = row.name:GetWidth()
     context.healing[1].dps = 1210
@@ -588,14 +592,17 @@ Test("numeric reservation follows the final caption instead of fixed empty colum
     context:ResetCounts()
     context:Tick()
     assert(
-        not row.value:IsShown() and row.name:GetWidth() == 187,
+        not row.value:IsShown() and row.name:GetWidth() == availableWithIcons,
         "disabled numbers did not return their entire gutter"
     )
     assert(not context.reads.metrics, "disabled numeric text still requested glyph metrics")
     context:SetSetting("meterShowIcons", false)
     context:ResetCounts()
     context:Tick()
-    assert(row.name:GetWidth() == 219 and not context.reads.metrics, "disabled icons retained unused name space")
+    assert(
+        row.name:GetWidth() == availableWithIcons + 32 and not context.reads.metrics,
+        "disabled icons retained unused name space"
+    )
 end)
 
 Test("name and number fonts stay independent and rejected native sizes retry", function()

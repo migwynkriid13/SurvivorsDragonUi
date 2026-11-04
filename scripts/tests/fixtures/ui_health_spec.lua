@@ -847,7 +847,7 @@ end)
 -- Production target color, border and refresh scheduling over the real health owner.
 local function TargetView(context, labels)
     local env, bar = context.env, context.env.TargetFrameHealthBar
-    env.tex = "InterfaceAddOnsSurvivorsDragonUimedia\tex\unitframes\\"
+    env.tex = env.DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     env.UnitIsUnit = function() return false end
     env.UnitClassification = function()
         context.reads.classification = (context.reads.classification or 0) + 1

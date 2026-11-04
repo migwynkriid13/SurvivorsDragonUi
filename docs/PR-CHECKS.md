@@ -1482,8 +1482,9 @@ repaints after `T.ClearRotation`. The waypoint frame fixture turns a guide for
 heading equation. `ui_minimap_arrow_steps_spec.lua` drives the production
 legacy minimap arrow from native `AZS_RUN.pf` packets: its offset follows every
 heading, its UVs change only per step and an unchanged heading writes nothing.
-The gold glow fixture allows at most 129 distinct ray crops over five seconds
-and requires a restart to repaint the rays.
+The gold glow fixture allows at most 128 distinct ray crops across the 4.8-second
+wrap, forbids repeated writes within the same step and requires a restart to
+repaint the rays.
 
 The nameplate fixture requires a settled plate to sample its position every
 frame without rereading effective scale, width or height. A health callback

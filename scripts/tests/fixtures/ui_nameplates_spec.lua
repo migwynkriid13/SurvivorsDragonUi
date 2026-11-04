@@ -1416,10 +1416,9 @@ do
     current:Call(plate.nativeBar, "OnValueChanged")
     assert(reads.world == 2 and reads.scale == 1, "repeated callbacks reread unchanged plate metrics")
 
+    -- The shared mock dispatches OnHide and OnShow on the native transitions.
     plate:Hide()
-    current:Call(plate, "OnHide")
     plate:Show()
-    current:Call(plate, "OnShow")
     assert(plate.fixture.origin ~= origin and reads.scale == 2, "a reused plate kept its retired metrics")
 
     for _, case in ipairs({ { "GetWidth", -1 }, { "GetWidth", 0 }, { "GetHeight" }, { "GetEffectiveScale" } }) do
@@ -1427,9 +1426,7 @@ do
         local original = plate[method]
         plate[method] = function() return value end
         plate:Hide()
-        current:Call(plate, "OnHide")
         plate:Show()
-        current:Call(plate, "OnShow")
         local incomplete = plate.fixture.origin
         assert(incomplete and incomplete.metricsScale == nil, method .. " cached incomplete native metrics")
         plate[method] = original

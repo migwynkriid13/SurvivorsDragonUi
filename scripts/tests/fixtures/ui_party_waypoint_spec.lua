@@ -91,6 +91,8 @@ env.DFRL.navigation = {
     MinimapSize = function() return 100, 100 end,
 }
 c:Load("core/hud.lua")
+c:Load("core/widgets.lua")
+c:Load("core/tooltips.lua")
 c:Load("core/display.lua", "Display")
 do
     local defaults = env.DFRL.display.Snapshot()
