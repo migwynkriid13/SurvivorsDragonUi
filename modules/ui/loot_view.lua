@@ -55,9 +55,35 @@ DFRL:NewMod("LootView", 4, function()
         card:SetAlpha(alpha)
         card.paintedAlpha = alpha
     end
+    local function CloseTooltip(card)
+        card.tooltipRetryAt, card.tooltipRetryUntil = nil, nil
+        if card.hoverEnabled and GameTooltip and GameTooltip:IsOwned(card) then GameTooltip:Hide() end
+    end
+    local function BindTooltip(card)
+        GameTooltip:SetOwner(card, "ANCHOR_TOPRIGHT")
+        if not pcall(GameTooltip.SetHyperlink, GameTooltip, card.entry.tooltipReference) then
+            CloseTooltip(card)
+            return false
+        end
+        return not GameTooltip:IsShown()
+    end
+    local function EnterTooltip()
+        local card = this
+        if not card.hoverEnabled or not card:IsVisible() or not GameTooltip then return end
+        if BindTooltip(card) then
+            local now = GetTime()
+            card.tooltipRetryAt, card.tooltipRetryUntil = now + 0.2, now + 2
+            nextUpdateAt = nil
+        end
+    end
+    local function LeaveTooltip() CloseTooltip(this) end
     local function Retire(card)
         if not card then return end
         if card:IsShown() then card:Hide() end
+        if card.hoverEnabled then
+            card:EnableMouse(false)
+            card.hoverEnabled = nil
+        end
         card.entry, card.started, card.retryAt = nil, nil, nil
         card.presentationDirty = nil
         card.rewardText, card.rewardMarks = nil, nil
@@ -157,6 +183,9 @@ DFRL:NewMod("LootView", 4, function()
             card:SetWidth(WIDTH)
             card:SetHeight(HEIGHT)
             card:EnableMouse(false)
+            card:SetScript("OnEnter", EnterTooltip)
+            card:SetScript("OnLeave", LeaveTooltip)
+            card:SetScript("OnHide", LeaveTooltip)
             card:Hide()
             local background = card:CreateTexture(nil, "BACKGROUND")
             if background:SetTexture(path .. "loot\\Toast.blp") == false then ready = false end
@@ -206,6 +235,23 @@ DFRL:NewMod("LootView", 4, function()
             else
                 if paint then
                     if card.presentationDirty then Refresh(card) end
+                    -- A cold native template may arrive after the first hover.
+                    -- Use the card's existing updater, and yield to another tooltip.
+                    if card.tooltipRetryAt and now >= card.tooltipRetryAt then
+                        if
+                            now < card.tooltipRetryUntil
+                            and GameTooltip
+                            and not GameTooltip:IsShown()
+                            and BindTooltip(card)
+                        then
+                            card.tooltipRetryAt = now + 0.2
+                        else
+                            card.tooltipRetryAt, card.tooltipRetryUntil = nil, nil
+                        end
+                    end
+                    if card.tooltipRetryAt then
+                        nextAt = nextAt and math.min(nextAt, card.tooltipRetryAt) or card.tooltipRetryAt
+                    end
                     local alpha = 1
                     if not performanceMode then
                         alpha = math.min(1, math.max(0, elapsed / FADE_IN))
@@ -262,6 +308,15 @@ DFRL:NewMod("LootView", 4, function()
         local markReward = loot.IsMarkReward(entry)
         if not markReward then entry = loot.Resolve(entry) end
         card.entry, card.started = entry, GetTime()
+        if
+            not markReward
+            and entry.tooltipReference
+            and GameTooltip
+            and type(GameTooltip.SetHyperlink) == "function"
+        then
+            card:EnableMouse(true)
+            card.hoverEnabled = true
+        end
         nextUpdateAt = nil
         card.retryAt = not markReward and entry.itemReference and entry.iconSource ~= "native" and card.started + 0.2
             or nil

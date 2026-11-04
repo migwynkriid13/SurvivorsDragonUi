@@ -50,6 +50,84 @@ local function Loot(settings)
     return context, chat, locale, context:Controller("CVAR_UPDATE"), animation
 end
 
+Test("a linkless Tier 0.5 loot card binds its native icon and retries a cold hover", function()
+    local context, _, _, service, animation = Loot({ performanceMode = true })
+    local env = context.env
+    context:Load("modules/ui/loot_icons.lua")
+    local tip = { calls = 0 }
+    function tip:SetOwner(owner)
+        self.owner = owner
+        self.shown = false
+    end
+    function tip:SetHyperlink(reference)
+        assert(reference == "item:101070:0:0:0", "the hover used the locale ID instead of the gear ID")
+        self.calls = self.calls + 1
+        if self.ready then
+            self.shown = true
+        else
+            self:Hide()
+        end
+    end
+    function tip:IsOwned(owner) return self.owner == owner end
+    function tip:IsShown() return self.shown end
+    function tip:Hide()
+        self.owner, self.shown = nil, false
+    end
+    env.GameTooltip = tip
+    env.DFRL.loot.Observe("You receive loot: |cffa335ee[Helm of Heroism]|r", "CHAT_MSG_SYSTEM")
+    context:Call(service, "OnUpdate", 1.5)
+    local card
+    for _, object in ipairs(context.objects) do
+        if object.entry then card = object end
+    end
+    assert(card and card.entry.itemReference == nil and card.entry.color == "ffa335ee")
+    assert(card.name:GetText() == "Helm of Heroism" and card.iconPath == "Interface\\Icons\\INV_Helmet_02")
+    context:Call(card, "OnEnter")
+    assert(tip.calls == 1 and not tip:IsShown(), "cold native tooltip behavior was bypassed")
+    tip.ready = true
+    context.now = context.now + 0.25
+    context:Call(animation, "OnUpdate", 0.25)
+    assert(tip.calls == 2 and tip:IsShown() and tip:IsOwned(card), "hover did not recover the native template")
+    context:SetLayoutHidden(true)
+    assert(not tip:IsShown() and not card.tooltipRetryAt)
+    context:SetLayoutHidden(false)
+    context:Call(card, "OnEnter")
+    local foreign = {}
+    tip:SetOwner(foreign)
+    tip.shown = true
+    context:Call(card, "OnLeave")
+    env.DFRL.loot.Clear()
+    assert(
+        tip:IsShown() and tip:IsOwned(foreign) and not card.hoverEnabled,
+        "pooled cleanup affected foreign ownership"
+    )
+end)
+
+Test("Tier 0.5 name collisions use the received class and color and explicit links take priority", function()
+    local context, _, locale = Loot({})
+    local env = context.env
+    context:Load("modules/ui/loot_icons.lua")
+    locale.code = "ru"
+    local resolve = env.DFRL.loot.Resolve
+    local epic = resolve({ name = "Перчатки Чародея", itemClass = "mage", color = "FFA335EE" })
+    local rare = resolve({ name = "Перчатки Чародея", itemClass = "mage", color = "ff0070dd" })
+    assert(epic.tooltipReference == "item:108770:0:0:0" and epic.icon == "Interface\\Icons\\INV_Gauntlets_17")
+    assert(rare.icon and rare.icon ~= epic.icon and not rare.tooltipReference)
+    assert(not resolve({ name = epic.name, color = epic.color }).icon)
+    assert(not resolve({ name = epic.name, itemClass = "mage" }).tooltipReference)
+    local reference = "item:123:0:0:0"
+    env.GetItemInfo = function(received)
+        assert(received == reference)
+        return epic.name, reference, 4, nil, nil, nil, nil, "INVTYPE_HAND", "Interface\\Icons\\Native"
+    end
+    local linked = resolve({ name = epic.name, itemClass = "mage", color = epic.color, itemReference = reference })
+    assert(
+        linked.iconSource == "native"
+            and linked.icon == "Interface\\Icons\\Native"
+            and linked.tooltipReference == reference
+    )
+end)
+
 Test(
     "fractional Hogger rewards make one marks-only toast and two rewards stack with independent retail expiry",
     function()
