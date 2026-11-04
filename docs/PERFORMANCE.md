@@ -3100,6 +3100,17 @@ CI-only controller scenarios cover school refinement, meter ambiguity, stronger
 metadata, failures/recovery, language/world retirement, weapon changes and FIFO
 eviction. Existing learned-talent lifetime and source priority remain unchanged.
 
+## Tier 0.5 loot icons and hover
+
+Tier 0.5 uses exact localized gear records in the existing loot icon catalog.
+The existing three cards bind their existing icon region and rim. The catalog
+reuses native textures and adds no frame or region. The cards enable mouse input
+only when a native tooltip reference is available. Hover reuses `GameTooltip`
+and retries an uncached template on the existing card updater at 0.2-second
+intervals for up to two seconds. Mouse leave, Layout hiding and card retirement
+stop retries and close only that card's tooltip. Settled hovers do no recurring
+tooltip work. Marks cards and unknown linkless drops remain passive.
+
 ## Loot popup modes and marks — 2026-10-27
 
 The new Loot notifications page uses existing editor artwork: one category

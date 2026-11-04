@@ -49,8 +49,11 @@ uses the unmodified 276-by-96 silver LootToast crop, with a 50-by-50 native item
 icon when available and the existing quality rim. Names keep their received
 color; exact native item quality supplies a color only when the message has none.
 Unavailable icons and their rims are omitted, with text using the freed space.
-Names may wrap within the native-style two-line name area. No tooltip, click
-handler, roll button, sound, collection subtitle or slot line is added.
+Names may wrap within the native-style two-line name area. Hovering a card
+with an exact item reference shows the game's item tooltip. A cold native
+template can retry for up to two seconds during the hover. The tooltip closes
+when the pointer leaves or the card hides or expires. Marks rewards and
+unidentified items keep their passive cards.
 
 Explicit native **already collected** status is rejected before queueing,
 metadata resolution or sequence assignment unless SDUI mode's enabled marks
@@ -192,18 +195,20 @@ lifetime and shared layout registration.
 ## Native item metadata
 
 `Resolve(entry)` returns a fresh record, preserving the original name and color.
-It first feature-detects `GetItemInfo` and passes only the exact original
-`item:...` reference when supplied. Successful native data can add `quality`
-and `icon`. A native icon records `iconSource = "native"`.
+For a received `item:...` reference, it passes that exact payload to
+`GetItemInfo` when available. Successful native data can add `quality` and
+`icon`. A native icon records `iconSource = "native"`.
 
 Native self-loot notices also arrive as colored names without links. These
 previously returned before any icon lookup. The generated native gear catalog
 now supplies exact name/icon metadata in all fourteen languages, following the
 SCT catalog approach. Native class captured through `UnitClass("player")` at
 delivery can refine same-name variants within that source. Generated matches
-record `iconSource = "catalog"`; they supply no inferred quality, slot or item id.
-Missing/conflicting mappings stay unavailable. Details, the reported Novice's
-Circlet join and pinned extraction evidence are in [LOOT-ICONS.md](LOOT-ICONS.md).
+record `iconSource = "catalog"`. The Tier 0.5 catalog also supplies the exact
+native gear reference for linkless drops. Same-class names shared by the
+regular rare set and Tier 0.5 use the received notice color to disambiguate.
+Missing or conflicting mappings stay unavailable. Extraction evidence is in
+[LOOT-ICONS.md](LOOT-ICONS.md).
 
 Linked notices retain the existing bounded metadata retries even while showing
 a catalog icon, so a later native template can replace the weaker fallback.
@@ -280,7 +285,5 @@ Original downloaded files remain separate in a temporary source directory.
 The runtime manifest contains the shared service, selected view and single
 Toast TGA. Gallery images, originals, proposal data and example icons do not ship.
 
-Local tests, syntax checks, formatting tools and addon/game execution remain
-unauthorized and were not run. GitHub Actions provides the authorized static
-formatting/dead-code/version checks. Runtime functionality and exact visual
-parity still require permitted game validation.
+Pinned local formatting is separate from the CI-only source and UI lifecycle
+checks. In-game icon rendering and native tooltip delivery remain unverified.

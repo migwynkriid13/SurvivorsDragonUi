@@ -57,31 +57,35 @@ DFRL:NewMod("LootNotifications", 0, function()
         return true
     end
 
-    local function CatalogIcon(entry)
+    local function CatalogItem(entry)
         local catalogs = DFRL.LootIconCatalog
         local code = DFRL.locale.code
         local catalog = catalogs and (catalogs[code] or catalogs.en)
-        local icon = catalog and catalog[entry.name]
-        if type(icon) == "string" then return icon end
+        local item = catalog and catalog[entry.name]
         -- Refine only ambiguity in this same native source, using the actual
         -- player class captured at delivery. No class is inferred from a name.
-        if icon == false and entry.itemClass then
+        if item == false and entry.itemClass then
             local classes = catalogs.classes and catalogs.classes[code]
             local names = classes and classes[entry.itemClass]
-            icon = names and names[entry.name]
-            if type(icon) == "string" then return icon end
+            item = names and names[entry.name]
+            if type(item) == "table" and item.byColor then
+                item = entry.color and item.byColor[string.lower(entry.color)]
+            end
         end
+        return item
     end
     -- Prefer exact-reference native metadata. Native self-loot text can contain
     -- only a colored name, so use the generated exact native catalog as fallback.
-    -- Missing/conflicting catalog entries stay unknown; never invent item ids.
+    -- Only an exact catalog item may supply a reference for a linkless drop.
     function loot.Resolve(entry)
         local result = {}
         for key, value in pairs(entry) do
             result[key] = value
         end
-        if type(entry.itemReference) == "string" and type(GetItemInfo) == "function" then
-            local ok, name, _, quality, _, _, _, _, _, icon = pcall(GetItemInfo, entry.itemReference)
+        local reference = entry.itemReference
+        result.tooltipReference = reference
+        if type(reference) == "string" and type(GetItemInfo) == "function" then
+            local ok, name, _, quality, _, _, _, _, _, ninth, tenth = pcall(GetItemInfo, reference)
             if ok and type(name) == "string" and name ~= "" then
                 if
                     type(quality) == "number"
@@ -91,17 +95,25 @@ DFRL:NewMod("LootNotifications", 0, function()
                 then
                     result.quality = quality
                 end
+                local icon = type(tenth) == "string" and tenth or ninth
+                local lower = type(icon) == "string" and string.lower(icon)
                 if
-                    type(icon) == "string"
-                    and icon ~= ""
-                    and not string.find(string.lower(icon), "inv_misc_questionmark", 1, true)
+                    lower
+                    and string.find(lower, "^interface[\\/]")
+                    and not string.find(lower, "inv_misc_questionmark", 1, true)
                 then
                     result.icon, result.iconSource = icon, "native"
                 end
             end
         end
         if not result.icon then
-            result.icon = CatalogIcon(entry)
+            local catalogItem = CatalogItem(entry)
+            if type(catalogItem) == "table" then
+                result.icon = catalogItem.icon
+                result.tooltipReference = reference or catalogItem.reference
+            elseif type(catalogItem) == "string" then
+                result.icon = catalogItem
+            end
             if result.icon then result.iconSource = "catalog" end
         end
         return result
