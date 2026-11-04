@@ -44,6 +44,7 @@ DFRL:NewMod("RunBanners", 4, function()
     local DOT_STACKS = "Your damage over time spells now stack {n} times on one enemy."
     local ACHIEVEMENT_HEADING = "Achievement earned:"
     local ACHIEVEMENT_MESSAGE = "Achievement earned: {name} (+{n})"
+    local ACHIEVEMENT_POINTS = "{n} points"
     local ACHIEVEMENT_ICON_ROOT = "Interface\\Icons\\"
     local CODEX_ICONS = {
         ["Jeweler's Eye"] = ACHIEVEMENT_ICON_ROOT .. "INV_Jewelry_Ring_15",
@@ -459,6 +460,21 @@ DFRL:NewMod("RunBanners", 4, function()
             return points
         end
     end
+    local function ParseAwardText(text)
+        local plain = PlainText(text)
+        if not plain then return end
+        local fields = DFRL.locale.Match(ACHIEVEMENT_MESSAGE, plain)
+        if fields then return fields.name, fields.n end
+
+        -- The game's system line wraps the name and localized reward separately.
+        local prefix = DFRL.locale.Native(ACHIEVEMENT_HEADING)
+        local length = string.len(prefix)
+        if string.sub(plain, 1, length) ~= prefix then return end
+        local _, _, name, reward =
+            string.find(string.sub(plain, length + 1), "^[ \t]*%[([^%[%]\r\n]+)%][ \t]*%(([^()\r\n]+)%)$")
+        local points = DFRL.locale.Match(ACHIEVEMENT_POINTS, reward)
+        if points then return name, points.n end
+    end
     local function ReadAward(text, name, metadata)
         local points, icon
         local keyed = type(metadata) == "table" and type(metadata.key) == "string" and metadata.key ~= ""
@@ -468,12 +484,10 @@ DFRL:NewMod("RunBanners", 4, function()
         end
         if type(name) ~= "string" or not string.find(name, "%S") then name = nil end
         if not name or points == nil then
-            local fields = DFRL.locale.Match(ACHIEVEMENT_MESSAGE, PlainText(text))
-            if fields then
-                name = name or fields.name
-                if points == nil and fields.name == name and string.find(fields.n or "", "^%d+$") then
-                    points = ReadPoints(tonumber(fields.n))
-                end
+            local receivedName, reward = ParseAwardText(text)
+            name = name or receivedName
+            if points == nil and receivedName == name and reward and string.find(reward, "^%d+$") then
+                points = ReadPoints(tonumber(reward))
             end
         end
         if not name or not string.find(name, "%S") then return end

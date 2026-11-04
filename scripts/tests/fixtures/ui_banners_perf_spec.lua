@@ -107,6 +107,22 @@ for code in pairs(legacy.env.DFRL.locale.data) do
     local card = assert(AchievementCard(legacy, name), "old callback did not parse the award for " .. code)
     assert(card.icon:GetTexture() == "Interface\\Icons\\INV_Jewelry_Ring_15" and card.points:GetText() == "10")
     legacy.env.DFRL.banners.Clear()
+    legacy.handler({
+        id = 2,
+        kind = "achievement",
+        name = name,
+        text = locale.Native("Achievement earned:")
+            .. " ["
+            .. name
+            .. "] ("
+            .. locale.Native("{n} points", { n = 10 })
+            .. ")",
+    })
+    assert(
+        AchievementCard(legacy, name) == card and card.points:GetText() == "10",
+        "localized points were lost for " .. code
+    )
+    legacy.env.DFRL.banners.Clear()
     languages = languages + 1
 end
 assert(languages == 14, "legacy awards omitted a native language")
@@ -117,10 +133,12 @@ local chatService = chatOnly:Controller("CHAT_MSG_SYSTEM")
 assert(chatOnly.nativeShown and not chatService:GetScript("OnUpdate"), "chat fallback acquired the HUD or idle work")
 chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "Unrelated: Achievement earned: Every Bauble (+25)")
 chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "Achievement earned: Every Bauble (+-25)")
+chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "Achievement earned: [Every Bauble] (25 gold)")
+chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "Achievement earned: [Every Bauble] (25 points) trailing text")
 assert(not AchievementCard(chatOnly, "Every Bauble"), "chat fallback accepted malformed or partial templates")
-chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "Achievement earned: Every Bauble (+25)")
-local chatCard = assert(AchievementCard(chatOnly, "Every Bauble"), "chat-only award did not show")
-assert(chatCard.points:GetText() == "25" and chatService:GetScript("OnUpdate"), "chat award lost points or expiry")
+chatOnly:Event(chatService, "CHAT_MSG_SYSTEM", "|cffffff00Achievement earned: [Regular]|r |cffaaaaaa(10 points)|r")
+local chatCard = assert(AchievementCard(chatOnly, "Regular"), "chat-only award did not show")
+assert(chatCard.points:GetText() == "10" and chatService:GetScript("OnUpdate"), "chat award lost points or expiry")
 chatOnly.now = chatOnly.now + 4.11
 chatOnly:Call(chatService, "OnUpdate", 4.11)
 assert(not chatCard:IsShown() and not chatService:GetScript("OnUpdate"), "chat toast retained idle work after expiry")

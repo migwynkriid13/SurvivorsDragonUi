@@ -18,9 +18,10 @@ The existing banner ID identifies each notification, including awards with the
 same title. Zero points use the emblem shield. An unknown amount leaves the
 shield hidden.
 
-Older callbacks can supply the title and amount through the exact localized
-achievement message. On clients without the full banner API, Custom banners
-listens for that complete message on `CHAT_MSG_SYSTEM` while in the world.
+Older callbacks can supply the title and amount through the localized banner
+text. Custom banners also recognizes the game's chat format, such as
+`Achievement earned: [Regular] (10 points)`. On clients without the full banner
+API, it listens for complete award messages on `CHAT_MSG_SYSTEM` while in the world.
 This path leaves native banners and chat under game ownership. It needs the
 game to emit the award as a system message. Both legacy paths use exact
 localized Codex titles to resolve the two known icons. Other awards without
