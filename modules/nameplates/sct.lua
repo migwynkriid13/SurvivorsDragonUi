@@ -287,8 +287,11 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     local function IsFiniteNumber(value) return type(value) == "number" and value - value == 0 end
 
     local plateFilter = {
-        enabled = DFRL.display.Get("nameplatesBossGuardiansOnly"),
+        kinds = { final = 1, boss = 1, guardian = 2, elite = 4 },
+        visible = {},
         names = {},
+        liveUnits = {},
+        sharedSignatures = {},
         seen = {},
         sequence = 0,
         units = 0,
@@ -296,12 +299,80 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         barrier = -1,
         age = 0.2,
     }
-    function plateFilter.Clear(barrier)
+    function plateFilter.ClearNames()
         for name in pairs(plateFilter.names) do
             plateFilter.names[name] = nil
         end
+        plateFilter.aliasesReady = nil
+    end
+    function plateFilter.Clear(barrier)
+        plateFilter.ClearNames()
+        for id in pairs(plateFilter.liveUnits) do
+            plateFilter.liveUnits[id] = nil
+        end
         plateFilter.source, plateFilter.stamp, plateFilter.accepted = nil, nil, nil
         if barrier then plateFilter.barrier = barrier end
+    end
+    function plateFilter.Configure()
+        local bosses = DFRL.display.Get("nameplatesShowBosses") ~= false
+        local guardians = DFRL.display.Get("nameplatesShowGuardians") ~= false
+        local elites = DFRL.display.Get("nameplatesShowElites") ~= false
+        local regular = DFRL.display.Get("nameplatesShowRegular") ~= false
+        local kinds, visible = plateFilter.kinds, plateFilter.visible
+        local boss, guardian, elite = kinds.boss, kinds.guardian, kinds.elite
+        if
+            visible[boss] == bosses
+            and visible[guardian] == guardians
+            and visible[elite] == elites
+            and plateFilter.regular == regular
+        then
+            return false
+        end
+        -- Show a shared signature only if every possible kind is enabled.
+        visible[boss], visible[guardian], visible[elite] = bosses, guardians, elites
+        visible[boss + guardian] = bosses and guardians
+        visible[boss + elite] = bosses and elites
+        visible[guardian + elite] = guardians and elites
+        visible[boss + guardian + elite] = bosses and guardians and elites
+        plateFilter.regular = regular
+        plateFilter.enabled = not (bosses and guardians and elites and regular)
+        plateFilter.needsRoster = plateFilter.enabled and (bosses or guardians or elites or regular)
+        if not plateFilter.needsRoster then
+            if plateFilter.distant then
+                plateFilter.ClearNames()
+            else
+                plateFilter.Clear()
+                plateFilter.time = nil
+            end
+        end
+        plateFilter.age = 0.2
+        return true
+    end
+    plateFilter.Configure()
+    function sct.EnemyNameplatesVisible() return inWorld and enemyPlatesEnabled end
+    function sct.RequestDistantNameplateRoster(wanted)
+        if plateFilter.distant == wanted then return end
+        plateFilter.distant = wanted
+        if not wanted and not plateFilter.needsRoster then
+            plateFilter.Clear()
+            plateFilter.time = nil
+        end
+        plateFilter.age = 0.2
+    end
+    function sct.DistantNameplateUnit(id, kind)
+        if not plateFilter.distant or not plateFilter.accepted then return end
+        local unit = plateFilter.liveUnits[id]
+        if unit and unit.kind == kind then return unit end
+    end
+    function plateFilter.MergeSignature(previous, unit)
+        local mask, kind = previous.mask, unit.mask
+        if math.mod(math.floor(mask / kind), 2) == 0 then mask = mask + kind end
+        local shared = plateFilter.sharedSignatures[mask]
+        if not shared then
+            shared = { mask = mask }
+            plateFilter.sharedSignatures[mask] = shared
+        end
+        return shared
     end
     function plateFilter.Receipt(prefix)
         if prefix ~= "AZSUNITS" and prefix ~= "AZSZONE" and prefix ~= "AZSRUN" then return end
@@ -317,7 +388,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
     function plateFilter.Update(elapsed)
-        if not plateFilter.enabled then return end
+        if not plateFilter.needsRoster and not plateFilter.distant then return end
         plateFilter.age = plateFilter.age + (tonumber(elapsed) or 0)
         if plateFilter.age < 0.2 then return end
         plateFilter.age = 0
@@ -349,6 +420,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             plateFilter.source == entries
             and plateFilter.stamp == stamp
             and plateFilter.accepted == plateFilter.units
+            and (not plateFilter.needsRoster or plateFilter.aliasesReady)
         then
             return
         end
@@ -364,19 +436,33 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         for _, entry in ipairs(entries) do
             if entry.hp > 0 then
-                local maxima = plateFilter.names[entry.name]
-                if not maxima then
-                    maxima = {}
-                    plateFilter.names[entry.name] = maxima
+                local mask = plateFilter.kinds[entry.kind]
+                local unit = plateFilter.liveUnits[entry.id]
+                if not unit or unit.name ~= entry.name or unit.kind ~= entry.kind then
+                    unit = { id = entry.id, name = entry.name, kind = entry.kind, mask = mask }
+                    plateFilter.liveUnits[entry.id] = unit
                 end
-                -- A published ordinary elite with the same signature is ambiguous.
-                T.IndexUnitMaximum(maxima, entry.hpm, entry.kind ~= "elite")
+                unit.hp, unit.hpm = entry.hp, entry.hpm
+                if plateFilter.needsRoster then
+                    local maxima = plateFilter.names[entry.name]
+                    if not maxima then
+                        maxima = {}
+                        plateFilter.names[entry.name] = maxima
+                    end
+                    T.IndexUnitMaximum(maxima, entry.hpm, unit, plateFilter.MergeSignature)
+                end
+            else
+                plateFilter.seen[entry.id] = nil
             end
+        end
+        for id in pairs(plateFilter.liveUnits) do
+            if not plateFilter.seen[id] then plateFilter.liveUnits[id] = nil end
         end
         for name, maxima in pairs(plateFilter.names) do
             if not next(maxima) then plateFilter.names[name] = nil end
         end
         plateFilter.source, plateFilter.stamp, plateFilter.accepted = entries, stamp, plateFilter.units
+        plateFilter.aliasesReady = plateFilter.needsRoster
     end
     local function PlateName(data, sample)
         if not sample then return data.nameRegion and data.nameRegion:GetText() end
@@ -410,12 +496,35 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return sample.red, sample.green, sample.blue
     end
     function plateFilter.Matches(data, sample)
+        if not plateFilter.aliasesReady then return false end
         local name = PlateName(data, sample)
-        local maxima = name and plateFilter.names[name]
-        if not maxima then return false end
+        if not name or name == "" then
+            data.filterUnit = nil
+            return false
+        end
+        local maxima = plateFilter.names[name]
+        if not maxima then
+            data.filterUnit = nil
+            return plateFilter.regular
+        end
         local minimum, maximum = PlateRange(data, sample)
-        -- Anonymous plates expose no spawn ID; never equate percentage bars to HP.
-        return minimum == 0 and maxima[maximum] == true
+        if minimum ~= 0 or not IsFiniteNumber(maximum) or maximum <= 0 then
+            data.filterUnit = nil
+            return false
+        end
+        local signature = maxima[maximum]
+        if signature then
+            data.filterUnit = signature.id and signature or nil
+            return plateFilter.visible[signature.mask]
+        end
+        -- Native plates stay bound until hidden. The live roster and the bar
+        -- can receive a maximum-health change in either order.
+        local unit = data.filterUnit
+        if maximum > 100 and unit and unit.name == name and plateFilter.liveUnits[unit.id] == unit then
+            return plateFilter.visible[unit.mask]
+        end
+        data.filterUnit = nil
+        return maximum ~= 100 and plateFilter.regular
     end
     DFRL.locale.Listen(function()
         plateFilter.Clear()
@@ -717,6 +826,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if not inWorld then return end
         if not plate:IsShown() then
             shownPlates[plate] = nil
+            data.filterUnit = nil
             RetirePlate(plate)
             return
         end
@@ -841,10 +951,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         HookScript(plate, "OnHide", function()
             shownPlates[plate] = nil
+            data.filterUnit = nil
             RetirePlate(plate)
         end)
         HookScript(plate, "OnShow", function()
             shownPlates[plate] = data
+            data.filterUnit = nil
             RetirePlate(plate)
             -- Revisit descendants on reuse, including children added while hidden.
             originIndex.callbackGeometry.valid = false
@@ -2084,14 +2196,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
         nameplateFontSize = DFRL.display.Get("nameplateFontSize")
-        local filtered = DFRL.display.Get("nameplatesBossGuardiansOnly")
-        if plateFilter.enabled ~= filtered then
-            plateFilter.enabled = filtered
-            plateFilter.Clear()
-            plateFilter.time = nil
-            plateFilter.age = 0.2
-            ApplyPlateTracking(false)
-        end
+        if plateFilter.Configure() then ApplyPlateTracking(false) end
         textScale = DFRL.display.Get("sctScale")
         distanceScaling.enabled = DFRL.display.Get("sctDistanceScaling")
         distanceScaling.reference = DFRL.display.Get("sctDistanceReference")

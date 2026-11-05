@@ -61,9 +61,13 @@ DFRL:NewMod("Display", 0, function()
         bossCountdownEndless = true,
         bossCountdownRegular = false,
         guardiansInBossBar = false,
-        nameplatesBossGuardiansOnly = false,
+        nameplatesShowBosses = true,
+        nameplatesShowGuardians = true,
+        nameplatesShowElites = true,
+        nameplatesShowRegular = true,
         nameplatesNamesOnly = false,
         nameplateFontSize = 9,
+        nameplateDistance = 20,
         targetDebuffsOnTop = false,
         damageIcons = false,
         sctNormalHits = true,
@@ -171,6 +175,7 @@ DFRL:NewMod("Display", 0, function()
         meterFontSize = { minimum = 8, maximum = 18, integer = true },
         meterNameFontSize = { minimum = 8, maximum = 18, integer = true },
         nameplateFontSize = { minimum = 6, maximum = 32, integer = true },
+        nameplateDistance = { minimum = 20, maximum = 200, integer = true },
         meterDpsWindow = { minimum = 5, maximum = 120, integer = true },
         meterRefreshRate = { minimum = 0.25, maximum = 2 },
         layoutGridSpacing = { minimum = 8, maximum = 128, integer = true },
@@ -316,6 +321,14 @@ DFRL:NewMod("Display", 0, function()
             return defaults[key]
         end
         if type(value) == "boolean" then return value end
+        if
+            (key == "nameplatesShowElites" or key == "nameplatesShowRegular")
+            and value == nil
+            and type(source) == "table"
+            and source.nameplatesBossGuardiansOnly == true
+        then
+            return false
+        end
         if key == "runTextRegular" or key == "runTextEndless" then
             local legacy = _G.SurvivorsDragonUiRunFont
             if type(legacy) == "table" and type(legacy.showText) == "boolean" then return legacy.showText end
@@ -336,6 +349,10 @@ DFRL:NewMod("Display", 0, function()
     end
 
     function display.Get(key) return Read(draft or _G.SurvivorsDragonUiDisplay, key) end
+    function display.GetRange(key)
+        local range = ranges[key]
+        if range then return range.minimum, range.maximum end
+    end
     function display.BossIcon() return bossArt[DFRL.display.Get("bossIconStyle")] end
     function display.GuardianIcon()
         return DFRL.display.Get("guardianIconStyle") == "original" and originalCrest

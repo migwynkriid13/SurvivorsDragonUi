@@ -1096,12 +1096,22 @@ The assertions cover:
   assertions.
   See [DIABLO-SCT.md](DIABLO-SCT.md) for the video study and tuning.
 - Full SCT/filter and nameplate-style fixtures combine Names only with the
-  boss/guardian filter. They cover exact capped/float32 ranges and halfway
+  four enemy category filters. They cover independent toggles, paired elites,
+  final bosses, all-on and all-off, friendly plates, shared signatures across
+  categories and reuse of unchanged aliases. With Guardians and Elites on,
+  they exercise guardian rescaling in both publication orders, immediate
+  checkbox changes and retirement on same-name plate reuse or spawn replacement.
+  Existing cases cover exact capped/float32 ranges and halfway
   rounding, sleeping-to-awake ceiling conversion and its float32 serialization
   boundaries, ordinary/ambiguous elite exclusion, percentage-only rejection,
-  both toggles, V and zone retirement, independent name visibility, lazy bar
-  allocation/reuse and no unchanged cosmetic writes. The scrolling and plate
+  V and zone retirement, independent name visibility, lazy bar
+  allocation/reuse and no unchanged cosmetic writes. Editor cases cover the four
+  checkbox defaults, preview, search and migration of a legacy profile. The scrolling and plate
   fixtures share explicit native setup; production algorithms are not copied.
+- Distant nameplate fixtures exercise the 20- and 200-yard boundaries,
+  feet versus overhead distance, exact spawn ID and kind joins, native roster
+  demand with all categories enabled, and V/Names only/checkbox transitions.
+  They exercise the shared world-anchor callback and reused plate style.
 - Native marks messages use exact templates in all fourteen catalogs. Tests
   preserve item links/colors and original integer/decimal amounts/totals, keep zero-reward
   duplicates hidden, leave conversations/unknown suffixes unchanged and reject

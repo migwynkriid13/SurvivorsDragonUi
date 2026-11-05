@@ -105,6 +105,19 @@ env.CreateFrame = function(kind, name, parent, template)
             slider.maximum = math.max(0, self.child:GetHeight() - self:GetHeight())
             slider:SetValue(math.min(slider:GetValue(), slider.maximum))
         end
+    elseif template == "OptionsSliderTemplate" then
+        for _, suffix in ipairs({ "Low", "High", "Text" }) do
+            frame:CreateFontString(name .. suffix)
+        end
+        function frame:SetMinMaxValues(minimum, maximum)
+            self.minimum, self.maximum = minimum, maximum
+        end
+        function frame:SetValueStep(step) self.step = step end
+        function frame:GetValue() return self.value or self.minimum end
+        function frame:SetValue(value)
+            self.value = math.max(self.minimum, math.min(self.maximum, value))
+            context:Call(self, "OnValueChanged", self.value)
+        end
     end
     return frame
 end
@@ -531,6 +544,7 @@ assert(env.T.CompactEditorToggle(toggle) == 64, "available metrics did not repai
 local compact = env.T.CreateEditorToggle(panel, "Performance Mode", nil, 232)
 compact:SetHeight(36)
 compact.label:SetHeight(28)
+assert(env.T.CompactEditorToggle(compact) == 36, "caption-only checkbox did not retain its row height")
 assert(
     compact.label.point[1] == "LEFT" and compact.label.point[5] == 0 and compact.label.justifyV == "MIDDLE",
     "compact checkbox caption drifted when its height changed"
@@ -993,6 +1007,53 @@ assert(
 
 dialog.navigation.Select("combat")
 assert(pages.combat and pages.nameplates and not pages.meter, "Combat still prepares Damage meter")
+local distanceLabel = env.displayNumbers.nameplateDistance
+local distanceSlider = distanceLabel.slider
+assert(
+    distanceSlider.minimum == 20
+        and distanceSlider.maximum == 200
+        and distanceSlider.step == 1
+        and distanceLabel:GetText() == "20",
+    "nameplate slider lost its bounds or initial value"
+)
+distanceSlider:SetValue(137)
+assert(
+    distanceLabel:GetText() == "137" and display.Get("nameplateDistance") == 137 and not env.SurvivorsDragonUiDisplay,
+    "dragging the nameplate slider did not preview its selected distance"
+)
+local distanceProfile = display.Snapshot()
+distanceProfile.nameplateDistance = 83
+display.Load(distanceProfile)
+assert(distanceSlider:GetValue() == 83 and distanceLabel:GetText() == "83", "profile did not refresh the slider")
+display.Set("nameplateDistance", 20)
+for _, entry in ipairs({
+    { "nameplatesShowBosses", "Bosses" },
+    { "nameplatesShowGuardians", "Guardians" },
+    { "nameplatesShowElites", "Elites" },
+    { "nameplatesShowRegular", "Regular mobs" },
+}) do
+    local key, caption = entry[1], entry[2]
+    local control = env.displayControls[key]
+    assert(control.label:GetText() == caption and control.editorChecked, "nameplate category did not default on")
+    context:Call(control, "OnClick")
+    assert(display.Get(key) == false and not env.SurvivorsDragonUiDisplay, "nameplate preview skipped Confirm")
+    context:Call(control, "OnClick")
+    assert(display.Get(key) == true, "nameplate checkbox did not restore its category")
+end
+local legacyPlates = display.Copy({ nameplatesBossGuardiansOnly = true, nameplatesShowElites = true })
+assert(
+    legacyPlates.nameplatesShowBosses
+        and legacyPlates.nameplatesShowGuardians
+        and legacyPlates.nameplatesShowElites
+        and legacyPlates.nameplatesShowRegular == false
+        and legacyPlates.nameplatesBossGuardiansOnly == nil,
+    "legacy profile migration did not preserve its filter and explicit new choices"
+)
+dialog.navigation.Search("Regular mobs")
+assert(
+    #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "nameplatesShowRegular",
+    "nameplate category was absent from search"
+)
 dialog.navigation.Search("damage over time")
 assert(#dialog.navigation.results == 1, "custom combat filters were absent from search")
 dialog.navigation.OpenResult(1)

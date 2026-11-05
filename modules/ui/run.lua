@@ -1378,6 +1378,12 @@ DFRL:NewMod("RunTimers", 5, function()
         for key, label in pairs(displayNumbers) do
             if label:IsVisible() then
                 local value = DFRL.display.Get(key)
+                local slider = label.slider
+                if slider and slider:GetValue() ~= value then
+                    slider.syncing = true
+                    slider:SetValue(value)
+                    slider.syncing = nil
+                end
                 T.SetTextIfChanged(label, label.formatValue and label.formatValue(value) or tostring(value))
             end
         end
@@ -1972,10 +1978,16 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Names only",
                         "Hide health bars and keep names. Custom combat text still works.",
                     },
+                    { "nameplatesShowBosses", "Bosses" },
+                    { "nameplatesShowGuardians", "Guardians" },
+                    { "nameplatesShowElites", "Elites" },
+                    { "nameplatesShowRegular", "Regular mobs" },
                     {
-                        "nameplatesBossGuardiansOnly",
-                        "Only bosses and guardians",
-                        "Hide ordinary enemy nameplates. V still shows or hides nameplates.",
+                        "nameplateDistance",
+                        "Nameplate range (yards)",
+                        "Regular mobs stay at 20 yards. This slider adjusts bosses, guardians and elites.",
+                        slider = "SurvivorsDragonUiNameplateDistance",
+                        wide = true,
                     },
                 },
             },
@@ -2824,6 +2836,43 @@ DFRL:NewMod("RunTimers", 5, function()
             displayNumbers[entry[1]] = value
             return control
         end
+        local function DisplaySlider(parent, entry, width, height)
+            local key, name = entry[1], entry.slider
+            local control = CreateFrame("Frame", nil, parent)
+            control:SetWidth(width)
+            control:SetHeight(height)
+            local title = FontEditorLabel(control, entry[2], 0, -7, 12)
+            title:SetWidth(width - 76)
+            local description = FontEditorLabel(control, entry[3], 0, -71, 9)
+            description:SetWidth(width)
+            description:SetHeight(32)
+            description:SetJustifyV("TOP")
+            description:SetTextColor(0.59, 0.59, 0.56)
+            local slider = CreateFrame("Slider", name, control, "OptionsSliderTemplate")
+            slider:SetWidth(width - 32)
+            slider:SetHeight(16)
+            slider:SetPoint("TOPLEFT", control, "TOPLEFT", 16, -36)
+            local minimum, maximum = DFRL.display.GetRange(key)
+            slider:SetMinMaxValues(minimum, maximum)
+            slider:SetValueStep(1)
+            for suffix, text in pairs({ Low = tostring(minimum), High = tostring(maximum), Text = "" }) do
+                local label = _G[name .. suffix]
+                if label then label:SetText(text) end
+            end
+            slider:SetScript("OnValueChanged", function()
+                if not slider.syncing and slider:IsVisible() then DFRL.display.Set(key, slider:GetValue()) end
+            end)
+            slider:EnableMouseWheel(true)
+            slider:SetScript("OnMouseWheel", navigation.Scroll)
+            local value = FontEditorLabel(control, "", 0, 0, 12)
+            value:ClearAllPoints()
+            value:SetPoint("TOPRIGHT", control, "TOPRIGHT", -4, -7)
+            value:SetWidth(64)
+            value:SetJustifyH("RIGHT")
+            value.slider = slider
+            displayNumbers[key] = value
+            return control
+        end
         local optionLayouts = {}
         builders.options = function(page, category)
             local dependents
@@ -2833,6 +2882,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             local columns = category.columns or (table.getn(category.options) > 1 and 2 or 1)
             local rowHeight = 88
+            local sliderHeight = 112
             local modeHeight = category.mode and 112 or 0
             local rowWidth = (contentWidth - gap * (columns - 1)) / columns
             local content = page
@@ -2876,6 +2926,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     picker.dropdownOpenUp = true
                     fontEditor.iconSelectors = fontEditor.iconSelectors or {}
                     fontEditor.iconSelectors[key] = picker
+                elseif entry.slider then
+                    control = DisplaySlider(content, entry, controlWidth, sliderHeight)
                 elseif entry.step then
                     control = DisplayNumber(content, entry, controlWidth, rowHeight)
                     if entry.range then
@@ -2892,7 +2944,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     span = span,
                     numeric = entry.step ~= nil,
                     color = entry.color,
-                    height = entry.choices and rowHeight or nil,
+                    height = entry.slider and sliderHeight or (entry.choices and rowHeight or nil),
                     entry = entry,
                 })
                 if leading and entry[1] == category.mode.after then leading = false end

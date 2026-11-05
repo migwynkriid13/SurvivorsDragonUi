@@ -178,26 +178,27 @@ local function UnitMaximumFloat(value)
     if integer == 0 or (exponent == 128 and integer == 16777216) then return end
     return integer * step
 end
-local function AddUnitMaximum(maxima, maximum, value)
+local function AddUnitMaximum(maxima, maximum, value, merge)
     if not maximum or maxima[maximum] == false then return end
     local previous = maxima[maximum]
     if previous ~= nil and previous ~= value then
-        maxima[maximum] = false
+        maxima[maximum] = merge and merge(previous, value) or false
     else
         maxima[maximum] = value
     end
 end
-function DFRL.tools.IndexUnitMaximum(maxima, maximum, value)
-    AddUnitMaximum(maxima, maximum, value)
-    AddUnitMaximum(maxima, UnitMaximumFloat(maximum), value)
+-- A consumer may merge colliding values. Otherwise a collision stays ambiguous.
+function DFRL.tools.IndexUnitMaximum(maxima, maximum, value, merge)
+    AddUnitMaximum(maxima, maximum, value, merge)
+    AddUnitMaximum(maxima, UnitMaximumFloat(maximum), value, merge)
     local unitMaximum = math.min(4294967295, math.ceil(maximum))
-    AddUnitMaximum(maxima, unitMaximum, value)
-    AddUnitMaximum(maxima, UnitMaximumFloat(unitMaximum), value)
+    AddUnitMaximum(maxima, unitMaximum, value, merge)
+    AddUnitMaximum(maxima, UnitMaximumFloat(unitMaximum), value, merge)
     -- AZSUNITS serializes float32 maxima to zero decimal places, while waking
     -- guardians publish ceilf(maximum) to UNIT_FIELD_MAXHEALTH. Only these
     -- whole-number publications can encode a fractional value just above them.
     if maximum == math.floor(maximum) and (maximum < 4194304 or (maximum < 8388608 and math.mod(maximum, 2) == 0)) then
-        AddUnitMaximum(maxima, maximum + 1, value)
+        AddUnitMaximum(maxima, maximum + 1, value, merge)
     end
 end
 

@@ -3953,7 +3953,7 @@ style reuses its name label, remembers its color and changes visibility only
 when the effective mode changes. Names-only updates copy changed native names
 and reaction colors, then skip cosmetic health range/value/color writes and
 raid-icon lookup/binding. Native health-loss matching, coordinate sampling,
-collision placement, V/Shift-V ownership and the boss/guardian filter keep
+collision placement, V/Shift-V ownership and enemy category filters keep
 their current lifecycles. Masked plates still skip the entire style refresh;
 showing again applies the current choice and current native state.
 
@@ -3989,30 +3989,44 @@ pinned formatting only; no local tests, standalone validation or addon/game
 execution. Settings and behavior are documented in
 [API-NOTES.md](API-NOTES.md#names-only-nameplates--2026-10-27).
 
-## Boss and guardian nameplate filter — 2026-10-27
+## Enemy nameplate filters
 
-The default-off `nameplatesBossGuardiansOnly` option adds no gameplay frame,
-texture, material or updater. It uses the current SCT controller's OnUpdate and
-existing message subscription. While enabled, phase/receipt retirement and the
-official unit-list index refresh run at five Hz. A matching source reference,
+At the default 20 yards, the range option requests no distant roster or
+projection work. Extending it reuses the five-Hz encounter reader and existing
+world-marker catalog and callback. Up to 40 published special enemies can
+contribute bars. Each matched candidate uses its overhead projection and,
+when on screen, a second same-frame projection of its feet for distance. The
+lazy pool shares the near-plate style and skips native raid-icon allocation.
+The all-on preset skips the near-plate signature index even while serving
+distant health.
+
+The four default-on enemy category checkboxes add no gameplay frame, texture,
+material or updater. They use the current SCT controller's OnUpdate and existing
+message subscription. With a mix of enabled and disabled categories,
+phase/receipt retirement and the official unit-list index refresh run at five Hz. A matching source reference,
 timestamp and receipt generation skip index rebuilding. Accepted changes reuse
 exact-name/native-range buckets, with at most the native 40 entries; retired names
-are removed. Off clears the index and skips its native metadata reads.
+are removed. Showing or hiding every category clears the index and skips its
+native metadata reads.
 
 Accepted metadata indexes the original maximum, its float32 rounding and the
 native ceil/uint32-clamped maximum with its float32 rounding. Whole-number
 publications below 2^23 also index an upper ceiling only where a fractional
 float32 actor maximum can serialize to that integer: all integers below 2^22,
 and even half-ties below 2^23. This retains at most four distinct exact keys per
-entry; it is not a per-plate tolerance search or a carried-forward identity.
+entry without a per-plate tolerance search.
 The sleeping-to-awake conversion changes accepted display metadata only. These
 numeric aliases are computed only when the accepted publication changes, reusing
-the same buckets. Published elites mark collisions
-ambiguous across those aliases too. No per-plate conversion, name-only bypass,
+the same buckets. Each signature stores a live roster entry or a shared mask
+of matching categories. Live entries reuse their records across publications.
+Each shown plate can retain one uniquely matched entry while the accepted
+roster still contains it, covering rescaling without an additional scan or poll.
+Checkbox changes update which masks are visible without rebuilding aliases
+while filtering stays active. No per-plate conversion, name-only bypass,
 tolerance search, damage estimate, percentage-to-HP inference or new getter is
 added. Names-only labels no longer depend on health-widget anchors, and unused
 bar artwork remains unallocated until an eligible regular plate needs it.
-CI-only full-controller/style mocks cover both options together, native range
+CI-only full-controller/style mocks cover Names only with category filters, native range
 representations, wake ceilings/serialization boundaries, exclusions/ambiguity, mode/V changes, retirement, lazy pooling
 and unchanged writes. Local work is source/diff review and pinned formatting.
 
@@ -4027,14 +4041,12 @@ No per-frame table, string formatting, texture bind or new artwork is introduced
 by the filter. Existing pooled skins remain allocated; excluded skins contribute
 no visible custom regions. This does not remove native plate collision work.
 
-The existing lazy settings dialog adds one category button (12 texture regions
-and one caption) and one checkbox row (four texture regions and two captions).
-These reuse the editor artwork and draw only with their shown editor parents;
-no new material or per-plate region is added. The maximum added allocation is
-16 texture regions and three FontStrings after opening the editor. Source
-counts are not measured draw calls, FPS, GPU memory or visual parity. The
+The four checkboxes replace one checkbox with a description. The lazy Nameplates
+page therefore adds a net 12 editor texture regions and two FontStrings.
+The controls reuse the existing editor artwork and draw only with their shown
+editor parents. The
 anonymous-plate identity limit and snapshot policy are documented in
-[API-NOTES.md](API-NOTES.md#boss-and-guardian-nameplate-filter--2026-10-27).
+[API-NOTES.md](API-NOTES.md#enemy-nameplate-filters).
 
 ## What changes
 

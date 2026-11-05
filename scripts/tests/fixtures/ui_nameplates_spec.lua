@@ -5,7 +5,7 @@ local function Plates(setup)
     local context = SCT(false, function(context, env)
         context.settings.nameplatesNamesOnly = true
         context.settings.nameplateFontSize = 9
-        context.settings.nameplatesBossGuardiansOnly = true
+        context.settings.nameplatesShowElites, context.settings.nameplatesShowRegular = false, false
         env.NAMEPLATES_ON = true
         env.AZS_GetPhase = function() return context.phase or "playing" end
         env.AZS_RUN, env.AZS_RUN_UPDATED = { t = 10 }, context.now
@@ -176,6 +176,117 @@ context.env.T.IndexUnitMaximum(aliases, 70e12, "guardian")
 context.env.T.IndexUnitMaximum(aliases, 80e12, "boss")
 assert(aliases[4294967295] == false and aliases[4294967296] == false, "clamped kind aliases lost ambiguity")
 print("PASS shared maximum aliases preserve kind conflicts across native float32 and clamped representations")
+
+for _, performanceMode in ipairs({ false, true }) do
+    local current = Plates(function(owner)
+        owner.settings.performanceMode = performanceMode
+        owner.settings.nameplatesShowElites, owner.settings.nameplatesShowRegular = true, true
+        owner.final = owner:MakePlate("Final", 5000)
+        owner.elite = owner:MakePlate("Elite", 2000)
+        owner.elitePair = owner:MakePlate("Elite", 2000)
+        owner.friendly = owner:MakePlate("Friendly", 1000)
+        owner.friendly.nativeBar.color = { 0, 1, 0, 1 }
+    end)
+    local categories = {
+        { "nameplatesShowBosses", current.boss, current.final },
+        { "nameplatesShowGuardians", current.guardian },
+        { "nameplatesShowElites", current.elite, current.elitePair },
+        { "nameplatesShowRegular", current.ordinary },
+    }
+    local function CheckVisibility(hidden)
+        for _, category in ipairs(categories) do
+            for index = 2, #category do
+                assert(
+                    category[index].fixture.style.name:IsVisible() == (hidden ~= category[1] and hidden ~= "all"),
+                    "incorrect visibility for " .. category[1]
+                )
+            end
+        end
+        assert(current.friendly.fixture.style.name:IsVisible(), "hostile filters hid a friendly plate")
+    end
+    current:Tick(0.21)
+    CheckVisibility()
+    local roster = Entries()
+    roster[3] = { id = 12, kind = "final", name = "Final", hp = 5000, hpm = 5000 }
+    roster[4] = { id = 13, kind = "elite", name = "Elite", hp = 2000, hpm = 2000 }
+    roster[5] = { id = 14, kind = "elite", name = "Elite", hp = 2000, hpm = 2000 }
+    local sct = current.env.DFRL.sct
+    sct.RequestDistantNameplateRoster(true)
+    current:Publish(roster)
+    assert(sct.DistantNameplateUnit(13, "elite").hp == 2000, "all-on filters blocked requested distant health")
+    assert(not sct.DistantNameplateUnit(13, "guardian"), "distant health ignored the native kind")
+    sct.RequestDistantNameplateRoster(false)
+    assert(not sct.DistantNameplateUnit(13, "elite"), "unrequested distant health remained active")
+    for _, category in ipairs(categories) do
+        current:SetSetting(category[1], false)
+        current:Tick(0.21)
+        CheckVisibility(category[1])
+        current:SetSetting(category[1], true)
+        current:Tick(0.21)
+        CheckVisibility()
+    end
+    for _, category in ipairs(categories) do
+        current:SetSetting(category[1], false)
+    end
+    current:Tick(0.21)
+    CheckVisibility("all")
+
+    current:SetSetting("nameplatesShowGuardians", true)
+    current:SetSetting("nameplatesShowElites", true)
+    roster[6] = { id = 15, kind = "elite", name = "Hogger", hp = 80e12, hpm = 80e12 }
+    current:Publish(roster)
+    local name = current.guardian.fixture.style.name
+    assert(name:IsVisible(), "signature shared by two enabled categories was hidden")
+    local index = current.env.T.IndexUnitMaximum
+    current.env.T.IndexUnitMaximum = function() error("a checkbox change rebuilt an unchanged roster") end
+    current:SetSetting("nameplatesShowElites", false)
+    current:Tick(0.21)
+    assert(not name:IsVisible(), "ambiguous guardian exposed a disabled elite")
+    current:SetSetting("nameplatesShowElites", true)
+    current:SetSetting("nameplatesShowGuardians", false)
+    current:Tick(0.21)
+    assert(not name:IsVisible(), "ambiguous elite exposed a disabled guardian")
+    current.env.T.IndexUnitMaximum = index
+
+    current:SetSetting("nameplatesShowGuardians", true)
+    current:SetSetting("nameplatesNamesOnly", performanceMode)
+    roster[6] = nil
+    roster[1].hp, roster[1].hpm, roster[1].state = 1200, 1200, 0
+    local native = current.guardian.nativeBar
+    native.maximum, native.value = 1200, 1200
+    current:Publish(roster)
+    assert(name:IsVisible(), "sleeping guardian could not establish its initial match")
+    native.maximum = 8500
+    current:Tick(0.21)
+    assert(name:IsVisible(), "native rescale before the roster hid the living guardian")
+    roster[1].hp, roster[1].hpm, roster[1].state = 8300, 8500, 1
+    current:Publish(roster)
+    assert(name:IsVisible(), "the roster did not confirm the waking guardian")
+    roster[1].hpm = 12500
+    current:Publish(roster)
+    assert(name:IsVisible(), "a newer roster hid the guardian before the native bar caught up")
+    native.maximum = 12500
+    current:Tick(0.21)
+    assert(name:IsVisible(), "the native bar did not recover its exact match")
+    native.maximum = 15000
+    current:SetSetting("nameplatesShowGuardians", false)
+    assert(not name:IsVisible(), "retained classification bypassed the guardian checkbox")
+    current:SetSetting("nameplatesShowGuardians", true)
+    current:Tick(0.21)
+    assert(name:IsVisible(), "the guardian checkbox did not restore the living guardian")
+    current.guardian:Hide()
+    current.guardian:Show()
+    assert(not name:IsVisible(), "recycled same-name plate inherited the old guardian match")
+    native.maximum = 12500
+    current:Tick(0.21)
+    assert(name:IsVisible(), "a fresh exact match did not restore the plate")
+    native.maximum = 15000
+    roster[1].id = 16
+    current:Publish(roster)
+    assert(not name:IsVisible(), "a different spawn with the same name inherited the old guardian match")
+end
+print("PASS category filters retain a living guardian through either rescale order and retire reused matches")
+
 context:Tick(0.21)
 assert(not context.guardian.fixture.style.name:IsVisible(), "unpublished guardian bypassed the filter")
 context.env.WorldFrame.childrenReads, context.guardian.childrenReads = 0, 0
@@ -248,10 +359,12 @@ for _, representation in ipairs({
     { 1234, 1236, false },
     { 1234, 100, false },
 }) do
+    context.guardian:Hide()
     local publication = Entries()
     publication[1].hp, publication[1].hpm, publication[1].state = 1000, representation[1], 1
     context.guardian.nativeBar.maximum = representation[2]
     context:Publish(publication)
+    context.guardian:Show()
     assert(guardian.name:IsVisible() == representation[3], "wake conversion accepted an invalid native encoding")
 end
 waking[3] = { id = 12, kind = "elite", name = "Hogger", hp = 1200, hpm = 1235 }
@@ -343,7 +456,7 @@ print("PASS names-only transitions hide actual regions and reuse lazily allocate
 do
     local current = Plates(function(owner)
         owner.settings.nameplatesNamesOnly = false
-        owner.settings.nameplatesBossGuardiansOnly = false
+        owner.settings.nameplatesShowElites, owner.settings.nameplatesShowRegular = true, true
         owner.settings.performanceMode = true
     end)
     current:Tick(0.21)
@@ -380,7 +493,7 @@ print("PASS Performance Mode hides pooled plate shadows, defers their first allo
 for _, performanceMode in ipairs({ false, true }) do
     local current = Plates(function(owner)
         owner.settings.nameplatesNamesOnly = false
-        owner.settings.nameplatesBossGuardiansOnly = false
+        owner.settings.nameplatesShowElites, owner.settings.nameplatesShowRegular = true, true
         owner.settings.performanceMode = performanceMode
     end)
     current:Tick(0.21)
@@ -459,7 +572,8 @@ assert(not guardian.name:IsVisible(), "ambiguous capped elite signature exposed 
 context:Publish(Entries())
 assert(guardian.name:IsVisible(), "guardian did not recover after ambiguity was removed")
 context:SetSetting("nameplatesNamesOnly", true)
-context:SetSetting("nameplatesBossGuardiansOnly", false)
+context:SetSetting("nameplatesShowElites", true)
+context:SetSetting("nameplatesShowRegular", true)
 context:Tick(0.21)
 assert(context.ordinary.fixture.style.name:IsVisible(), "disabling the filter did not restore ordinary names")
 context.env.HideNameplates()
@@ -486,7 +600,8 @@ assert(
 )
 print("PASS hidden native plates leave the sampling set and rejoin through the existing show hook")
 
-context:SetSetting("nameplatesBossGuardiansOnly", true)
+context:SetSetting("nameplatesShowElites", false)
+context:SetSetting("nameplatesShowRegular", false)
 context:Tick(0.21)
 context:Event(context.controller, "CHAT_MSG_ADDON", "AZSZONE")
 context:Tick(0.21)
@@ -797,7 +912,7 @@ local function FollowingPlates(performance, style)
     return Plates(function(current, env)
         current.settings.sctStyle = style
         current.settings.performanceMode = performance
-        current.settings.nameplatesBossGuardiansOnly = false
+        current.settings.nameplatesShowElites, current.settings.nameplatesShowRegular = true, true
         env.NAMEPLATES_ON = nil
         -- Both production controllers get identical launch choices, allowing a
         -- stationary reference without copying any production motion equation.
@@ -1056,7 +1171,7 @@ print("PASS normal hits follow their own origins while mixed Performance Mode su
 local function CameraPlates(performance, missing)
     return Plates(function(current, env)
         current.settings.performanceMode = performance
-        current.settings.nameplatesBossGuardiansOnly = false
+        current.settings.nameplatesShowElites, current.settings.nameplatesShowRegular = true, true
         local camera = { starts = 0, stops = 0, queries = 0, looking = false, worldUps = {}, reloads = 0 }
         current.camera = camera
         camera.rightDown, camera.buttonReads = false, 0
@@ -1172,10 +1287,10 @@ for _, performance in ipairs({ false, true }) do
     current:Press(plate, "RightButton")
     assert(camera.starts == starts, "V-off tracking plate started camera input")
     current.env.ShowNameplates()
-    current:SetSetting("nameplatesBossGuardiansOnly", true)
+    current:SetSetting("nameplatesShowRegular", false)
     current:Press(plate, "RightButton")
     assert(camera.starts == starts, "filtered plate started camera input")
-    current:SetSetting("nameplatesBossGuardiansOnly", false)
+    current:SetSetting("nameplatesShowRegular", true)
     current:Tick(0)
     plate:Hide()
     current:Press(plate, "RightButton")
@@ -1439,7 +1554,7 @@ print("PASS plates cache fixed native metrics per incarnation and callbacks samp
 do
     local current = Plates()
     local env = current.env
-    current:SetSetting("nameplatesBossGuardiansOnly", false)
+    current:SetSetting("nameplatesShowRegular", true)
     current:SetSetting("classHealth", true)
     local player = current:MakePlate("Hero", 1000)
     player.nativeBar.color = { 0, 1, 0 }

@@ -144,6 +144,7 @@ local function Scene(performance)
         }
         if source then
             local expected = (source.kind == "cache" or source.kind == "downedPartyMember") and "position" or "overhead"
+            if native.distant and source.unitId and attachment == "position" then expected = "position" end
             assert(attachment == expected, "consumer requested an unsupported entity attachment")
             local offset = requests[1].offset
             if source.kind == "cache" or source.kind == "downedPartyMember" then
@@ -176,6 +177,7 @@ local function Scene(performance)
             if requests[1].offset then entry.y = entry.y + requests[1].offset.z * (native.heightProjection or 16) end
             entry.cameraDistance, entry.cameraDepth, entry.uiUnitsPerYard = 20, 20, 16
             entry.playerDistance = source.playerDistance
+            if attachment == "position" and source.feetDistance then entry.playerDistance = source.feetDistance end
             if entry.playerDistance == nil and not native.omitDistance then entry.playerDistance = 20 end
         end
         local batch = {
@@ -1246,6 +1248,98 @@ for _, performance in ipairs({ false, true }) do
     end
     assert(not c.reads.trims and #c:Markers() == 0, "world cleanup repeated after retirement")
     c.api.Reset()
+end
+
+do
+    local c = Scene(false)
+    local env, native = c.env, c.native
+    local display = env.DFRL.display
+    c:Load("core/tools.lua")
+    c:Load("modules/nameplates/style.lua", "NameplateStyle")
+    local object = c.Object
+    function c:Object(kind, ...)
+        local frame = object(self, kind, ...)
+        if kind == "StatusBar" then
+            function frame:GetMinMaxValues() return self.minimum or 0, self.maximum or 1 end
+            function frame:SetMinMaxValues(minimum, maximum)
+                self.minimum, self.maximum = minimum, maximum
+            end
+            function frame:GetValue() return self.value or 0 end
+            function frame:SetValue(value) self.value = value end
+        end
+        return frame
+    end
+    local units = {
+        [1] = { id = 1, kind = "guardian", name = "Guardian", hp = 15, hpm = 60 },
+        [2] = { id = 2, kind = "elite", name = "Elite", hp = 50, hpm = 100 },
+        [3] = { id = 3, kind = "final", name = "Final", hp = 100, hpm = 100 },
+    }
+    local requested, v = false, true
+    env.DFRL.sct = {
+        EnemyNameplatesVisible = function() return v end,
+        RequestDistantNameplateRoster = function(value) requested = value end,
+        DistantNameplateUnit = function(id, kind)
+            local unit = units[id]
+            if requested and unit and unit.kind == kind then return unit end
+        end,
+    }
+    native.distant = true
+    local guardian, elite, final =
+        Record("guardian", "guardian"), Record("elite", "elite"), Record("final", "finalBoss")
+    guardian.unitId, elite.unitId, final.unitId = 1, 2, 3
+    guardian.playerDistance, elite.playerDistance, final.playerDistance = 40, 200, 45
+    guardian.feetDistance, elite.feetDistance, final.feetDistance = 20, 200, 40
+    native.entries = { guardian, elite, final }
+    display.Set("worldCacheIcons", false)
+    display.Set("worldBossIcons", false)
+    display.Set("worldPartyIcons", false)
+    local function Visible(kind, name)
+        for _, frame in ipairs(c.objects) do
+            if frame.kind == kind and frame:IsVisible() and (not name or frame:GetText() == name) then return frame end
+        end
+    end
+    c:Service()
+    assert(display.Get("nameplateDistance") == 20 and not requested and native.registers == 0)
+    assert(display.Copy({ nameplateDistance = 500 }).nameplateDistance == 200)
+    assert(display.Copy({ nameplateDistance = 2 }).nameplateDistance == 20)
+    display.Set("nameplateDistance", 200)
+    display.Set("nameplatesShowBosses", false)
+    c:Service()
+    c:Frame()
+    assert(requested and native.lastKinds.elite and not native.lastKinds.finalBoss)
+    assert(Visible("FontString", "Elite") and Visible("StatusBar").value == 0.5)
+    assert(not Visible("FontString", "Guardian"), "head height duplicated a native plate at 20 yards")
+    assert(not Visible("FontString", "Final"), "Bosses off exposed a final boss")
+    local discoveryReads = native.calls
+    display.Set("nameplateDistance", 199)
+    c:Service()
+    c:Frame()
+    assert(not Visible("FontString", "Elite") and native.calls == discoveryReads, "range preview rebuilt the catalog")
+    display.Set("nameplateDistance", 200)
+    c:Service()
+    c:Frame()
+    assert(Visible("FontString", "Elite") and native.calls == discoveryReads, "range preview lost the accepted catalog")
+    guardian.feetDistance, elite.feetDistance = 21, 201
+    c:Frame()
+    assert(Visible("FontString", "Guardian") and not Visible("FontString", "Elite"))
+    assert(Visible("StatusBar").value == 0.25, "projected plate lost the exact unit's health")
+    display.Set("nameplatesNamesOnly", true)
+    display.Set("performanceMode", true)
+    c:Frame()
+    assert(Visible("FontString", "Guardian") and not Visible("StatusBar"), "Names only retained a distant health bar")
+    local allocated = #c.objects
+    v = false
+    c:Frame()
+    assert(not Visible("FontString", "Guardian"), "V off left a projected plate")
+    v = true
+    c:Frame()
+    assert(Visible("FontString", "Guardian") and #c.objects == allocated, "showing plates skipped pool reuse")
+    units[1].kind = "elite"
+    c:Frame()
+    assert(not Visible("FontString", "Guardian"), "a same-ID row of another kind painted a guardian")
+    display.Set("nameplateDistance", 20)
+    c:Service()
+    assert(not requested and native.unregisters == 1, "default range retained the distant owner")
 end
 
 local old = Scene(false)

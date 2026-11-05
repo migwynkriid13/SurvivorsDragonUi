@@ -1292,6 +1292,7 @@ end
 -- line. Longer translations retain a second line and the same three-unit gap.
 function DFRL.tools.CompactEditorToggle(button)
     local label, description = button.label, button.description
+    if not description then return button:GetHeight() end
     local natural = label:GetStringWidth()
     local labelHeight = natural and natural > 0 and natural <= label:GetWidth() and 16 or 28
     local descriptionTop = 7 + labelHeight + 3

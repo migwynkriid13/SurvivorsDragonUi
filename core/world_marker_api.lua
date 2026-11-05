@@ -5,7 +5,10 @@ setfenv(1, DFRL:GetEnv())
 function DFRL.tools.NewWorldMarkerApi(navigation)
     local api = {}
     local DISCOVERY_INTERVAL, TRANSIENT_RETRY, FAILURE_RETRY = 0.2, 0.1, 0.5
-    local markerKinds = { "cache", "guardian", "boss", "finalBoss", "downedPartyMember" }
+    local NATIVE_PLATE_RANGE = 20
+    local markerKinds = { "cache", "guardian", "boss", "finalBoss", "downedPartyMember", "elite" }
+    local plateKinds = { guardian = "guardian", boss = "boss", finalBoss = "final", elite = "elite" }
+    local distant = { kinds = {}, views = {}, pool = {}, range = NATIVE_PLATE_RANGE }
     local state = {
         records = {},
         staging = {},
@@ -42,6 +45,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             padding = 6,
             crop = { 0, 65 / 128, 0, 65 / 128 },
         },
+        elite = { state = "alive", attachment = "overhead", padding = 0 },
         boss = {
             key = "worldBossIcons",
             mode = "worldBossIconMode",
@@ -135,6 +139,18 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         for _, marker in pairs(state.markers) do
             HideMarker(marker)
         end
+        for _, view in pairs(distant.views) do
+            if view.style.visual:IsShown() then view.style.visual:Hide() end
+        end
+    end
+    local function RecyclePlate(id, view)
+        if view.style.visual:IsShown() then view.style.visual:Hide() end
+        view.drawPass, distant.views[id] = nil, nil
+        table.insert(distant.pool, view)
+    end
+    local function RequestRoster(wanted)
+        local sct = DFRL.sct
+        if sct and sct.RequestDistantNameplateRoster then sct.RequestDistantNameplateRoster(wanted) end
     end
     local function Recycle(id, marker)
         HideMarker(marker)
@@ -165,6 +181,9 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         for id, marker in pairs(state.markers) do
             Recycle(id, marker)
         end
+        for id, view in pairs(distant.views) do
+            RecyclePlate(id, view)
+        end
         Trim(state.records, 0)
         Trim(state.staging, 0)
         Trim(state.requests, 0)
@@ -177,11 +196,12 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         state.discoveryAt, state.discoveryStarted, state.discoveryFailures = nil, nil, nil
     end
     function api.Reset()
+        RequestRoster(false)
         if not state.reset then
             state.session, state.enabled, state.retire = nil, false, nil
             ClearCatalog()
             state.query, state.kinds, state.capabilities = nil, nil, nil
-            state.queryCache, state.queryBoss, state.queryParty = nil, nil, nil
+            state.queryCache, state.queryBoss, state.queryParty, state.queryPlates = nil, nil, nil, nil
             state.active, state.reset = false, true
         end
         -- Failure backoff can be installed after Reset. Off/hidden cleanup
@@ -193,10 +213,14 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
     local function Context(value, position)
         return value.mapId == position.mapId and value.spaceId == position.spaceId and value.runId == position.runId
     end
-    local function Wanted(kind)
+    local function IconWanted(kind)
         local style = styles[kind]
-        return style and state.choices[style.key]
+        return style and style.key and state.choices[style.key]
     end
+    local function PlateWanted(kind)
+        return state.requestPlates and distant.range > NATIVE_PLATE_RANGE and distant.kinds[kind]
+    end
+    local function Wanted(kind) return IconWanted(kind) or PlateWanted(kind) end
     local function DistanceVisible(kind, distance)
         local style = styles[kind]
         local mode = style.mode and state.choices[style.mode] or "always"
@@ -284,7 +308,24 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         local visible = frame:IsVisible()
         return visible == true or visible == 1
     end
+    local function UpdatePlateOptions()
+        local range = DFRL.display.Get("nameplateDistance") or NATIVE_PLATE_RANGE
+        local guardians = DFRL.display.Get("nameplatesShowGuardians") ~= false
+        local bosses = DFRL.display.Get("nameplatesShowBosses") ~= false
+        local elites = DFRL.display.Get("nameplatesShowElites") ~= false
+        distant.namesOnly = DFRL.display.Get("nameplatesNamesOnly")
+        distant.fontSize = DFRL.display.Get("nameplateFontSize")
+        local kinds = distant.kinds
+        if kinds.guardian ~= guardians or kinds.boss ~= bosses or kinds.elite ~= elites then
+            kinds.guardian, kinds.boss, kinds.finalBoss, kinds.elite = guardians, bosses, bosses, elites
+            state.queryDirty = true
+        end
+        local wanted = range > NATIVE_PLATE_RANGE and (guardians or bosses or elites)
+        if distant.wanted ~= wanted then state.queryDirty = true end
+        distant.range, distant.wanted = range, wanted
+    end
     function api.UpdateOptions()
+        UpdatePlateOptions()
         local bossIcon = DFRL.display.BossIcon()
         styles.boss.art, styles.boss.crop = bossIcon.world, bossIcon.crop
         styles.guardian.art = DFRL.display.GuardianIcon()
@@ -336,14 +377,104 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             Trim(state.points, used)
             for _, record in ipairs(state.staging) do
                 if record.kind and not Wanted(record.kind) then
-                    record.anchorId, record.kind, record.attachment = nil, nil, nil
+                    record.anchorId, record.kind, record.attachment, record.unitId = nil, nil, nil, nil
                 end
             end
         end
-        if not cache and not boss and not party then
+        if not cache and not boss and not party and not distant.wanted then
             state.active = false
             HideAll()
         end
+    end
+    local function Projection(size, sample, clock)
+        local projection, failure = Read("AZS_ProjectWorldAnchors", state.requests)
+        if failure == "STREAM_CHANGED" then return nil, failure end
+        if
+            not projection
+            or projection.apiVersion ~= 1
+            or projection.frameCurrent ~= true
+            or not Id(projection.worldId)
+            or not Id(projection.streamId)
+            or not Id(projection.cameraSampleId)
+            or not Number(projection.clockSeconds)
+            or projection.clockSeconds < 0
+            or (sample and sample ~= projection.cameraSampleId)
+            or (clock and clock ~= projection.clockSeconds)
+            or Array(projection.entries, size) ~= size
+        then
+            return
+        end
+        if
+            projection.worldId ~= state.world
+            or projection.streamId ~= state.stream
+            or (state.clock and projection.clockSeconds < state.clock)
+        then
+            return nil, "STREAM_CHANGED"
+        end
+        return projection
+    end
+    local function SamplePlateDistances(total, sample, clock)
+        -- Use the feet for the native range boundary and the head for drawing.
+        -- Both projections must come from this same post-camera frame.
+        local first = 1
+        while first <= total do
+            local size = 0
+            while first <= total and size < state.capabilities.maxProjectionsPerCall do
+                local point = state.points[first]
+                if point and point.plate then
+                    size = size + 1
+                    local request = state.requests[size] or {}
+                    request.anchorId = state.records[first].anchorId
+                    request.attachment, request.offset = "position", nil
+                    state.requests[size], state.indices[size] = request, first
+                end
+                first = first + 1
+            end
+            Trim(state.requests, size)
+            Trim(state.indices, size)
+            if size > 0 then
+                local projection, failure = Projection(size, sample, clock)
+                if not projection then return nil, failure end
+                for index = 1, size do
+                    local entry = projection.entries[index]
+                    if
+                        type(entry) ~= "table"
+                        or entry.anchorId ~= state.requests[index].anchorId
+                        or entry.attachment ~= "position"
+                        or not projectionStates[entry.state]
+                    then
+                        return
+                    end
+                    if entry.state == "worldChanged" then return nil, "STREAM_CHANGED" end
+                    local distance = entry.playerDistance
+                    state.points[state.indices[index]].plate = entry.state == "onScreen"
+                        and entry.entityState == "alive"
+                        and Number(distance)
+                        and distance > NATIVE_PLATE_RANGE
+                        and distance <= distant.range
+                end
+            end
+        end
+        return true
+    end
+    local function DrawPlate(unit, point)
+        local style = T.NameplateStyle
+        local view = distant.views[unit.id]
+        if not view then
+            view = table.remove(distant.pool) or style.CreateProjected()
+            distant.views[unit.id] = view
+        end
+        if view.drawPass == state.drawPass then return end
+        style.UpdateProjected(
+            view,
+            unit,
+            point.x,
+            point.plateY,
+            distant.namesOnly,
+            distant.fontSize,
+            state.choices.performanceMode
+        )
+        view.drawPass = state.drawPass
     end
     local function Project()
         if not state.enabled or not state.world or not state.active then return true end
@@ -351,21 +482,29 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             HideAll()
             return true
         end
-        if table.getn(state.records) == 0 then return true end
         -- Projection already validates this frame's world epoch. The shared
         -- discovery reader checks map/run/space without another player getter per frame.
         local sample, clock, total = nil, nil, table.getn(state.records)
         local first = 1
         local cacheVisible = CacheAffordable()
-        -- Validate every batch before showing any icon. Reuse scalar result slots.
+        local sct = DFRL.sct
+        local drawPlates = state.hasPlateQuery and state.requestPlates and sct.EnemyNameplatesVisible()
+        -- Validate every batch before showing any visual. Reuse result slots.
         while first <= total do
             local size = 0
             while first <= total and size < state.capabilities.maxProjectionsPerCall do
                 local record = state.records[first]
+                record.plateUnit = drawPlates
+                    and PlateWanted(record.kind)
+                    and record.unitId
+                    and sct.DistantNameplateUnit(record.unitId, plateKinds[record.kind])
                 if
-                    Wanted(record.kind)
-                    and (record.kind ~= "cache" or cacheVisible)
-                    and (record.kind ~= "downedPartyMember" or state.requestParty)
+                    record.plateUnit
+                    or (
+                        IconWanted(record.kind)
+                        and (record.kind ~= "cache" or cacheVisible)
+                        and (record.kind ~= "downedPartyMember" or state.requestParty)
+                    )
                 then
                     size = size + 1
                     local request = state.requests[size] or {}
@@ -375,7 +514,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 else
                     local point = state.points[first]
                     if point then
-                        point.visible, point.onScreen = false, false
+                        point.visible, point.onScreen, point.plate = false, false, false
                     end
                 end
                 first = first + 1
@@ -383,34 +522,12 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             Trim(state.requests, size)
             Trim(state.indices, size)
             if size > 0 then
-                local projection, failure = Read("AZS_ProjectWorldAnchors", state.requests)
+                local projection, failure = Projection(size, sample, clock)
                 if failure == "STREAM_CHANGED" then
                     ClearCatalog()
                     return true
                 end
-                if
-                    not projection
-                    or projection.apiVersion ~= 1
-                    or projection.frameCurrent ~= true
-                    or not Id(projection.worldId)
-                    or not Id(projection.streamId)
-                    or not Id(projection.cameraSampleId)
-                    or not Number(projection.clockSeconds)
-                    or projection.clockSeconds < 0
-                    or (sample and sample ~= projection.cameraSampleId)
-                    or (clock and clock ~= projection.clockSeconds)
-                    or Array(projection.entries, size) ~= size
-                then
-                    return
-                end
-                if
-                    projection.worldId ~= state.world
-                    or projection.streamId ~= state.stream
-                    or (state.clock and projection.clockSeconds < state.clock)
-                then
-                    ClearCatalog()
-                    return true
-                end
+                if not projection then return end
                 sample, clock = projection.cameraSampleId, projection.clockSeconds
                 for index = 1, size do
                     local entry, record = projection.entries[index], state.records[state.indices[index]]
@@ -427,7 +544,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                         return true
                     end
                     local point = state.points[state.indices[index]] or {}
-                    point.visible, point.onScreen = false, false
+                    point.visible, point.onScreen, point.plate = false, false, false
                     point.retired = entry.state == "expired" or entry.state == "unknownAnchor"
                     if entry.state == "onScreen" then
                         if
@@ -443,15 +560,26 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                             return
                         end
                         point.onScreen = true
-                        point.visible = entry.entityState == styles[record.kind].state
+                        point.visible = IconWanted(record.kind)
+                            and entry.entityState == styles[record.kind].state
                             and DistanceVisible(record.kind, entry.playerDistance)
                         point.x, point.y = entry.x, entry.y + styles[record.kind].padding
+                        point.plate = record.plateUnit and entry.entityState == "alive"
+                        point.plateY = entry.y
                     elseif entry.x ~= nil or entry.y ~= nil then
                         return
                     end
                     state.points[state.indices[index]] = point
                 end
             end
+        end
+        if drawPlates then
+            local accepted, failure = SamplePlateDistances(total, sample, clock)
+            if failure == "STREAM_CHANGED" then
+                ClearCatalog()
+                return true
+            end
+            if not accepted then return end
         end
         if clock then state.clock = clock end
         state.drawPass = (state.drawPass or 0) + 1
@@ -465,7 +593,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 used = used + 1
                 state.records[used], state.points[used] = record, point
             end
-            if point and point.onScreen and Wanted(record.kind) then
+            if point and point.onScreen and IconWanted(record.kind) then
                 local marker = point.visible and Marker(record) or state.markers[record.anchorId]
                 if marker and marker.ready then
                     if (point.visible or marker:IsShown()) and (marker.x ~= point.x or marker.y ~= point.y) then
@@ -477,11 +605,16 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                     UpdateVisibility(marker, point.visible, clock, styles[record.kind].mode ~= nil)
                 end
             end
+            if point and point.plate then DrawPlate(record.plateUnit, point) end
+            record.plateUnit = nil
         end
         Trim(state.records, used)
         Trim(state.points, used)
         for _, marker in pairs(state.markers) do
             if marker.drawPass ~= state.drawPass then HideMarker(marker) end
+        end
+        for id, view in pairs(distant.views) do
+            if view.drawPass ~= state.drawPass then RecyclePlate(id, view) end
         end
         return true
     end
@@ -491,20 +624,26 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             and state.queryCache == state.requestCache
             and state.queryBoss == state.requestBoss
             and state.queryParty == state.requestParty
+            and state.queryPlates == state.requestPlates
         then
             return table.getn(state.query.kinds)
         end
         state.queryCache, state.queryBoss, state.queryParty = state.requestCache, state.requestBoss, state.requestParty
+        state.queryPlates = state.requestPlates
+        state.hasPlateQuery = false
         state.queryDirty = nil
         ClearMap(state.kinds)
         local count, list = 0, state.query.kinds
         for _, kind in ipairs(markerKinds) do
+            local plate = state.capabilities.plateDistances and PlateWanted(kind)
             local requested = kind == "cache" and state.requestCache
                 or kind == "downedPartyMember" and state.requestParty
-                or (kind ~= "cache" and kind ~= "downedPartyMember" and state.requestBoss)
+                or (styles[kind].key == "worldBossIcons" and state.requestBoss)
+                or plate
             if requested and state.capabilities.kinds[kind] then
                 count = count + 1
                 list[count], state.kinds[kind] = kind, true
+                if plate then state.hasPlateQuery = true end
             end
         end
         Trim(list, count)
@@ -549,6 +688,8 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 maxProjectionsPerCall = caps.maxProjectionsPerCall,
                 kinds = {},
                 playerDistanceMetrics = caps.playerDistanceMetrics == true,
+                plateDistances = caps.playerDistanceMetrics == true
+                    and Contains(caps.attachments, attachments, "position"),
             }
             for _, kind in ipairs(markerKinds) do
                 cached.kinds[kind] = Contains(caps.kinds, kinds, kind)
@@ -650,6 +791,11 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                     used = used + 1
                     local record = state.staging[used] or {}
                     record.anchorId, record.kind, record.attachment = entry.anchorId, entry.kind, attachment
+                    record.unitId = plateKinds[entry.kind]
+                            and Integer(entry.unitId, 1, 4294967295)
+                            and Contains(entry.attachments, attachments, "position")
+                            and entry.unitId
+                        or nil
                     state.staging[used] = record
                     -- Failed partial scans must also remain clearable on Lua 5.0.
                     if used > stagingSize then
@@ -669,6 +815,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                         used = used + 1
                         local record = state.staging[used] or {}
                         record.anchorId, record.kind, record.attachment = old.anchorId, old.kind, old.attachment
+                        record.unitId = old.unitId
                         state.staging[used], state.seen[old.anchorId] = record, true
                         if used > stagingSize then
                             if table.setn then table.setn(state.staging, used) end
@@ -693,11 +840,22 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
     local function RetryDelay(base, failures) return math.min(8, base * 2 ^ math.min(failures - 1, 7)) end
     function api.Service(inWorld)
         local choices = state.choices
+        local sct = DFRL.sct
+        state.requestPlates = distant.wanted
+            and T.NameplateStyle
+            and sct
+            and sct.EnemyNameplatesVisible
+            and sct.EnemyNameplatesVisible()
         if
             not inWorld
             or not Shown(WorldFrame)
             or not Shown(UIParent)
-            or (not choices.worldCacheIcons and not choices.worldBossIcons and not choices.worldPartyIcons)
+            or (
+                not choices.worldCacheIcons
+                and not choices.worldBossIcons
+                and not choices.worldPartyIcons
+                and not state.requestPlates
+            )
         then
             api.Reset()
             return
@@ -707,8 +865,9 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         state.requestParty = choices.worldPartyIcons
             and (not navigation.HasParty or navigation.HasParty())
             and (not navigation.NeedsPartyMarker or navigation.NeedsPartyMarker())
-        local active = state.requestCache or state.requestBoss or state.requestParty
+        local active = state.requestCache or state.requestBoss or state.requestParty or state.requestPlates
         if not active then
+            RequestRoster(false)
             if state.active ~= false then HideAll() end
             state.active = false
             return
@@ -739,10 +898,12 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             state.configFailures = nil
         end
         if SetQuery() == 0 then
+            RequestRoster(false)
             state.active = false
             HideAll()
             return
         end
+        RequestRoster(state.hasPlateQuery)
         if state.discoveryAt and now >= state.discoveryStarted and now < state.discoveryAt then return end
         local position = navigation.WorldPosition()
         if position and state.world and not Context(state, position) then ClearCatalog() end

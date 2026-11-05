@@ -65,23 +65,28 @@ DFRL:NewMod("NameplateStyle", 5, function()
         style.healthFill.RefreshWidth(WIDTH - 2)
         style.healthFill.SetTexture(path .. "kui_bar.blp")
 
-        local raid = overlay:CreateTexture(nil, "OVERLAY")
-        raid:SetPoint("LEFT", overlay, "RIGHT", 8, 0)
-        raid:SetWidth(30)
-        raid:SetHeight(30)
-        raid:Hide()
-        style.background, style.health, style.raid = background, health, raid
+        if style.native then
+            local raid = overlay:CreateTexture(nil, "OVERLAY")
+            raid:SetPoint("LEFT", overlay, "RIGHT", 8, 0)
+            raid:SetWidth(30)
+            raid:SetHeight(30)
+            raid:Hide()
+            style.raid = raid
+        end
+        style.background, style.health = background, health
     end
 
-    local function Attach(plate, data)
-        if data.style or not data.bar or not data.nameRegion then return end
-
-        -- Keep native geometry/data intact; names have no hidden-bar dependency.
-        local visual = CreateFrame("Frame", nil, plate)
-        visual:SetPoint("CENTER", data.bar, "CENTER", 0, 0)
+    local function CreateStyle(parent, nativeBar)
+        local visual = CreateFrame("Frame", nil, parent)
+        if nativeBar then
+            visual:SetPoint("CENTER", nativeBar, "CENTER", 0, 0)
+        else
+            visual:SetFrameStrata("LOW")
+            visual:Hide()
+        end
         visual:SetWidth(WIDTH)
         visual:SetHeight(HEIGHT)
-        visual:SetFrameLevel(plate:GetFrameLevel() + 1)
+        visual:SetFrameLevel(parent:GetFrameLevel() + 1)
         visual:EnableMouse(false)
         local overlay = CreateFrame("Frame", nil, visual)
         overlay:SetPoint("TOPLEFT", visual, "TOPLEFT", 1, -1)
@@ -93,7 +98,8 @@ DFRL:NewMod("NameplateStyle", 5, function()
         name:SetPoint("BOTTOM", overlay, "TOP", 0.5, -TEXT_OFFSET)
         name:SetWidth(WIDTH * 2)
 
-        data.style = {
+        return {
+            native = nativeBar ~= nil,
             visual = visual,
             overlay = overlay,
             name = name,
@@ -101,6 +107,10 @@ DFRL:NewMod("NameplateStyle", 5, function()
             nameGreen = 1,
             nameBlue = 1,
         }
+    end
+    local function Attach(plate, data)
+        -- Keep native geometry/data intact; names have no hidden-bar dependency.
+        if not data.style and data.bar and data.nameRegion then data.style = CreateStyle(plate, data.bar) end
     end
 
     local function CopyNativeIcon(destination, source)
@@ -186,7 +196,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
                 if region and region.SetAlpha and region:GetAlpha() ~= 0 then region:SetAlpha(0) end
             end
         end
-        local nativeTexture = not data.nativeLayersSuppressed and data.bar:GetStatusBarTexture()
+        local nativeTexture = data.bar and not data.nativeLayersSuppressed and data.bar:GetStatusBarTexture()
         if nativeTexture and nativeTexture.SetAlpha and nativeTexture:GetAlpha() ~= 0 then nativeTexture:SetAlpha(0) end
 
         if style.namesOnly ~= namesOnly or style.performanceMode ~= performanceMode then
@@ -195,7 +205,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
                 if style.health then
                     if style.background:IsShown() then style.background:Hide() end
                     if style.health:IsShown() then style.health:Hide() end
-                    if style.raid:IsShown() then style.raid:Hide() end
+                    if style.raid and style.raid:IsShown() then style.raid:Hide() end
                 end
             else
                 EnsureHealth(style)
@@ -268,8 +278,10 @@ DFRL:NewMod("NameplateStyle", 5, function()
             red, green, blue = PlateColor(red, green, blue)
         end
         UpdateHealth(style, minimum, maximum, value, red, green, blue)
-        local regions = data.nativeRegions
-        CopyNativeIcon(style.raid, regions and regions[6])
+        if style.raid then
+            local regions = data.nativeRegions
+            CopyNativeIcon(style.raid, regions and regions[6])
+        end
     end
 
     local function SetMasked(data, masked)
@@ -288,7 +300,32 @@ DFRL:NewMod("NameplateStyle", 5, function()
         end
     end
 
-    T.NameplateStyle = { Attach = Attach, Update = Update, SetMasked = SetMasked }
+    local function CreateProjected()
+        return {
+            style = CreateStyle(WorldFrame),
+            sample = { minimum = 0, maximum = 1, red = 1, green = 0, blue = 0 },
+        }
+    end
+    local function UpdateProjected(data, unit, x, y, namesOnly, fontSize, performanceMode)
+        local visual, sample = data.style.visual, data.sample
+        if data.x ~= x or data.y ~= y then
+            visual:ClearAllPoints()
+            -- Keep the health bar below the optional crest at the same anchor.
+            visual:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", x, y - 20)
+            data.x, data.y = x, y
+        end
+        sample.name, sample.value = unit.name, unit.hp / unit.hpm
+        if not visual:IsShown() then visual:Show() end
+        Update(visual, data, namesOnly, fontSize, sample, performanceMode)
+    end
+
+    T.NameplateStyle = {
+        Attach = Attach,
+        Update = Update,
+        SetMasked = SetMasked,
+        CreateProjected = CreateProjected,
+        UpdateProjected = UpdateProjected,
+    }
 end)
 
 --[[
