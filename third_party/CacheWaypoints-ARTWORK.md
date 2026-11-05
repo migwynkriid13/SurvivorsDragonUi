@@ -50,7 +50,7 @@ crop placements, color choices, layers and motion shown here are custom
 assemblies. The selected **02 Kyrian Wake** uses the cyan ribbon crop in
 `media/tex/waypoint/KyrianWake.blp`. The source sheet SHA-256 is
 `ae744fc133b8b633b4b2a2ac6cbb81b835428b7a9c0716fe3121d41611d69694`.
-The two resized ribbons, original beam and soft pool are composited into one
+The lower ribbon, original beam and soft pool are composited into one
 128 × 256 BLP2 texture. The runtime uses full UVs and additive blending with
 the ground reference at 150/174 of the canvas height. The other Blizzard
 extracts appear in the comparison preview. Blizzard retains the artwork
