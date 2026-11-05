@@ -1554,6 +1554,7 @@ print("PASS plates cache fixed native metrics per incarnation and callbacks samp
 do
     local current = Plates()
     local env = current.env
+    current:SetSetting("nameplatesShowElites", true)
     current:SetSetting("nameplatesShowRegular", true)
     current:SetSetting("classHealth", true)
     local player = current:MakePlate("Hero", 1000)
@@ -1577,6 +1578,7 @@ do
     assert(r == 0 and g == 1 and b == 0, "nameplate skin modified the native tint")
     player.nativeBar.color = { 1, 0, 0 }
     current:Tick(0.21)
+    assert(player.fixture.style.visual:IsVisible(), "hostile plate was hidden before the tint check")
     r, g, b = player.fixture.style.name:GetTextColor()
     assert(r == 1 and g == 0 and b == 0, "a hostile plate with the hero's name inherited the player class")
 end

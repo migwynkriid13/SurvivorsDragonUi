@@ -1051,8 +1051,10 @@ assert(
 )
 dialog.navigation.Search("Regular mobs")
 assert(
-    #dialog.navigation.results == 1 and dialog.navigation.results[1].target == "nameplatesShowRegular",
-    "nameplate category was absent from search"
+    #dialog.navigation.results == 2
+        and dialog.navigation.results[1].target == "nameplatesShowRegular"
+        and dialog.navigation.results[2].target == "nameplateDistance",
+    "search did not find both the regular-mob checkbox and the range hint"
 )
 dialog.navigation.Search("damage over time")
 assert(#dialog.navigation.results == 1, "custom combat filters were absent from search")
