@@ -17,17 +17,22 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         points = {},
         markers = {},
         pool = {},
+        cachePool = {},
         seen = {},
         cursors = {},
         choices = {},
     }
     local path = DFRL:GetInfoOrCons("tex") .. "waypoint\\"
+    local beamTop = { z = 6 }
+    local reviveArt = path .. "KyrianWake.blp"
+    local poolArt = DFRL:GetInfoOrCons("tex") .. "tally\\AffordableGlow.blp"
     local styles = {
         cache = {
             key = "worldCacheIcons",
             mode = "worldCacheIconMode",
             distance = "worldCacheIconDistance",
             art = path .. "Chest.blp",
+            lightArt = path .. "CacheBeam.blp",
             state = "present",
             attachment = "position",
             size = 22.4,
@@ -68,6 +73,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         downedPartyMember = {
             key = "worldPartyIcons",
             art = path .. "FallenAlly.blp",
+            lightArt = reviveArt,
             state = "downed",
             attachment = "position",
             size = 29.12,
@@ -139,7 +145,16 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         if ok and failure == nil and type(value) == "table" then return value end
         return nil, type(failure) == "table" and failure.code or nil
     end
+    local function HideWorldLight(marker)
+        local light = marker.light
+        if light and light.shown then
+            light.beam:Hide()
+            if light.pool and light.art ~= reviveArt then light.pool:Hide() end
+            light.shown = nil
+        end
+    end
     local function HideMarker(marker)
+        HideWorldLight(marker)
         if marker:IsShown() then marker:Hide() end
         marker.fadeStarted, marker.fadeTarget, marker.fadeFrom = nil, nil, nil
         if marker.alpha and marker.alpha ~= 1 then marker:SetAlpha(1) end
@@ -165,8 +180,12 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
     local function Recycle(id, marker)
         HideMarker(marker)
         marker.x, marker.y, marker.kind, marker.ready = nil, nil, nil, nil
+        local light = marker.light
+        if light then
+            light.x, light.y = nil, nil
+        end
         state.markers[id] = nil
-        table.insert(state.pool, marker)
+        table.insert(light and light.pool and state.cachePool or state.pool, marker)
     end
     local function Release()
         if not state.handler then return true end
@@ -276,7 +295,11 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         local style = styles[record.kind]
         local marker = state.markers[record.anchorId]
         if not marker then
-            marker = table.remove(state.pool)
+            if record.kind == "cache" then
+                marker = table.remove(state.cachePool) or table.remove(state.pool)
+            else
+                marker = table.remove(state.pool) or table.remove(state.cachePool)
+            end
             if not marker then
                 marker = CreateFrame("Frame", nil, WorldFrame)
                 marker:Hide()
@@ -417,6 +440,134 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         end
         return projection
     end
+    local function SampleWorldLights(total, sample, clock)
+        local first, top = 1, false
+        while first <= total do
+            local size = 0
+            while first <= total and size < state.capabilities.maxProjectionsPerCall do
+                local record, point = state.records[first], state.points[first]
+                if styles[record.kind].lightArt and point and point.visible then
+                    size = size + 1
+                    local request = state.requests[size] or {}
+                    request.anchorId, request.attachment = record.anchorId, record.attachment
+                    request.offset = top and beamTop or nil
+                    state.requests[size], state.indices[size] = request, first
+                    if not top then
+                        point.lightYard, point.lightHeight = nil, nil
+                    end
+                    top = not top
+                end
+                if not top then first = first + 1 end
+            end
+            Trim(state.requests, size)
+            Trim(state.indices, size)
+            if size > 0 then
+                local projection, failure = Projection(size, sample, clock)
+                if not projection then return nil, failure end
+                for index = 1, size do
+                    local entry, request = projection.entries[index], state.requests[index]
+                    if
+                        type(entry) ~= "table"
+                        or entry.anchorId ~= request.anchorId
+                        or entry.attachment ~= request.attachment
+                        or not projectionStates[entry.state]
+                    then
+                        return
+                    end
+                    if entry.state == "worldChanged" then return nil, "STREAM_CHANGED" end
+                    local recordIndex = state.indices[index]
+                    local style = styles[state.records[recordIndex].kind]
+                    if entry.state == "onScreen" and entry.entityState == style.state then
+                        local point = state.points[recordIndex]
+                        if not Number(entry.x) or not Number(entry.y) then return end
+                        if request.offset then
+                            if point.lightYard then point.lightHeight = entry.y - point.lightY end
+                        elseif Number(entry.uiUnitsPerYard) and entry.uiUnitsPerYard > 0 then
+                            point.lightX, point.lightY, point.lightYard = entry.x, entry.y, entry.uiUnitsPerYard
+                        end
+                    end
+                end
+            end
+        end
+        return true
+    end
+    local function DrawWorldLight(marker, point, art, alpha)
+        local yard, height = point.lightYard, point.lightHeight
+        if not yard or not Number(height) or height <= 1 then
+            HideWorldLight(marker)
+            return
+        end
+        local isRevive = art == reviveArt
+        local light = marker.light
+        if not light then
+            local beam = marker:CreateTexture(nil, "BORDER")
+            beam:Hide()
+            beam:SetBlendMode("ADD")
+            light = { beam = beam }
+            marker.light = light
+        end
+        if light.art ~= art then
+            HideWorldLight(marker)
+            light.art, light.beamReady = art, nil
+            light.x, light.y, light.yard = nil, nil, nil
+            if isRevive then
+                light.beam:SetVertexColor(1, 1, 1, 1)
+            else
+                light.beam:SetVertexColor(1, 0.78, 0.38, 1)
+            end
+        end
+        if not isRevive then
+            if not light.pool then
+                local pool = marker:CreateTexture(nil, "BACKGROUND")
+                pool:Hide()
+                pool:SetBlendMode("ADD")
+                pool:SetVertexColor(1, 0.78, 0.38, 0.68)
+                light.pool = pool
+            end
+            if not light.poolReady then
+                local ok, result = pcall(light.pool.SetTexture, light.pool, poolArt)
+                light.poolReady = ok and result ~= false
+            end
+            if not light.poolReady then return end
+        end
+        if not light.beamReady then
+            local ok, result = pcall(light.beam.SetTexture, light.beam, art)
+            light.beamReady = ok and result ~= false
+        end
+        if not light.beamReady then return end
+        local bottom = point.lightY - (isRevive and height * 0.16 or 0)
+        if light.x ~= point.lightX or light.y ~= bottom then
+            if not isRevive then light.pool:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", point.lightX, bottom) end
+            light.beam:SetPoint("BOTTOM", WorldFrame, "BOTTOMLEFT", point.lightX, bottom)
+            light.x, light.y = point.lightX, bottom
+        end
+        if light.yard ~= yard or light.height ~= height then
+            if isRevive then
+                light.beam:SetWidth(4.4 * yard)
+                light.beam:SetHeight(height * 1.16)
+            else
+                local rise = math.min(1, height / (beamTop.z * yard))
+                light.pool:SetWidth(3.4 * yard)
+                light.pool:SetHeight(3.4 * yard * math.max(0.25, math.sqrt(1 - rise * rise)))
+                light.beam:SetWidth(2.4 * yard)
+                light.beam:SetHeight(height)
+            end
+            light.yard, light.height = yard, height
+        end
+        if not isRevive and light.poolAlpha ~= alpha then
+            light.pool:SetAlpha(alpha)
+            light.poolAlpha = alpha
+        end
+        if light.alpha ~= alpha then
+            light.beam:SetAlpha(alpha)
+            light.alpha = alpha
+        end
+        if not light.shown then
+            if not isRevive then light.pool:Show() end
+            light.beam:Show()
+            light.shown = true
+        end
+    end
     local function SamplePlateDistances(total, sample, clock)
         -- Use the feet for the native range boundary and the head for drawing.
         -- Both projections must come from this same post-camera frame.
@@ -489,6 +640,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         -- Projection already validates this frame's world epoch. The shared
         -- discovery reader checks map/run/space without another player getter per frame.
         local sample, clock, total = nil, nil, table.getn(state.records)
+        local lightOnScreen, allyOnScreen = false, false
         local first = 1
         local cacheVisible = CacheAffordable()
         local sct = DFRL.sct
@@ -567,6 +719,10 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                         point.visible = IconWanted(record.kind)
                             and entry.entityState == styles[record.kind].state
                             and DistanceVisible(record.kind, entry.playerDistance)
+                        if point.visible and styles[record.kind].lightArt then
+                            lightOnScreen = true
+                            if record.kind == "downedPartyMember" then allyOnScreen = true end
+                        end
                         point.x, point.y = entry.x, entry.y + styles[record.kind].padding
                         point.plate = record.plateUnit and entry.entityState == "alive"
                         point.plateY = entry.y
@@ -585,6 +741,17 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             end
             if not accepted then return end
         end
+        local lightAlpha
+        local wave = (allyOnScreen or (lightOnScreen and not state.choices.performanceMode)) and math.sin(clock * 2.2)
+            or 0
+        if lightOnScreen then
+            local ready, failure = SampleWorldLights(total, sample, clock)
+            if failure == "STREAM_CHANGED" then
+                ClearCatalog()
+                return true
+            end
+            if ready then lightAlpha = state.choices.performanceMode and 0.85 or 0.85 + 0.15 * wave end
+        end
         if clock then state.clock = clock end
         state.drawPass = (state.drawPass or 0) + 1
         local used = 0
@@ -600,13 +767,20 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             if point and point.onScreen and IconWanted(record.kind) then
                 local marker = point.visible and Marker(record) or state.markers[record.anchorId]
                 if marker and marker.ready then
-                    if (point.visible or marker:IsShown()) and (marker.x ~= point.x or marker.y ~= point.y) then
+                    local y = point.y + (record.kind == "downedPartyMember" and 2 * wave or 0)
+                    if (point.visible or marker:IsShown()) and (marker.x ~= point.x or marker.y ~= y) then
                         marker:ClearAllPoints()
-                        marker:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", point.x, point.y)
-                        marker.x, marker.y = point.x, point.y
+                        marker:SetPoint("CENTER", WorldFrame, "BOTTOMLEFT", point.x, y)
+                        marker.x, marker.y = point.x, y
                     end
                     marker.drawPass = state.drawPass
                     UpdateVisibility(marker, point.visible, clock, styles[record.kind].mode ~= nil)
+                    local art = styles[record.kind].lightArt
+                    if art and lightAlpha and point.visible then
+                        DrawWorldLight(marker, point, art, lightAlpha)
+                    else
+                        HideWorldLight(marker)
+                    end
                 end
             end
             if point and point.plate then DrawPlate(record.plateUnit, point) end

@@ -80,8 +80,9 @@ Icons require the five documented general world-anchor endpoints and version-one
 capabilities in [the released API](AzerothSurvivors-Addon-API.md#world-anchors-version-1).
 Discovery uses opaque handles. Boss, guardian and elite markers follow their
 living entity and use the native `overhead` point with six UI units of screen
-padding. Elites use a gold star. Cache icons sit four yards above the cache and
-fallen-ally icons sit five yards above the revive spot. Both use `position` with a world
+padding. Elites use a gold star. Cache icons sit four yards above the cache.
+Fallen-ally icons gently bob around five yards above the revive spot, with the
+blue Kyrian Wake beacon anchored below them. Both use `position` with a world
 offset and zero screen padding. Cache sides are 22.4 units;
 fallen-ally sides are 29.12 units, a 30% increase from their former 22.4.
 These two kinds require advertised

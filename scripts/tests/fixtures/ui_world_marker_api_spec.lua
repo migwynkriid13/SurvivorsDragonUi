@@ -11,6 +11,9 @@ local function Scene(performance)
             setPoint(self, ...)
             self.point = { ... }
         end
+        if frame.kind == "Texture" then
+            function frame:SetBlendMode(mode) self.blendMode = mode end
+        end
         return frame
     end
     c:Load("core/display.lua", "Display")
@@ -147,7 +150,15 @@ local function Scene(performance)
             if native.distant and source.unitId and attachment == "position" then expected = "position" end
             assert(attachment == expected, "consumer requested an unsupported entity attachment")
             local offset = requests[1].offset
-            if source.kind == "cache" or source.kind == "downedPartyMember" then
+            local groundMarker = source.kind == "cache" or source.kind == "downedPartyMember"
+            if groundMarker and (not offset or offset.z == 6) then
+                assert(native.worldOffsets ~= false, "light requested unadvertised world offsets")
+                if offset then
+                    assert(not native.beamOffset or offset == native.beamOffset)
+                    native.beamOffset = offset
+                end
+                if native.lightClipped then entry.state = "clipped" end
+            elseif groundMarker then
                 assert(native.worldOffsets ~= false, "position icon requested unadvertised world offsets")
                 local expectedHeight = source.kind == "cache" and 4 or 5
                 assert(type(offset) == "table" and offset.z == expectedHeight)
@@ -382,7 +393,8 @@ for _, performance in ipairs({ false, true }) do
         local raised = marker.kind == "cache" or marker.kind == "downedPartyMember"
         local expectedY = marker.kind == "cache" and 264 or (raised and 280 or 206)
         local expectedSize = marker.kind == "downedPartyMember" and 29.12 or (raised and 22.4 or 25.6)
-        assert(marker.point[5] == expectedY, "marker ignored native world offset or used incorrect screen padding")
+        local tolerance = marker.kind == "downedPartyMember" and 2 or 0
+        assert(math.abs(marker.point[5] - expectedY) <= tolerance, "marker used an incorrect projected height")
         assert(marker:GetWidth() == expectedSize and marker:GetHeight() == expectedSize, "incorrect world-icon size")
     end
     native.frameCurrent = false
@@ -447,6 +459,9 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     local marker = c:Markers()[1]
     assert(marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 264)
+    local light = marker.light
+    assert(light.beam:IsVisible() and light.pool:IsVisible() and light.beam.blendMode == "ADD")
+    assert(light.beam.point[5] == 200 and light.beam:GetHeight() == 96 and light.pool.point[5] == 200)
     local objects, calls, capabilities = #c.objects, native.calls, native.capabilityReads
     c:ResetCounts()
     c:Frame()
@@ -455,6 +470,10 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     assert(marker.point[5] == 232 and marker:GetWidth() == 22.4, "cache height substituted a fixed screen gap")
     assert(native.calls == calls and native.capabilityReads == capabilities, "cache height added metadata queries")
+    native.lightClipped = true
+    c:Frame()
+    assert(marker:IsVisible() and not light.beam:IsShown() and not light.pool:IsShown())
+    native.lightClipped = nil
     native.entries = { Record("pooled-ally", "downedPartyMember") }
     c:Service(0.21)
     c:ResetCounts()
@@ -463,13 +482,22 @@ for _, performance in ipairs({ false, true }) do
         c:Markers()[1] == marker
             and marker:GetWidth() == 29.12
             and marker:GetHeight() == 29.12
-            and marker.point[5] == 240,
+            and math.abs(marker.point[5] - 240) <= 2,
         "fallen ally lost its larger size or five-yard height"
     )
-    assert(c.writes.SetWidth == 1 and c.writes.SetHeight == 1, "cache/ally pool reuse did not resize exactly once")
+    assert(c.writes.SetWidth == 2 and c.writes.SetHeight == 2, "ally icon and beam did not each resize once")
+    assert(
+        light.beam:IsShown() and not light.pool:IsShown() and string.find(light.beam.texture, "KyrianWake.blp", 1, true)
+    )
     c:ResetCounts()
     c:Frame()
     assert(not c.writes.SetWidth and not c.writes.SetHeight and not c.writes.SetPoint, "settled ally rewrote geometry")
+    local firstY, beamPoint = marker.point[5], light.beam.point
+    c:Frame(0.7)
+    local highY = marker.point[5]
+    c:Frame(1.45)
+    assert(firstY < highY and marker.point[5] < highY and math.abs(marker.point[5] - 240) <= 2)
+    assert(light.beam.point == beamPoint, "bobbing icon displaced the ground beacon")
     native.entries = { Record("pooled-boss", "boss") }
     c.env.DFRL.display.Set("worldBossIcons", true)
     c:Service(0.21)
@@ -650,42 +678,43 @@ for _, performance in ipairs({ false, true }) do
     assert(#c:Markers() == 2, "default cache icons require affordability data")
     local registrations, calls, objects = native.registers, native.calls, #c.objects
     display.Set("worldCacheAffordableOnly", true)
-    local function Check(run, stamp, expected, projected)
+    local function Check(run, stamp, expected)
         env.AZS_RUN, env.AZS_RUN_UPDATED = run, stamp
         local before = native.projections or 0
         c:Frame()
         assert(#c:Markers() == expected, "incorrect affordability visibility")
-        assert((native.projections or 0) - before == projected, "hidden cache still requested projection")
+        local projected = expected == 2 and 6 or 3
+        assert((native.projections or 0) - before == projected, "unexpected affordability projection work")
         assert(
             native.registers == registrations and native.calls == calls,
             "affordability rebound or rediscovered anchors"
         )
         assert(#c.objects == objects, "affordability allocated another marker")
     end
-    Check({ gold = 9, chest = 10 }, 1, 1, 1)
-    Check({ gold = 10, chest = 10 }, 1, 2, 2)
+    Check({ gold = 9, chest = 10 }, 1, 1)
+    Check({ gold = 10, chest = 10 }, 1, 2)
     c:ResetCounts()
-    Check({ gold = 10, chest = 10 }, 1, 2, 2)
+    Check({ gold = 10, chest = 10 }, 1, 2)
     assert(
         not c.writes.SetPoint and not c.writes.SetTexture and not c.writes.Show and not c.writes.Hide,
         "unchanged affordability repainted world icons"
     )
-    Check({ gold = 10, chest = 11 }, 1, 1, 1)
-    Check({ gold = 20, chest = 11 }, 1, 2, 2)
-    Check({ gold = 5, chest = 11 }, 1, 1, 1)
-    Check({ gold = 0, chest = 0 }, 1, 2, 2)
-    Check({ gold = 1.5, chest = 1.5 }, 1, 2, 2)
-    Check({ gold = 1.49, chest = 1.5 }, 1, 1, 1)
-    Check(nil, 1, 1, 1)
-    Check({}, 1, 1, 1)
-    Check({ gold = 10, chest = 1 }, nil, 1, 1)
-    Check({ gold = 10, chest = 1 }, 0 / 0, 1, 1)
+    Check({ gold = 10, chest = 11 }, 1, 1)
+    Check({ gold = 20, chest = 11 }, 1, 2)
+    Check({ gold = 5, chest = 11 }, 1, 1)
+    Check({ gold = 0, chest = 0 }, 1, 2)
+    Check({ gold = 1.5, chest = 1.5 }, 1, 2)
+    Check({ gold = 1.49, chest = 1.5 }, 1, 1)
+    Check(nil, 1, 1)
+    Check({}, 1, 1)
+    Check({ gold = 10, chest = 1 }, nil, 1)
+    Check({ gold = 10, chest = 1 }, 0 / 0, 1)
     for _, invalid in ipairs({ -1, "10", 0 / 0, math.huge }) do
-        Check({ gold = invalid, chest = 1 }, 1, 1, 1)
-        Check({ gold = 10, chest = invalid }, 1, 1, 1)
+        Check({ gold = invalid, chest = 1 }, 1, 1)
+        Check({ gold = 10, chest = invalid }, 1, 1)
     end
     display.Set("worldCacheAffordableOnly", false)
-    Check(nil, nil, 2, 2)
+    Check(nil, nil, 2)
     display.Set("worldCacheAffordableOnly", true)
     native.entries = { Record("cache", "cache") }
     c:Service(0.21)

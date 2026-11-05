@@ -4650,8 +4650,24 @@ world/handle retirement hide immediately and clear the fade. Hidden marker
 coordinates are never replayed to sustain a fade. Recycled views restore alpha
 and retire their fade scalars. Performance Mode settles visibility immediately,
 including an active transition, with identical range queries and cleanup.
-Fallen-ally icons retain instant visibility. No gameplay frame, region, event,
-separate updater or animation timer is added.
+Fallen-ally icons retain instant visibility. The fade uses the existing
+marker regions and callback.
+
+The cache trial and Kyrian Wake use the existing post-camera pass. Each
+visible cache or fallen-ally icon that passes its filters adds two projections
+on the same anchor, at ground level and six yards up. These requests share
+the bounded batch and require the same camera sample. A clipped endpoint
+hides the light while the icon can still draw. Collection, revival, filtering,
+stream changes and marker recycling retire the light.
+
+Cache markers lazily add two additive textures under the icon. The revive
+shaft, ribbons and ground glow share one baked texture and reuse the beam
+region when a cache marker becomes an ally marker. Geometry and texture
+bindings are changed-only. One wave from the projection clock drives the
+visible light pulse and the two-unit ally icon bob. Performance Mode keeps
+the bob and settles light opacity. The lights add visible alpha overdraw.
+Source review and artwork simulation provide no live frame-time or appearance
+measurement.
 
 Four lazy Map subsections reuse the same world icon builder, shared dropdown
 popup, numeric controls, scrolling and search. The split adds two section
