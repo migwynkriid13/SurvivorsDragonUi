@@ -2,10 +2,13 @@
 
 Every PR push runs formatting, static Lua analysis, package and asset inventory,
 source contracts, checker regression fixtures, mocked UI lifecycle tests and the
-existing artwork checks. No game starts. Only the separate mocked UI test step
-executes selected production Lua against fake native boundaries. Keep the `Formatting and local dead code` job as a required
-check in the repository's branch rules; editing a workflow does not configure
-branch protection by itself.
+existing artwork checks. Formatting, Lua analysis and mocked UI, source
+contracts, and package and artwork checks run in parallel. The source contract
+job analyzes the PR head and merge base concurrently before comparing their
+findings. The `Formatting and local dead code` job collects all results and
+remains the required check in the repository's branch rules. Only the mocked
+UI tests execute selected production Lua against fake native boundaries. No
+game starts.
 
 The rarity odds fixture drives the production panel with mocked phase, run
 and stats feeds. It covers the shared quest header, the compact reward table,

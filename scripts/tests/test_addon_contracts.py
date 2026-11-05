@@ -155,6 +155,20 @@ for _, setting in pairs(keys) do DFRL.display.Get(setting) end
 ''')
         self.assertEqual(result["unusedSettings"], [])
 
+    def test_dynamic_alias_cycles_keep_candidates_for_each_reader(self):
+        display = DISPLAY.replace("enabled = true", "enabled = true, extra = false").replace(
+            'enabled = Read(source, "enabled")', 'enabled = Read(source, "enabled"), extra = Read(source, "extra")'
+        )
+        result = self.scan('''
+local first = "enabled"
+local second = first
+first = second or "extra"
+DFRL.display.Get(first)
+DFRL.display.Get(second)
+''', display=display)
+        readers = [item["candidates"] for item in result["dynamic"] if item["api"] == "DFRL.display.Get"]
+        self.assertEqual([set(names) for names in readers], [{"enabled", "extra"}, {"enabled", "extra"}])
+
     def test_unread_layout_flags_and_broken_option_callbacks_fail(self):
         result = analyze({
             "core/display.lua": DISPLAY,

@@ -1,5 +1,6 @@
 """CI source contracts and orphan regressions; no addon Lua executes here."""
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import re
@@ -38,8 +39,7 @@ def main():
     try:
         sources = {name: (SOURCE / name).read_text(encoding="utf-8")
                    for name in runtime_files() if name.endswith(".lua")}
-        current = analyze(sources, caption_keys((SOURCE / "localization/ui.tsv").read_text(encoding="utf-8")))
-        failures.extend(current["failures"])
+        current_captions = caption_keys((SOURCE / "localization/ui.tsv").read_text(encoding="utf-8"))
         base_sha = os.environ["PR_BASE_SHA"]
         if not re.fullmatch(r"[0-9a-f]{40}", base_sha):
             raise ValueError("PR_BASE_SHA must be the PR event's full base SHA")
@@ -47,7 +47,12 @@ def main():
         manifest = json.loads(git("show", base + ":packaging/runtime-files.json"))
         before_sources = {name: git("show", base + ":" + name).decode("utf-8")
                           for name in manifest["files"] if name.endswith(".lua")}
-        previous = analyze(before_sources, caption_keys(git("show", base + ":localization/ui.tsv").decode("utf-8")))
+        before_captions = caption_keys(git("show", base + ":localization/ui.tsv").decode("utf-8"))
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            head_analysis = pool.submit(analyze, sources, current_captions)
+            previous = analyze(before_sources, before_captions)
+            current = head_analysis.result()
+        failures.extend(current["failures"])
         failures.extend(orphan_regressions(current, previous))
         current["base_commit"] = base
         current["new_orphans"] = orphan_regressions(current, previous)
