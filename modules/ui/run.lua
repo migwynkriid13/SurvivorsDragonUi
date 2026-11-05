@@ -1678,9 +1678,15 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function RefreshTimerCaptions()
         local mode = runClock.mode or "Regular"
-        local currentEnabled = DFRL.display.Get("runCurrent" .. mode)
+        local currentEnabled, textEnabled
+        if mode == "Regular" then
+            currentEnabled = DFRL.display.Get("runCurrentRegular")
+            textEnabled = DFRL.display.Get("runTextRegular")
+        else
+            currentEnabled = DFRL.display.Get("runCurrentEndless")
+            textEnabled = DFRL.display.Get("runTextEndless")
+        end
         local maximumEnabled = mode == "Regular" and DFRL.display.Get("runMaximumRegular")
-        local textEnabled = DFRL.display.Get("runText" .. mode)
         local countdownEnabled = bossClock.option and DFRL.display.Get(bossClock.option) or false
         local hasTime = runClock.seconds ~= nil
         local seconds = currentEnabled and runClock.seconds or nil
@@ -4180,7 +4186,6 @@ DFRL:NewMod("RunTimers", 5, function()
         activeMarkers = {},
         activeMarkerCount = 0,
         bossLoss = CreateBossHealthLoss(),
-        bossColorKeys = { boss = "bossBarBossColor", guardian = "bossBarGuardianColor", elite = "bossBarEliteColor" },
         encounterGroups = { bossGroup },
         detachedByKind = {},
         detachOptions = {
@@ -5377,8 +5382,12 @@ DFRL:NewMod("RunTimers", 5, function()
             return
         end
         local colors = render.bossColors or {}
-        for kind, key in pairs(render.bossColorKeys) do
-            local hex = DFRL.display.Get(key)
+        local selected = {
+            boss = DFRL.display.Get("bossBarBossColor"),
+            guardian = DFRL.display.Get("bossBarGuardianColor"),
+            elite = DFRL.display.Get("bossBarEliteColor"),
+        }
+        for kind, hex in pairs(selected) do
             if not colors[kind] or colors[kind].hex ~= hex then
                 local red, green, blue = DFRL.display.ColorRGB(hex)
                 colors[kind] = { hex = hex, red = red, green = green, blue = blue }

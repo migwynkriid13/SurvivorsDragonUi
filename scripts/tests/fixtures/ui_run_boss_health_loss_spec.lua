@@ -664,6 +664,8 @@ for _, performance in ipairs({ false, true }) do
     local guardians, elites = context:Group("guardianBars"), context:Group("eliteBars")
     guardians:Hide()
     elites:Hide()
+    context.source.Watch(guardians)
+    context.source.Watch(elites)
     env.render.encounterGroups = { env.bossGroup, guardians, elites }
     env.render.detachedByKind = { guardian = guardians, elite = elites }
     local allocated = #context.objects
@@ -678,6 +680,7 @@ for _, performance in ipairs({ false, true }) do
     guardians:Show()
     context.source.Rows("playing")
     assert(guardian.bar.value == 0.7, "showing a detached group held stale health")
+    assert(not guardian.lossStart, "showing a detached group replayed damage taken while hidden")
     env.render.detachedByKind.guardian = nil
     context.source.Rows("playing")
     assert(#env.rowOrder == 3 and not guardians:IsShown() and guardian.frame:GetParent() == env.bossGroup)
