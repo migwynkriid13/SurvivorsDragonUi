@@ -26,18 +26,11 @@ already resurrecting that member. The design name **Winged Soul** labels the
 user-selected proposal, rather than an official atlas name. Blizzard retains
 the artwork copyright; the public mirror supplies no additional artwork license.
 
-## Revive-beacon studies and cache trial
+## Revive-beacon studies
 
 [Animated comparison](../docs/previews/revive-beacons.webp) uses the original
 64 × 64 Winged Soul glyph above the same simulated ground in all five designs.
-The lower-right panel shows the separate warm gold chest trial.
-
-The chest trial's `media/tex/waypoint/CacheBeam.blp` is an original 64 × 128
-white alpha mask with a soft core and three tapered rays. It uses the addon’s
-lossless BLP2 palette format and full UVs. The base reuses the original
-64 × 32 `media/tex/tally/AffordableGlow.blp` mask. The renderer stretches the
-column vertically from the ground to the projected six-yard endpoint, flattens
-the pool with camera pitch, and tints both gold with additive blending.
+The lower-right panel records an earlier chest trial from the design study.
 
 The following preview components come from Blizzard's early Dragonflight
 10.0.0 (45454) texture snapshot at Gethe commit
@@ -46,7 +39,7 @@ inclusive and bottom-right exclusive.
 
 | Study             | Artwork and assembly                                                                                                                                                   |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 01 Dawn Column    | Original shaft and existing soft pool, in pale gold. This is the closest visual match to the local cache trial.                                                        |
+| 01 Dawn Column    | Original shaft and existing soft pool, in pale gold.                                                                                                                   |
 | 02 Kyrian Wake    | Blue shaft plus two tilted cyan ribbons from the 1024 × 512 [Covenant celebration sheet][celebration], crop `(413, 0, 775, 72)`.                                       |
 | 03 Spirit Flare   | Narrow white shaft and the complete 128 × 128 [Cooldown starburst][starburst] and [star4][star4] textures. [Cooldown.xml][cooldown] binds `star4` as its finish flash. |
 | 04 Emerald Return | Soft green shaft over two opposed crops of the celebration sheet's green braid `(12, 264, 352, 337)`.                                                                  |

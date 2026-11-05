@@ -151,7 +151,7 @@ local function Scene(performance)
             assert(attachment == expected, "consumer requested an unsupported entity attachment")
             local offset = requests[1].offset
             local groundMarker = source.kind == "cache" or source.kind == "downedPartyMember"
-            if groundMarker and (not offset or offset.z == 6) then
+            if source.kind == "downedPartyMember" and (not offset or offset.z == 6) then
                 assert(native.worldOffsets ~= false, "light requested unadvertised world offsets")
                 if offset then
                     assert(not native.beamOffset or offset == native.beamOffset)
@@ -459,9 +459,7 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     local marker = c:Markers()[1]
     assert(marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 264)
-    local light = marker.light
-    assert(light.beam:IsVisible() and light.pool:IsVisible() and light.beam.blendMode == "ADD")
-    assert(light.beam.point[5] == 200 and light.beam:GetHeight() == 96 and light.pool.point[5] == 200)
+    assert(not marker.light and native.projections == 1, "cache requested a beacon")
     local objects, calls, capabilities = #c.objects, native.calls, native.capabilityReads
     c:ResetCounts()
     c:Frame()
@@ -470,10 +468,6 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     assert(marker.point[5] == 232 and marker:GetWidth() == 22.4, "cache height substituted a fixed screen gap")
     assert(native.calls == calls and native.capabilityReads == capabilities, "cache height added metadata queries")
-    native.lightClipped = true
-    c:Frame()
-    assert(marker:IsVisible() and not light.beam:IsShown() and not light.pool:IsShown())
-    native.lightClipped = nil
     native.entries = { Record("pooled-ally", "downedPartyMember") }
     c:Service(0.21)
     c:ResetCounts()
@@ -486,9 +480,14 @@ for _, performance in ipairs({ false, true }) do
         "fallen ally lost its larger size or five-yard height"
     )
     assert(c.writes.SetWidth == 2 and c.writes.SetHeight == 2, "ally icon and beam did not each resize once")
-    assert(
-        light.beam:IsShown() and not light.pool:IsShown() and string.find(light.beam.texture, "KyrianWake.blp", 1, true)
-    )
+    local light = marker.light
+    assert(light.beam:IsShown() and light.beam.blendMode == "ADD")
+    assert(string.find(light.beam.texture, "KyrianWake.blp", 1, true))
+    native.lightClipped = true
+    c:Frame()
+    assert(marker:IsVisible() and not light.beam:IsShown(), "clipped beacon hid the icon or kept drawing")
+    native.lightClipped = nil
+    c:Frame()
     c:ResetCounts()
     c:Frame()
     assert(not c.writes.SetWidth and not c.writes.SetHeight and not c.writes.SetPoint, "settled ally rewrote geometry")
@@ -510,7 +509,8 @@ for _, performance in ipairs({ false, true }) do
         c:Markers()[1] == marker and marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 232,
         "mixed-kind pool failed to restore the smaller raised cache"
     )
-    assert(#c.objects == objects and native.registers == 1, "cache styling rebuilt the pool or native owner")
+    assert(not light.beam:IsShown(), "recycled cache retained the revive beacon")
+    assert(#c.objects == objects + 1 and native.registers == 1, "beacon reuse rebuilt the pool or native owner")
     c.api.Reset()
 
     local unsupported = Scene(performance)
@@ -683,7 +683,7 @@ for _, performance in ipairs({ false, true }) do
         local before = native.projections or 0
         c:Frame()
         assert(#c:Markers() == expected, "incorrect affordability visibility")
-        local projected = expected == 2 and 6 or 3
+        local projected = expected == 2 and 4 or 3
         assert((native.projections or 0) - before == projected, "unexpected affordability projection work")
         assert(
             native.registers == registrations and native.calls == calls,
