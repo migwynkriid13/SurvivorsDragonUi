@@ -1415,10 +1415,14 @@ do
     )
     dialog.navigation.OpenResult(1)
     local combinedBosses = assert(env.displayControls.bossCombineBars, "missing combined boss checkbox")
+    local elites = assert(env.displayControls.elitesInBossBar, "missing elite boss-bar checkbox")
+    assert(not elites.editorChecked and not display.Get("elitesInBossBar"), "elite boss bars defaulted on")
     assert(not combinedBosses.editorChecked and not display.Get("bossCombineBars"), "combined bosses defaulted on")
+    context:Call(elites, "OnClick")
     context:Call(combinedBosses, "OnClick")
     editor.Display()
     assert(combinedBosses.editorChecked and display.Get("bossCombineBars"), "combined bosses did not preview")
+    assert(elites.editorChecked and display.Get("elitesInBossBar") and not display.Get("guardiansInBossBar"))
     assert(not env.SurvivorsDragonUiDisplay, "combined bosses saved before Confirm")
     display.Set("customBossBars", false)
     editor.Display()
@@ -1426,10 +1430,12 @@ do
         not combinedBosses.mouse and combinedBosses:GetAlpha() == 0.45 and combinedBosses.editorChecked,
         "native boss bars did not disable and retain the combined choice"
     )
+    assert(not elites.mouse and elites.editorChecked, "native boss bars lost the elite preference")
     display.FinishEdit(false)
     display.BeginEdit()
     editor.Display()
     assert(not combinedBosses.editorChecked and display.Get("customBossBars"), "Cancel retained combined boss previews")
+    assert(not elites.editorChecked and not display.Get("elitesInBossBar"), "Cancel retained the elite preview")
     dialog.navigation.Search("")
 end
 -- Prepare every lazy category before counting; the next walk checks reuse.
@@ -1441,7 +1447,13 @@ for _ in pairs(pages) do
     pageCount = pageCount + 1
 end
 assert(
-    pageCount == 23 and pages.cacheIcons and pages.bossIcons and pages.rarityOdds and layoutBuilds == 1,
+    pageCount == 25
+        and pages.cacheIcons
+        and pages.bossIcons
+        and pages.eliteIcons
+        and pages.guardianIcons
+        and pages.rarityOdds
+        and layoutBuilds == 1,
     "full category walk lost or rebuilt sections"
 )
 local allCategoryObjects = #context.objects
@@ -1511,10 +1523,9 @@ display.BeginEdit()
 dialog:Show()
 dialog.navigation.Select("map")
 local affordableOnly = assert(env.displayControls.worldCacheAffordableOnly, "missing affordability checkbox")
-assert(
-    env.displayControls.worldBossIcons.editorChecked and display.Get("worldBossIcons"),
-    "guardian and boss world icons did not default on in settings"
-)
+for _, key in ipairs({ "worldBossIcons", "worldGuardianIcons", "worldEliteIcons" }) do
+    assert(env.displayControls[key].editorChecked and display.Get(key), "encounter icon did not default on")
+end
 assert(
     dialog.navigation.selected == "map" and pages.cacheIcons:IsVisible() and affordableOnly:IsVisible(),
     "affordability case did not open the visible Map & navigation category"
@@ -1556,14 +1567,11 @@ dialog.navigation.ClearSearch()
 display.Set("worldCacheAffordableOnly", false)
 local cacheModes = assert(dialog.displayModes.worldCacheIconMode, "missing cache visibility modes")
 local bossModes = assert(dialog.displayModes.worldBossIconMode, "missing encounter visibility modes")
-local cacheRange, bossRange
+local ranges = {}
 for _, group in ipairs(dialog.worldIconRanges) do
-    if group.master == "worldCacheIcons" then
-        cacheRange = group
-    else
-        bossRange = group
-    end
+    ranges[group.master] = group
 end
+local cacheRange, bossRange = ranges.worldCacheIcons, ranges.worldBossIcons
 assert(cacheRange and bossRange and not cacheRange.enabled and not bossRange.enabled)
 SelectChoice(cacheModes.dropdown, "near")
 editor.Display()
@@ -1583,7 +1591,7 @@ SelectChoice(bossModes.dropdown, "far")
 editor.Display()
 assert(cacheRange.enabled and bossRange.enabled and display.Get("worldBossIconMode") == "far")
 dialog.navigation.Search("Nearby only")
-assert(#dialog.navigation.results == 2, "distance modes were missing from settings search")
+assert(#dialog.navigation.results == 4, "distance modes were missing from settings search")
 dialog.navigation.OpenResult(1)
 assert(dialog.navigation.selected == "map", "distance search did not open Map & navigation")
 dialog.navigation.ClearSearch()
@@ -1593,6 +1601,20 @@ display.Set("worldCacheIconDistance", 40)
 display.Set("worldBossIcons", false)
 editor.Display()
 assert(not cacheRange.enabled and not bossRange.enabled, "Always retained an unnecessary cutoff control")
+do
+    local eliteModes = dialog.displayModes.worldEliteIconMode
+    local guardianModes = dialog.displayModes.worldGuardianIconMode
+    SelectChoice(eliteModes.dropdown, "near")
+    SelectChoice(guardianModes.dropdown, "far")
+    context:Call(env.displayControls.worldEliteIcons, "OnClick")
+    editor.Display()
+    assert(not display.Get("worldEliteIcons") and display.Get("worldGuardianIcons"))
+    assert(not eliteModes.dropdown.mouse and not ranges.worldEliteIcons.enabled)
+    assert(guardianModes.dropdown.mouse and ranges.worldGuardianIcons.enabled)
+    context:Call(env.displayControls.worldEliteIcons, "OnClick")
+    editor.Display()
+    assert(ranges.worldEliteIcons.enabled and display.Get("worldEliteIconMode") == "near")
+end
 do
     local bossIcon = assert(dialog.iconSelectors.bossIconStyle)
     local guardianIcon = assert(dialog.iconSelectors.guardianIconStyle)

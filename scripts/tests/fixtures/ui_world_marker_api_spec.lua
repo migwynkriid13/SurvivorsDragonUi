@@ -259,17 +259,33 @@ local function Record(id, kind)
         projectState = "onScreen",
     }
 end
+local function DisableEncounterIcons(display)
+    display.Set("worldBossIcons", false)
+    display.Set("worldEliteIcons", false)
+    display.Set("worldGuardianIcons", false)
+end
 for _, performance in ipairs({ false, true }) do
     local c = Scene(performance)
     local native, display = c.native, c.env.DFRL.display
     local tex = c.env.DFRL:GetInfoOrCons("tex") .. "waypoint\\"
-    native.entries = { Record("boss", "boss"), Record("final", "finalBoss"), Record("guardian", "guardian") }
+    native.entries = {
+        Record("boss", "boss"),
+        Record("final", "finalBoss"),
+        Record("guardian", "guardian"),
+        Record("elite", "elite"),
+        Record("enemy", "enemy"),
+    }
+    display.Set("nameplatesShowElites", false)
     c:Service()
     c:Frame()
     local markers = c:Markers()
-    assert(#markers == 3)
+    assert(#markers == 4 and native.lastKinds.elite and not native.lastKinds.enemy)
     for _, marker in ipairs(markers) do
         local filename = marker.kind == "guardian" and "GuardianFloating.blp" or "WorldQuestBoss.blp"
+        if marker.kind == "elite" then
+            filename = "EliteWorldStar.blp"
+            assert(marker.point[5] == 206, "elite icon did not use encounter padding")
+        end
         assert(marker.icon.texture == tex .. filename, "default encounter icon did not bind")
     end
     local calls, objects = native.calls, #c.objects
@@ -278,11 +294,40 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     assert(native.calls == calls and #c.objects == objects, "changing art rebuilt markers or fetched the catalog")
     for _, marker in ipairs(markers) do
-        assert(marker.icon.texture == tex .. "GuardianClassic.blp", "existing marker did not adopt original art")
+        local filename = marker.kind == "elite" and "EliteWorldStar.blp" or "GuardianClassic.blp"
+        assert(marker.icon.texture == tex .. filename, "encounter style changed the wrong artwork")
     end
     c:ResetCounts()
     c:Frame()
     assert(not c.writes.SetTexture and not c.writes.SetTexCoord, "settled style repeated texture work")
+    display.Set("worldBossIcons", false)
+    c:Service()
+    c:Frame()
+    assert(
+        #c:Markers() == 2
+            and native.lastKinds.elite
+            and native.lastKinds.guardian
+            and not native.lastKinds.boss
+            and not native.lastKinds.finalBoss,
+        "boss switch affected the wrong encounter kinds"
+    )
+    display.Set("worldGuardianIconMode", "far")
+    display.Set("worldGuardianIconDistance", 20)
+    display.Set("worldEliteIconMode", "near")
+    display.Set("worldEliteIconDistance", 25)
+    calls = native.calls
+    c:Frame()
+    c:Frame(0.13)
+    markers = c:Markers()
+    assert(
+        #markers == 1 and markers[1].kind == "elite" and native.calls == calls,
+        "each encounter must apply its own cutoff without rebuilding discovery"
+    )
+    display.Set("worldGuardianIconDistance", 15)
+    display.Set("worldEliteIcons", false)
+    c:Frame()
+    markers = c:Markers()
+    assert(#markers == 1 and markers[1].kind == "guardian", "elite switch affected the guardian icon")
     c.api.Reset()
 end
 for _, performance in ipairs({ false, true }) do
@@ -297,7 +342,7 @@ for _, performance in ipairs({ false, true }) do
     assert(#c:Markers() == 0, "ordinary controller placed a world marker")
     c:Frame()
     assert(#c:Markers() == 3, "default-on encounter icons omitted a boss")
-    display.Set("worldBossIcons", false)
+    DisableEncounterIcons(display)
     c:Frame()
     assert(#c:Markers() == 2 and native.registers == 1 and native.handlers[native.foreign])
     local objects = #c.objects
@@ -383,7 +428,7 @@ for _, performance in ipairs({ false, true }) do
     retired()
     assert(native.handlers[native.foreign], "old callback stole a foreign owner")
     display.Set("worldCacheIcons", false)
-    display.Set("worldBossIcons", false)
+    DisableEncounterIcons(display)
     display.Set("worldPartyIcons", false)
     c:Service()
     local reads = native.calls
@@ -938,7 +983,7 @@ end
 for _, performance in ipairs({ false, true }) do
     local quiet = Scene(performance)
     local qn, qd = quiet.native, quiet.env.DFRL.display
-    qd.Set("worldBossIcons", false)
+    DisableEncounterIcons(qd)
     qn.partyPresent = false
     qd.Set("worldCacheAffordableOnly", true)
     quiet.env.AZS_RUN, quiet.env.AZS_RUN_UPDATED = { gold = 0, chest = 10 }, 1
@@ -996,7 +1041,7 @@ for _, performance in ipairs({ false, true }) do
         "affordability recovery rebuilt cached metadata/markers"
     )
     qd.Set("worldCacheIcons", false)
-    qd.Set("worldBossIcons", false)
+    DisableEncounterIcons(qd)
     qd.Set("worldPartyIcons", false)
     quiet:Service()
     calls, positions, phases, capabilities = qn.calls, qn.positionReads, qn.phaseReads, qn.capabilityReads
@@ -1016,7 +1061,7 @@ for _, performance in ipairs({ false, true }) do
     local alive = Scene(performance)
     alive.native.downedPresent = false
     alive.env.DFRL.display.Set("worldCacheIcons", false)
-    alive.env.DFRL.display.Set("worldBossIcons", false)
+    DisableEncounterIcons(alive.env.DFRL.display)
     for _ = 1, 20 do
         alive:Service(0.1)
         alive:Frame()
@@ -1159,7 +1204,7 @@ for _, performance in ipairs({ false, true }) do
     assert(rn.calls == calls + 1, "successful discovery did not restore the short first retry")
     rn.releaseFault = true
     retry.env.DFRL.display.Set("worldCacheIcons", false)
-    retry.env.DFRL.display.Set("worldBossIcons", false)
+    DisableEncounterIcons(retry.env.DFRL.display)
     retry.env.DFRL.display.Set("worldPartyIcons", false)
     local releases = rn.unregisters
     retry:Service()
@@ -1206,7 +1251,7 @@ for _, performance in ipairs({ false, true }) do
     end
     native.releaseFault = true
     display.Set("worldCacheIcons", false)
-    display.Set("worldBossIcons", false)
+    DisableEncounterIcons(display)
     display.Set("worldPartyIcons", false)
     c:ResetCounts()
     c:Service()
@@ -1291,7 +1336,7 @@ do
     guardian.feetDistance, elite.feetDistance, final.feetDistance = 20, 200, 40
     native.entries = { guardian, elite, final }
     display.Set("worldCacheIcons", false)
-    display.Set("worldBossIcons", false)
+    DisableEncounterIcons(display)
     display.Set("worldPartyIcons", false)
     local function Visible(kind, name)
         for _, frame in ipairs(c.objects) do

@@ -49,21 +49,17 @@ last-alive or historical location is substituted.
 
 ### World icons (native API)
 
-**Waypoints** also has three independent world-icon switches. **Icons above
-caches**, **Icons above fallen allies** and **Icons above guardians
-and bosses** all default on; the encounter switch includes final bosses.
-Missing or invalid values, older profiles and both resets use on. Explicit saved
-off choices are preserved. These switches retain live preview, Confirm/Cancel
-and profiles. They are independent of the HUD/minimap guidance switches.
+Under **Map & navigation**, caches, bosses, elites and guardians each have
+their own world icon switch, **When to show** menu and distance cutoff.
+The boss switch also covers final bosses. Each defaults to on and **Always**.
+**Nearby only** includes the cutoff and **Distant only** starts beyond it.
+Each cutoff defaults to 40 yards and adjusts from 5 to 200 in five-yard steps.
+Turning a switch off keeps that group's distance choices. Older saves and
+profiles copy their shared boss and guardian choices to the separate controls.
 
-Under **Map & navigation**, **World cache icons** and **World guardian and
-boss icons** each have **Always**, **Nearby only** and **Distant only** choices.
-Always is the default. The separate **Distance cutoff (yards)** starts at 40
-and adjusts from 5 to 200 in five-yard steps. Nearby includes the cutoff;
-Distant starts beyond it. The cutoff dims when Always is selected, and all
-related controls dim while that icon switch is off, retaining their choices.
-These choices share live preview, Confirm/Cancel, profiles and both resets.
-Fallen-ally world icons keep their existing visibility behavior.
+**Icons above fallen allies** is available under **Waypoints** and defaults on.
+World icon settings support live preview, Confirm/Cancel, profiles and resets.
+They are independent of the nameplate and HUD/minimap guidance switches.
 
 Cache and encounter icons fade in over 120 ms; crossing a distance cutoff also
 fades them out over 120 ms. Performance Mode uses instant visibility. Missing,
@@ -82,10 +78,10 @@ existing behavior.
 
 Icons require the five documented general world-anchor endpoints and version-one
 capabilities in [the released API](AzerothSurvivors-Addon-API.md#world-anchors-version-1).
-Discovery uses opaque handles; guardians/bosses follow the actual living entity,
-not the fixed lair. Encounters use the native `overhead` point with six UI units
-of screen padding. Cache icons sit four yards above the cache and fallen-ally
-icons sit five yards above the revive spot. Both use `position` with a world
+Discovery uses opaque handles. Boss, guardian and elite markers follow their
+living entity and use the native `overhead` point with six UI units of screen
+padding. Elites use a gold star. Cache icons sit four yards above the cache and
+fallen-ally icons sit five yards above the revive spot. Both use `position` with a world
 offset and zero screen padding. Cache sides are 22.4 units;
 fallen-ally sides are 29.12 units, a 30% increase from their former 22.4.
 These two kinds require advertised

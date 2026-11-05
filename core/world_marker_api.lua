@@ -36,16 +36,26 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             crop = { 0, 1, 0, 1 },
         },
         guardian = {
-            key = "worldBossIcons",
-            mode = "worldBossIconMode",
-            distance = "worldBossIconDistance",
+            key = "worldGuardianIcons",
+            mode = "worldGuardianIconMode",
+            distance = "worldGuardianIconDistance",
             state = "alive",
             attachment = "overhead",
             size = 27.2,
             padding = 6,
             crop = { 0, 65 / 128, 0, 65 / 128 },
         },
-        elite = { state = "alive", attachment = "overhead", padding = 0 },
+        elite = {
+            key = "worldEliteIcons",
+            mode = "worldEliteIconMode",
+            distance = "worldEliteIconDistance",
+            art = path .. "EliteWorldStar.blp",
+            state = "alive",
+            attachment = "overhead",
+            size = 25.6,
+            padding = 6,
+            crop = { 0, 1, 0, 1 },
+        },
         boss = {
             key = "worldBossIcons",
             mode = "worldBossIconMode",
@@ -201,7 +211,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             state.session, state.enabled, state.retire = nil, false, nil
             ClearCatalog()
             state.query, state.kinds, state.capabilities = nil, nil, nil
-            state.queryCache, state.queryBoss, state.queryParty, state.queryPlates = nil, nil, nil, nil
+            state.queryCache, state.queryParty, state.queryPlates = nil, nil, nil
             state.active, state.reset = false, true
         end
         -- Failure backoff can be installed after Reset. Off/hidden cleanup
@@ -329,48 +339,36 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         local bossIcon = DFRL.display.BossIcon()
         styles.boss.art, styles.boss.crop = bossIcon.world, bossIcon.crop
         styles.guardian.art = DFRL.display.GuardianIcon()
-        local cache = DFRL.display.Get("worldCacheIcons")
-        local boss = DFRL.display.Get("worldBossIcons")
-        local party = DFRL.display.Get("worldPartyIcons")
-        local affordable = DFRL.display.Get("worldCacheAffordableOnly")
-        local cacheMode = DFRL.display.Get("worldCacheIconMode")
-        local bossMode = DFRL.display.Get("worldBossIconMode")
-        local cacheDistance = DFRL.display.Get("worldCacheIconDistance")
-        local bossDistance = DFRL.display.Get("worldBossIconDistance")
-        local performance = DFRL.display.Get("performanceMode")
         local choices = state.choices
-        if
-            choices.worldCacheIcons == cache
-            and choices.worldBossIcons == boss
-            and choices.worldPartyIcons == party
-            and choices.worldCacheAffordableOnly == affordable
-            and choices.worldCacheIconMode == cacheMode
-            and choices.worldBossIconMode == bossMode
-            and choices.worldCacheIconDistance == cacheDistance
-            and choices.worldBossIconDistance == bossDistance
-            and choices.performanceMode == performance
-        then
-            return
+        local visibilityChanged = false
+        for _, kind in ipairs(markerKinds) do
+            if kind ~= "finalBoss" then
+                local style = styles[kind]
+                local enabled = DFRL.display.Get(style.key)
+                if choices[style.key] ~= enabled then
+                    choices[style.key] = enabled
+                    visibilityChanged = true
+                end
+                if style.mode then
+                    choices[style.mode] = DFRL.display.Get(style.mode)
+                    choices[style.distance] = DFRL.display.Get(style.distance)
+                end
+            end
         end
-        local visibilityChanged = choices.worldCacheIcons ~= cache
-            or choices.worldBossIcons ~= boss
-            or choices.worldPartyIcons ~= party
+        state.encounterIcons = choices.worldBossIcons or choices.worldGuardianIcons or choices.worldEliteIcons
+        local affordable = DFRL.display.Get("worldCacheAffordableOnly")
         if visibilityChanged or choices.worldCacheAffordableOnly ~= affordable then state.queryDirty = true end
-        choices.worldCacheIcons, choices.worldBossIcons, choices.worldPartyIcons = cache, boss, party
         choices.worldCacheAffordableOnly = affordable
-        choices.worldCacheIconMode, choices.worldBossIconMode = cacheMode, bossMode
-        choices.worldCacheIconDistance, choices.worldBossIconDistance = cacheDistance, bossDistance
-        choices.performanceMode = performance
+        choices.performanceMode = DFRL.display.Get("performanceMode")
         if visibilityChanged then
             local used = 0
             for index = 1, table.getn(state.records) do
                 local record = state.records[index]
+                local marker = state.markers[record.anchorId]
+                if marker and not IconWanted(record.kind) then Recycle(record.anchorId, marker) end
                 if Wanted(record.kind) then
                     used = used + 1
                     state.records[used], state.points[used] = record, state.points[index]
-                else
-                    local marker = state.markers[record.anchorId]
-                    if marker then Recycle(record.anchorId, marker) end
                 end
             end
             Trim(state.records, used)
@@ -381,7 +379,13 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                 end
             end
         end
-        if not cache and not boss and not party and not distant.wanted then
+        if
+            visibilityChanged
+            and not choices.worldCacheIcons
+            and not state.encounterIcons
+            and not choices.worldPartyIcons
+            and not distant.wanted
+        then
             state.active = false
             HideAll()
         end
@@ -622,13 +626,12 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         if
             not state.queryDirty
             and state.queryCache == state.requestCache
-            and state.queryBoss == state.requestBoss
             and state.queryParty == state.requestParty
             and state.queryPlates == state.requestPlates
         then
             return table.getn(state.query.kinds)
         end
-        state.queryCache, state.queryBoss, state.queryParty = state.requestCache, state.requestBoss, state.requestParty
+        state.queryCache, state.queryParty = state.requestCache, state.requestParty
         state.queryPlates = state.requestPlates
         state.hasPlateQuery = false
         state.queryDirty = nil
@@ -636,11 +639,15 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         local count, list = 0, state.query.kinds
         for _, kind in ipairs(markerKinds) do
             local plate = state.capabilities.plateDistances and PlateWanted(kind)
-            local requested = kind == "cache" and state.requestCache
-                or kind == "downedPartyMember" and state.requestParty
-                or (styles[kind].key == "worldBossIcons" and state.requestBoss)
-                or plate
-            if requested and state.capabilities.kinds[kind] then
+            local icon
+            if kind == "cache" then
+                icon = state.requestCache
+            elseif kind == "downedPartyMember" then
+                icon = state.requestParty
+            else
+                icon = IconWanted(kind)
+            end
+            if (icon or plate) and state.capabilities.kinds[kind] then
                 count = count + 1
                 list[count], state.kinds[kind] = kind, true
                 if plate then state.hasPlateQuery = true end
@@ -852,7 +859,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             or not Shown(UIParent)
             or (
                 not choices.worldCacheIcons
-                and not choices.worldBossIcons
+                and not state.encounterIcons
                 and not choices.worldPartyIcons
                 and not state.requestPlates
             )
@@ -861,11 +868,10 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             return
         end
         state.requestCache = choices.worldCacheIcons and CacheAffordable()
-        state.requestBoss = choices.worldBossIcons
         state.requestParty = choices.worldPartyIcons
             and (not navigation.HasParty or navigation.HasParty())
             and (not navigation.NeedsPartyMarker or navigation.NeedsPartyMarker())
-        local active = state.requestCache or state.requestBoss or state.requestParty or state.requestPlates
+        local active = state.requestCache or state.encounterIcons or state.requestParty or state.requestPlates
         if not active then
             RequestRoster(false)
             if state.active ~= false then HideAll() end

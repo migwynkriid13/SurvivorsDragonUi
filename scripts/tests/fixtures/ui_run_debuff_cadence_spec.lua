@@ -173,6 +173,10 @@ assert(row.debuffCount == 0 and row.debuffHeight == 0)
 for _, pooled in ipairs(row.debuffs) do
     assert(not pooled:IsShown() and not pooled.effect and not pooled.iconPath, "partial paint survived cleanup")
 end
+row.kind = "elite"
+context:ResetCounts()
+Refresh()
+assert(not context.reads.debuffs and row.debuffCount == 0, "elite row queried boss-only debuffs")
 env.inWorld = false
 context:ResetCounts()
 api.Update()

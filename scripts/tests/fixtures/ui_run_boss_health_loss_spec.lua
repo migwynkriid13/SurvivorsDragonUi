@@ -706,6 +706,32 @@ for _, performance in ipairs({ false, true }) do
     context.settings.guardiansInBossBar = false
     context:ResetCounts()
     assert(#context.source.Encounters("playing") == 2 and not context.reads.AZS_GetGuardians)
+    context:Load("core/tools.lua")
+    env.DFRL.layout.IsHidden = function(key) return key == "bossBars" and context.layoutHidden end
+    env.AZS_UNITS = {
+        { kind = "boss", id = 71, name = "First boss", hp = 900, hpm = 1000 },
+        { kind = "guardian", id = 73, name = "Guardian", hp = 800, hpm = 1000, state = 1 },
+        { kind = "elite", id = 74, name = "Elite", hp = 750, hpm = 1500 },
+        { kind = "elite", id = 75, name = "Elite", hp = 1500, hpm = 1500 },
+        { kind = "elite", id = 76, name = "Dead elite", hp = 0, hpm = 1500 },
+    }
+    assert(#context.source.Encounters("playing") == 2, "elites entered boss bars before opt-in")
+    context.settings.elitesInBossBar = true
+    entries = assert(context.source.Encounters("playing"))
+    assert(#entries == 4 and not context.reads.AZS_GetGuardians)
+    assert(entries[3].key == "elite:74" and entries[3].hp == 750 and entries[3].maximum == 1500)
+    assert(entries[4].key == "elite:75", "living elites with matching names merged")
+    env.AZS_UNITS[3].hp = 250
+    assert(context.source.Encounters("playing")[3].hp == 250, "elite health did not refresh")
+    env.AZS_UNITS[4].id = 74
+    assert(#context.source.Encounters("playing") == 2, "invalid optional roster displaced boss health")
+    env.AZS_UNITS[4].id = 75
+    context.layoutHidden = true
+    assert(#context.source.Encounters("playing") == 2, "hidden layout prepared elite rows")
+    context.layoutHidden = false
+    assert(#context.source.Encounters("playing") == 4, "visible layout did not recover elites")
+    context.settings.elitesInBossBar = false
+    assert(#context.source.Encounters("playing") == 2, "disabling elites kept stale rows")
     context:ResetCounts()
     assert(not context.source.Encounters("dead") and not next(context.reads), "retired phase read native encounters")
     env.AZS_UNITS_UPDATED = nil

@@ -93,9 +93,8 @@ saved boolean choices remain unchanged. The shared
 display lifecycle previews it live, saves only with Confirm, discards drafts on
 Cancel/world leave/logout/reload, and restores off through both full resets.
 
-`modules/ui/run.lua` filters only the guardian list from its encounter rows,
-retaining the received-unit-snapshot gate and native boss validation. Boss-only
-mode does not require or read the excluded guardian list. The existing row
+`modules/ui/run.lua` reads the guardian list only when the guardian option is on.
+The option is independent of **Elites in boss bar**. The existing row
 retirement clears removed guardian health/debuffs/tooltips and reflows bosses on
 the next HUD update. A valid empty boss list still takes over native `bosses`,
 which also contains guardians, so native guardian bars cannot reappear when only

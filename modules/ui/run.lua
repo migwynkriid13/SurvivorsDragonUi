@@ -1889,6 +1889,27 @@ DFRL:NewMod("RunTimers", 5, function()
             { "far", "Distant only", "Show icons beyond the distance cutoff." },
         }
         local encounterIconOptions = { { "default", "Default" }, { "original", "Original" } }
+        local function WorldIconSection(key, label, toggle, mode, distance, extra)
+            local options = {
+                toggle,
+                {
+                    distance,
+                    "Distance cutoff (yards)",
+                    "Nearby includes this distance; distant starts beyond it.",
+                    step = 5,
+                    wide = true,
+                    range = true,
+                },
+            }
+            if extra then table.insert(options, extra) end
+            return {
+                key = key,
+                label = label,
+                master = toggle[1],
+                mode = { key = mode, label = "When to show", after = toggle[1], values = worldIconModes },
+                options = options,
+            }
+        end
         local categories = {
             { key = "layout", label = "Layout" },
             { key = "profiles", label = "Profiles" },
@@ -2000,7 +2021,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     {
                         "bossCombineBars",
                         "Combine boss bars",
-                        "Split one row equally between all visible bosses and guardians.",
+                        "Split one row equally between all visible health bars.",
                     },
                     { "bossShowCurrentHealth", "Show current health", "Show current health on health bars." },
                     { "bossShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
@@ -2011,7 +2032,8 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Use K, M, B and T instead of full health numbers.",
                     },
                     { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
-                    { "guardiansInBossBar", "Guardians in boss bar", "Off: show only bosses in the boss bar." },
+                    { "guardiansInBossBar", "Guardians in boss bar", "Show health bars for fighting guardians." },
+                    { "elitesInBossBar", "Elites in boss bar", "Show health bars for living elites." },
                 },
             },
             {
@@ -2246,68 +2268,52 @@ DFRL:NewMod("RunTimers", 5, function()
                     },
                 },
             },
-            {
-                key = "cacheIcons",
-                label = "World cache icons",
-                master = "worldCacheIcons",
-                mode = {
-                    key = "worldCacheIconMode",
-                    label = "When to show",
-                    after = "worldCacheIcons",
-                    values = worldIconModes,
-                },
-                options = {
-                    { "worldCacheIcons", "Icons above caches", "Requires an updated game." },
-                    {
-                        "worldCacheIconDistance",
-                        "Distance cutoff (yards)",
-                        "Nearby includes this distance; distant starts beyond it.",
-                        step = 5,
-                        wide = true,
-                        range = true,
-                    },
-                    {
-                        "worldCacheAffordableOnly",
-                        "Only show affordable caches",
-                        "Hide world cache icons until you have enough gold.",
-                        wide = true,
-                    },
-                },
-            },
-            {
-                key = "bossIcons",
-                label = "World guardian and boss icons",
-                master = "worldBossIcons",
-                mode = {
-                    key = "worldBossIconMode",
-                    label = "When to show",
-                    after = "worldBossIcons",
-                    values = worldIconModes,
-                },
-                options = {
-                    { "worldBossIcons", "Icons above guardians and bosses", "Requires an updated game." },
-                    {
-                        "worldBossIconDistance",
-                        "Distance cutoff (yards)",
-                        "Nearby includes this distance; distant starts beyond it.",
-                        step = 5,
-                        wide = true,
-                        range = true,
-                    },
-                    {
-                        "bossIconStyle",
-                        "Boss icon",
-                        "Use this style above bosses and on the run timer.",
-                        choices = encounterIconOptions,
-                    },
-                    {
-                        "guardianIconStyle",
-                        "Guardian icon",
-                        "Use this style for guardian markers and the tracker.",
-                        choices = encounterIconOptions,
-                    },
-                },
-            },
+            WorldIconSection(
+                "cacheIcons",
+                "World cache icons",
+                { "worldCacheIcons", "Icons above caches", "Requires an updated game." },
+                "worldCacheIconMode",
+                "worldCacheIconDistance",
+                {
+                    "worldCacheAffordableOnly",
+                    "Only show affordable caches",
+                    "Hide world cache icons until you have enough gold.",
+                    wide = true,
+                }
+            ),
+            WorldIconSection(
+                "bossIcons",
+                "World boss icons",
+                { "worldBossIcons", "Icons above bosses", "Requires an updated game." },
+                "worldBossIconMode",
+                "worldBossIconDistance",
+                {
+                    "bossIconStyle",
+                    "Boss icon",
+                    "Use this style above bosses and on the run timer.",
+                    choices = encounterIconOptions,
+                }
+            ),
+            WorldIconSection(
+                "eliteIcons",
+                "World elite icons",
+                { "worldEliteIcons", "Icons above elites", "Requires an updated game." },
+                "worldEliteIconMode",
+                "worldEliteIconDistance"
+            ),
+            WorldIconSection(
+                "guardianIcons",
+                "World guardian icons",
+                { "worldGuardianIcons", "Icons above guardians", "Requires an updated game." },
+                "worldGuardianIconMode",
+                "worldGuardianIconDistance",
+                {
+                    "guardianIconStyle",
+                    "Guardian icon",
+                    "Use this style for guardian markers and the tracker.",
+                    choices = encounterIconOptions,
+                }
+            ),
             {
                 key = "minimap",
                 label = "Minimap",
@@ -2394,7 +2400,7 @@ DFRL:NewMod("RunTimers", 5, function()
             {
                 key = "map",
                 label = "Map & navigation",
-                sections = { "waypoints", "cacheIcons", "bossIcons", "minimap" },
+                sections = { "waypoints", "cacheIcons", "bossIcons", "eliteIcons", "guardianIcons", "minimap" },
             },
             {
                 key = "interface",
@@ -4268,7 +4274,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if row.value ~= 0 then row.bar:SetValue(0) end
         row.fill.SetFraction(0)
         row.value, row.layoutOffset, row.layoutX = 0, nil, nil
-        row.id, row.key = nil, nil
+        row.id, row.key, row.kind = nil, nil, nil
         table.insert(spareRows, row)
     end
 
@@ -4714,7 +4720,8 @@ DFRL:NewMod("RunTimers", 5, function()
         -- The API initializes its unit table to {} in each new Lua VM.
         -- Until an actual unit snapshot arrives after /reload, an empty
         -- getter result does not mean the native encounters disappeared.
-        if not IsNumber(AZS_UNITS_UPDATED) then return nil end
+        local stamp = AZS_UNITS_UPDATED
+        if not IsNumber(stamp) then return nil end
         local bosses = Read("AZS_GetBosses")
         local showGuardians = DFRL.display.Get("guardiansInBossBar")
         local guardians = showGuardians and Read("AZS_GetGuardians") or nil
@@ -4724,6 +4731,13 @@ DFRL:NewMod("RunTimers", 5, function()
         if type(bosses) ~= "table" or (showGuardians and type(guardians) ~= "table") then return nil end
         local entries, seen = render.encounters or {}, render.encounterSeen or {}
         render.encounters, render.encounterSeen = entries, seen
+        local elites
+        if DFRL.display.Get("elitesInBossBar") and not DFRL.layout.IsHidden("bossBars") then
+            local roster = AZS_UNITS
+            if T.EncounterRosterSize(roster, stamp) and T.ValidateEncounterEntries(roster, seen) then
+                elites = roster
+            end
+        end
         -- A fresh candidate may fail validation after partially copying rows;
         -- the next retirement must clear those copies as well.
         render.encountersRetired = nil
@@ -4737,6 +4751,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 -- Getter flags are booleans; also accept the native 1 form.
                 -- Lua considers 0 truthy, so do not test awake by truthiness.
                 local engaged = kind ~= "guardian" or entry.awake == true or entry.awake == 1
+                if kind == "elite" then engaged = entry.kind == "elite" and entry.hp > 0 end
                 if engaged then
                     if
                         not IsNumber(entry.id)
@@ -4763,7 +4778,13 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             return true
         end
-        if not Append(bosses, "boss") or (showGuardians and not Append(guardians, "guardian")) then return nil end
+        if
+            not Append(bosses, "boss")
+            or (showGuardians and not Append(guardians, "guardian"))
+            or (elites and not Append(elites, "elite"))
+        then
+            return nil
+        end
         for index = used + 1, table.getn(entries) do
             entries[index] = nil
         end
@@ -4927,7 +4948,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local paint = bossGroup:IsVisible()
         if not paint then return row.debuffHeight or 0 end
         local getter = _G.AZS_GetDebuffs
-        if enabled and row.debuffsFit ~= false and type(getter) == "function" then
+        if enabled and row.kind ~= "elite" and row.debuffsFit ~= false and type(getter) == "function" then
             -- The getter owns timing and returns current effects for this exact
             -- spawn, including when no unit is targeted. Never advance a local clock.
             local ok, effects = pcall(getter, row.id)
@@ -5123,7 +5144,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 reflow = true
             end
             row.key = entry.key
-            row.id = entry.id
+            row.id, row.kind = entry.id, entry.kind
             if paint then
                 local rowWidth = row.frame:GetWidth()
                 if not T.NearlyEqual(rowWidth, width) then

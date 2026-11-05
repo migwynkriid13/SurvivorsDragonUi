@@ -2052,7 +2052,7 @@ coverage is authored for CI only and has not been run locally.
 ## Boss health loss — 2026-10-28
 
 The optional `bossCombineBars` layout splits the existing width among all
-accepted boss/guardian rows. It reuses the same pooled pills, labels, debuff
+accepted boss, guardian and elite rows. It reuses the same pooled pills, labels, debuff
 icons, native reader and display listener in both Performance Mode states.
 Changed widths and count/order/options dirty the existing reflow; settled
 geometry skips size and anchor writes. Hidden groups defer this presentation.
@@ -2066,6 +2066,12 @@ icons until space returns. The lazy settings toggle adds one Button, five
 texture regions (checkbox, checkmark, hover and two divider strips) and two
 FontStrings, using existing artwork.
 Source review and CI-only fixtures do not establish native appearance or FPS.
+
+The default-off elite option validates the existing, bounded `AZS_UNITS`
+publication during the boss reader's refresh when the group is enabled and
+Layout allows it to be visible. Live elite rows reuse the same pool and health
+rendering. They skip the boss/guardian debuff getter. The checkbox uses the
+same settings builder and region count as the combined layout toggle above.
 
 The selected **04 Crimson echo** adds at most one lazily prepared FillWhite
 texture per pooled boss-bar row, including guardian rows in this view. Each
@@ -4614,16 +4620,13 @@ attachment correctness, wall visibility, camera timing, appearance or FPS.
 
 ### World-icon distance visibility and quick fades
 
-Cache, fallen-ally and encounter icon switches default on, including missing or
-invalid values and both full resets; explicit saved off choices are preserved.
-The encounter switch covers guardians, bosses and final bosses through the same
-existing discovery and projection path, without another reader or updater. Two modes
-(`worldCacheIconMode`, `worldBossIconMode`) normalize to `always`, `near` or
-`far`, initially `always`. Their existing-display-table cutoffs
-(`worldCacheIconDistance`, `worldBossIconDistance`) default to 40 yards and
-normalize to finite integer 5–200 values. The controls step by five; old/invalid
-profiles select Always/40, and all four preferences use the shared
-preview/Confirm/Cancel/profile/reset lifecycle without another SavedVariable.
+Cache, boss, guardian, elite and fallen-ally world icon switches default on.
+Final bosses share the boss options. Cache, boss, guardian and elite modes
+normalize to `always`, `near` or `far`, initially `always`. Each cutoff
+defaults to 40 yards, normalizes to an integer from 5 to 200 and steps by five.
+Missing guardian and elite settings in older saves and profiles inherit the old
+shared values. All options use the shared preview/Confirm/Cancel/profile/reset
+lifecycle in the existing display table.
 
 Distance filtering consumes `playerDistance` already supplied by the same
 current-frame projection, only when `playerDistanceMetrics` is advertised.
@@ -4632,9 +4635,10 @@ nonfinite distances hide only a filtered kind; Always preserves older metric
 providers. Camera metrics never substitute. Affordability remains an independent
 cache gate and fallen allies do not inherit these filters.
 
-Choices are copied by the existing listener. Changing a mode/cutoff does not
-dirty discovery, rebind the native callback or rebuild the pool. Hidden
-out-of-band handles still need their existing projection to detect movement
+Choices are copied by the existing listener. Disabling one icon kind omits it
+from discovery unless its distant nameplates still need the same anchors.
+Changing a mode/cutoff does not dirty discovery, rebind the native callback
+or rebuild the pool. Hidden out-of-band handles still need their existing projection to detect movement
 back into range, but do no texture preparation, frame allocation or placement
 while fully hidden. No player-position, capability or other getter is added.
 
@@ -4649,14 +4653,12 @@ including an active transition, with identical range queries and cleanup.
 Fallen-ally icons retain instant visibility. No gameplay frame, region, event,
 separate updater or animation timer is added.
 
-Two lazy Map subsections reuse the existing master switch, segmented-mode
-builder, numeric controls, scrolling and search. Cutoffs dim for Always; all
-related inputs dim while their master switch is off, preserving choices.
-They add 16 settings-only frames, 44 texture regions and 22 FontStrings across
-the two section shells/pages, six mode buttons, two numeric wrappers/four step
-buttons, headings and dividers. Existing checkboxes move into these sections.
-Prepared settings reuse those controls; hidden settings do no range-label work.
-All eleven added captions have fourteen source/runtime translations.
+Four lazy Map subsections reuse the same world icon builder, shared dropdown
+popup, numeric controls, scrolling and search. The split adds two section
+shells, switches, dropdowns and cutoff steppers. Each mode and cutoff dims
+according to its own switch, and Always dims its cutoff. Prepared settings
+reuse those controls. Hidden settings do no range-label work. All captions have
+fourteen source/runtime translations.
 
 CI-only source/view cases cover exact/fractional boundaries, independent kinds,
 missing/unadvertised metrics, affordability conjunction, interrupted/completed
