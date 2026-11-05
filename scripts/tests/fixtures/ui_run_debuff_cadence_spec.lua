@@ -11,10 +11,13 @@ env.PHASES = { ready = true, playing = true, choosing = true, paused = true, dea
 env.render = { bossLoss = { Update = function() context.reads.loss = (context.reads.loss or 0) + 1 end } }
 env.DEBUFF_SIZE, env.DEBUFF_GAP, env.ROW_HEIGHT = 16, 3, 32
 env.bossGroup = env.CreateFrame("Frame", nil, env.UIParent)
+env.render.encounterGroups = { env.bossGroup }
 env.run = env.CreateFrame("Frame", nil, env.UIParent)
 env.run:Hide()
 env.rowOrder = { { id = 71, columns = 2, debuffs = {}, frame = env.CreateFrame("Frame", nil, env.bossGroup) } }
 local row = env.rowOrder[1]
+row.group = env.bossGroup
+env.bossGroup.layoutKey, env.bossGroup.rows, env.bossGroup.capacity = "bossBars", env.rowOrder, 0
 local create = context.Object
 function context:Object(...)
     local object = create(self, ...)
@@ -59,7 +62,7 @@ env.UpdateRunBoundary = function() context.reads.boundary = (context.reads.bound
 env.UpdateClock = function() context.reads.clock = (context.reads.clock or 0) + 1 end
 env.UpdateTally = function() context.reads.tally = (context.reads.tally or 0) + 1 end
 local api
-env.UpdateRows = function(phase) api.Rows(phase) end
+env.UpdateRows = function(phase) api.Rows(env.bossGroup, phase) end
 local chunk = assert(loadfile(assert(arg[1], "missing extracted run-debuff source")))
 setfenv(chunk, env)
 api = chunk()

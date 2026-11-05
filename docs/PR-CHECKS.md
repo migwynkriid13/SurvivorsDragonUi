@@ -985,6 +985,8 @@ The assertions cover:
   changed-only recoloring, Default restoration and the tint of an active loss
   strip without restarting it. The editor fixture checks color controls in
   Default and Custom, the native-bar switch, meter independence and Cancel.
+- Detached encounter cases cover independent guardian and elite groups,
+  row reuse on detach and reattach, and health recovery after hiding one group.
 - Full production guardian tracker mocks cover status-caption reuse, native
   rounding boundaries, static statuses, language changes, actual text resets,
   failed setters, hidden work, pooled-row reuse, options/world cleanup and

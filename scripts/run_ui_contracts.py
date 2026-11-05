@@ -140,7 +140,10 @@ def main():
             "ReflowRows", "RefreshDebuffHover", "UpdateDebuffRows", "Update",
         ])
         run_debuff_cadence = run_debuff_cadence.rsplit("\nreturn ", 1)[0] + "\nreturn { Update = Update, Rows = UpdateDebuffRows, Clear = ClearDebuffs }\n"
-        run_boss_health_loss = extract_source("modules/ui/run.lua", ["Texture", "Pill", "CreateBossHealthLoss", "Retire", "ReflowRows", "UpdateRows"])
+        run_boss_health_loss = extract_source("modules/ui/run.lua", [
+            "Texture", "Pill", "CreateBossHealthLoss", "Retire", "ReflowRows",
+            "PlanEncounterGroup", "PaintEncounterGroup", "UpdateRows",
+        ])
         # Keep getter validation separate from the row tests' fake native feed.
         encounter_rows = extract_source("modules/ui/run.lua", ["EncounterRows"])
         run_boss_health_loss = (

@@ -8,14 +8,16 @@ local function Tracker()
     env.DFRL.display.GuardianIcon = function() return env.DFRL:GetInfoOrCons("tex") .. "waypoint\\GuardianFloating.blp" end
     context.settings.guardianRows = 0
     context.settings.guardianShowDead = true
+    context.settings.guardianShowHealthBars = true
     context.settings.guardianShowCurrentHealth, context.settings.guardianShowMaximumHealth = true, true
     context.entry =
         { key = "1:0", index = 1, id = 0, name = "Guardian", state = "empty", status = "returning", remaining = 61.9 }
     context.entries = { context.entry }
     env.DFRL.minimapDefaults = { right = 16 }
     env.DFRL.guardians = {
-        GetSnapshot = function(snapshot, trackerShowDead)
+        GetSnapshot = function(snapshot, trackerShowDead, trackerShowHealth)
             assert(trackerShowDead == context.settings.guardianShowDead, "tracker lost the current dead-row filter")
+            assert(trackerShowHealth == context.settings.guardianShowHealthBars, "tracker lost the health-bar choice")
             if context.choiceHidden then return end
             context.reads.snapshot = (context.reads.snapshot or 0) + 1
             snapshot.status, snapshot.rows = "ready", context.entries
@@ -416,9 +418,21 @@ do
     context:SetSetting("guardianShowCurrentHealth", false)
     context:Tick()
     assert(row.health:GetText() == "100" and row.bar.value == 0.5, "current-health choice changed the bar")
+    context:SetSetting("guardianShowHealthBars", false)
+    context:Tick()
+    local red, green, blue = row.status:GetTextColor()
+    assert(not row.pill:IsShown() and row.status:IsShown() and row.status:GetText() == "Combat")
+    assert(red == 1 and green == 0.24 and blue == 0.22 and row.bar.value == 0)
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+    context.entry.hp, context.entry.healthFraction = 40, 0.4
+    context:SetSetting("guardianShowHealthBars", true)
+    context:Tick()
+    assert(row.pill:IsShown() and not row.status:IsShown() and row.health:GetText() == "100" and row.bar.value == 0.4)
     context:SetSetting("guardianShowMaximumHealth", false)
     context:Tick()
-    assert(not row.health:IsShown() and row.bar.value == 0.5, "both health choices failed to hide only the label")
+    assert(not row.health:IsShown() and row.bar.value == 0.4, "both health choices failed to hide only the label")
 end
 print("PASS guardian status caching preserves the shared health branch, values and independent health controls")
 

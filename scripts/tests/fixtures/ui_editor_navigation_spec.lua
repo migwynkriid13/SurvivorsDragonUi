@@ -1418,8 +1418,11 @@ do
     dialog.navigation.OpenResult(1)
     local combinedBosses = assert(env.displayControls.bossCombineBars, "missing combined boss checkbox")
     local elites = assert(env.displayControls.elitesInBossBar, "missing elite boss-bar checkbox")
+    local detachGuardians = assert(env.displayControls.detachGuardianBars)
+    local detachElites = assert(env.displayControls.detachEliteBars)
     assert(not elites.editorChecked and not display.Get("elitesInBossBar"), "elite boss bars defaulted on")
     assert(not combinedBosses.editorChecked and not display.Get("bossCombineBars"), "combined bosses defaulted on")
+    assert(not detachGuardians.mouse and not detachElites.mouse, "detaching enabled for an excluded kind")
     local bossColors = {}
     for _, object in ipairs(context.objects) do
         if object:GetParent() == pages.bosses and object.input and object.pickerButton then
@@ -1438,6 +1441,10 @@ do
     editor.Display()
     assert(combinedBosses.editorChecked and display.Get("bossCombineBars"), "combined bosses did not preview")
     assert(elites.editorChecked and display.Get("elitesInBossBar") and not display.Get("guardiansInBossBar"))
+    assert(detachElites.mouse and not detachGuardians.mouse, "one kind unlocked both detach switches")
+    context:Call(detachElites, "OnClick")
+    editor.Display()
+    assert(display.Get("detachEliteBars") and not display.Get("detachGuardianBars"))
     assert(not env.SurvivorsDragonUiDisplay, "combined bosses saved before Confirm")
     display.Set("customBossBars", false)
     editor.Display()
@@ -1446,12 +1453,14 @@ do
         "native boss bars did not disable and retain the combined choice"
     )
     assert(not elites.mouse and elites.editorChecked, "native boss bars lost the elite preference")
+    assert(not detachElites.mouse and display.Get("detachEliteBars"), "native boss bars lost the detached preference")
     assert(not guardian.available and not guardian.input.keyboard and display.Get("bossBarGuardianColor") == "12AB90")
     display.FinishEdit(false)
     display.BeginEdit()
     editor.Display()
     assert(not combinedBosses.editorChecked and display.Get("customBossBars"), "Cancel retained combined boss previews")
     assert(not elites.editorChecked and not display.Get("elitesInBossBar"), "Cancel retained the elite preview")
+    assert(not display.Get("detachEliteBars"), "Cancel retained the detached preview")
     assert(display.Get("bossBarColorMode") == "default" and display.Get("bossBarGuardianColor") == "DB1F1A")
     dialog.navigation.Search("")
 end

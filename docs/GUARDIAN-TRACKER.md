@@ -28,6 +28,12 @@ DEFAULT 12 text. Both views share `core/widgets.lua` style/text helpers; the
 tracker has no Fighting caption, and health percentages are off by default. Missing health stays text-only,
 and a prior bar is cleared when its row stops fighting or is filtered out.
 
+**Show health bars** in **Guardian tracker** defaults on. Turn it off to show
+red **Combat** text beside fighting guardians. The tracker skips native health
+reads and health text measurement while this option is off. The health number
+controls are dimmed and retain their values. The choice follows the shared
+preview, Confirm, Cancel, profile and reset behavior.
+
 **Show current health** and **Show maximum health** in **Guardian tracker** are
 both on by default. Both on shows `current / maximum`; either alone shows its
 value without a slash. With percentages off, both off hides only the health text, preserving the fill
@@ -279,8 +285,9 @@ returning nil for an unready roster or unknown/negative `left`; the caller sampl
 official run time once when a drawable timer is positive. Native zero still
 shows `0:00`.
 
-The tracker requests health only for fighting guardians and skips countdown
-reads when **Show dead** hides returning lairs. Counts and status still
+The tracker requests health only for fighting guardians with **Show health
+bars** enabled. It skips countdown reads when **Show dead** hides returning
+lairs. Counts and status still
 include the whole roster. The default consumer snapshot retains all available
 health and countdowns. Lair acceptance shares the current waypoint phase
 sample, while standalone snapshot reads check native phase afresh.

@@ -144,9 +144,9 @@ DFRL:NewMod("GuardianRoster", 2, function()
     end
 
     -- Callers may reuse their own copy; accepted private rows are never exposed.
-    -- The tracker shows fighting health and reads countdowns when dead rows are shown.
+    -- The tracker requests fighting health and dead countdowns independently.
     -- Other callers get the full snapshot when the tracker choice is absent.
-    function roster.GetSnapshot(snapshot, trackerShowDead)
+    function roster.GetSnapshot(snapshot, trackerShowDead, trackerShowHealth)
         local active, phase = Active()
         if trackerShowDead ~= nil and phase == "choosing" then return end
         snapshot = snapshot or { rows = {}, counts = {} }
@@ -212,7 +212,7 @@ DFRL:NewMod("GuardianRoster", 2, function()
             end
             if Living(row) then
                 row.hp, row.maximum, row.healthFraction = nil, nil, nil
-                if trackerShowDead == nil or row.state == "awake" then
+                if trackerShowHealth ~= false and (trackerShowDead == nil or row.state == "awake") then
                     if not health then health = Health() end
                     local unit = health[row.id]
                     if unit then

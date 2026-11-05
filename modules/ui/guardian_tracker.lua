@@ -17,6 +17,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local rows = {}
     local inWorld, dirty, age = true, true, 0
     local showDead = DFRL.display.Get("guardianShowDead")
+    local showHealth = DFRL.display.Get("guardianShowHealthBars") ~= false
     local showCurrent = DFRL.display.Get("guardianShowCurrentHealth")
     local showMaximum = DFRL.display.Get("guardianShowMaximumHealth")
     local showPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true
@@ -86,11 +87,12 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local colors = {
         asleep = aliveColor,
         fighting = aliveColor,
+        combat = { 1, 0.24, 0.22 },
         returning = { 0.9, 0.73, 0.4 },
         due = aliveColor,
         empty = { 0.61, 0.67, 0.65 },
     }
-    local captions = { asleep = "Alive", fighting = "Alive", due = "Alive", empty = "Empty" }
+    local captions = { asleep = "Alive", fighting = "Alive", combat = "Combat", due = "Alive", empty = "Empty" }
     local function ClearStatus(row)
         if row.statusText == nil then return end
         row.statusIdentity, row.statusKind, row.statusSecond, row.statusLanguage, row.statusText =
@@ -101,31 +103,19 @@ DFRL:NewMod("GuardianTracker", 4, function()
             ClearStatus(row)
         end
     end
-    local function Status(entry, row)
-        if entry.status == "fighting" and Number(entry.healthFraction) then
-            return T.EncounterHealthText(
-                entry.hp,
-                entry.maximum,
-                showCurrent,
-                showMaximum,
-                nil,
-                shortenHealth,
-                showPercentage
-            )
-        end
-        local second = entry.status == "returning" and math.max(0, math.ceil(entry.remaining)) or nil
+    local function Status(entry, row, kind)
+        local second = kind == "returning" and math.max(0, math.ceil(entry.remaining)) or nil
         local language = DFRL.locale.code
         if
             row.statusIdentity ~= entry.key
-            or row.statusKind ~= entry.status
+            or row.statusKind ~= kind
             or row.statusSecond ~= second
             or row.statusLanguage ~= language
             or row.statusText == nil
         then
-            local text = entry.status == "returning" and Format("Respawns in %s", Time(second))
-                or DFRL.locale.Text(captions[entry.status] or "Empty")
-            row.statusIdentity, row.statusKind, row.statusSecond, row.statusLanguage =
-                entry.key, entry.status, second, language
+            local text = kind == "returning" and Format("Respawns in %s", Time(second))
+                or DFRL.locale.Text(captions[kind] or "Empty")
+            row.statusIdentity, row.statusKind, row.statusSecond, row.statusLanguage = entry.key, kind, second, language
             row.statusText = text
         end
         return row.statusText
@@ -265,16 +255,14 @@ DFRL:NewMod("GuardianTracker", 4, function()
         return true
     end
     local function MeasureHealthLabels(snapshot)
-        if
-            (showCurrent or showMaximum or showPercentage)
-            and presentation.measureSize ~= T.EncounterHealthStyle.fontSize
-        then
+        local showLabels = showHealth and (showCurrent or showMaximum or showPercentage)
+        if showLabels and presentation.measureSize ~= T.EncounterHealthStyle.fontSize then
             T.SetFont(measure, T.EncounterHealthStyle.fontSize, "OUTLINE")
             presentation.measureSize = T.EncounterHealthStyle.fontSize
         end
-        if snapshot.counts.fighting == 0 then
+        if not showHealth or snapshot.counts.fighting == 0 then
             presentation.healthLabels = nil
-        elseif showCurrent or showMaximum or showPercentage then
+        elseif showLabels then
             local labels = presentation.healthLabels or {}
             presentation.healthLabels = labels
             for index, entry in ipairs(snapshot.rows) do
@@ -313,9 +301,9 @@ DFRL:NewMod("GuardianTracker", 4, function()
         return true
     end
 
-    local function PaintRowStatus(row, entry, snapshotIndex)
+    local function PaintRowStatus(row, entry, snapshotIndex, status)
         -- Only the native fighting state with valid current health gets a bar.
-        if entry.state == "awake" and Number(entry.healthFraction) then
+        if showHealth and entry.state == "awake" and Number(entry.healthFraction) then
             ClearStatus(row)
             if row.value ~= entry.healthFraction then row.bar:SetValue(entry.healthFraction) end
             row.value = entry.healthFraction
@@ -344,14 +332,14 @@ DFRL:NewMod("GuardianTracker", 4, function()
             row.value = 0
             if row.pill:IsShown() then row.pill:Hide() end
             T.SetEncounterHealthText(row.health, nil, nil, false, false)
-            T.SetTextIfChanged(row.status, Status(entry, row))
+            T.SetTextIfChanged(row.status, Status(entry, row, status))
             if not row.status:IsShown() then row.status:Show() end
         end
     end
 
     local function Refresh()
         if not inWorld or DFRL.layout.IsHidden("guardianTracker") or not UIParent:IsVisible() then return end
-        local snapshot = roster.GetSnapshot(presentation.snapshot, showDead)
+        local snapshot = roster.GetSnapshot(presentation.snapshot, showDead, showHealth)
         if not snapshot then
             Hide()
             return
@@ -424,12 +412,13 @@ DFRL:NewMod("GuardianTracker", 4, function()
                     row.layoutWidth, row.layoutIndex, row.statusWidth = width, used, statusWidth
                 end
                 T.SetTextIfChanged(row.name, LairName(entry, row))
-                local color = colors[entry.status] or colors.empty
+                local status = not showHealth and entry.status == "fighting" and "combat" or entry.status
+                local color = colors[status] or colors.empty
                 if row.color ~= color then
                     row.status:SetTextColor(color[1], color[2], color[3])
                     row.color = color
                 end
-                PaintRowStatus(row, entry, snapshotIndex)
+                PaintRowStatus(row, entry, snapshotIndex, status)
                 if not row:IsShown() then row:Show() end
             end
         end
@@ -505,6 +494,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         local selectedOutline = DFRL.display.Get("uiFontOutline")
         local selected = DFRL.display.Get("guardianRows")
         local selectedShowDead = DFRL.display.Get("guardianShowDead")
+        local selectedHealth = DFRL.display.Get("guardianShowHealthBars") ~= false
         local selectedCurrent = DFRL.display.Get("guardianShowCurrentHealth")
         local selectedMaximum = DFRL.display.Get("guardianShowMaximumHealth")
         local selectedPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true
@@ -512,6 +502,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
         if
             selectedFont ~= uiFont
             or selectedOutline ~= uiFontOutline
+            or selectedHealth ~= showHealth
             or selectedCurrent ~= showCurrent
             or selectedMaximum ~= showMaximum
             or selectedShortHealth ~= shortenHealth
@@ -520,7 +511,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
             ClearStatuses()
             uiFont, uiFontOutline = selectedFont, selectedOutline
             presentation.measureSize = nil
-            showCurrent, showMaximum = selectedCurrent, selectedMaximum
+            showHealth, showCurrent, showMaximum = selectedHealth, selectedCurrent, selectedMaximum
             showPercentage = selectedPercentage
             shortenHealth = selectedShortHealth
             presentation.healthLabels, healthWidth = nil, 0
