@@ -413,13 +413,22 @@ Test("world icon distance choices preserve defaults, transactions, bounds and pr
     display.BeginEdit()
     display.Load({
         worldCacheIconMode = "far",
+        worldBossIcons = false,
         worldBossIconMode = "near",
         worldCacheIconDistance = 55,
         worldBossIconDistance = 25,
     })
     local profile = display.Snapshot()
+    assert(not profile.worldGuardianIcons and not profile.worldEliteIcons, "old shared off choice was lost")
+    assert(profile.worldGuardianIconMode == "near" and profile.worldEliteIconMode == "near")
+    assert(profile.worldGuardianIconDistance == 25 and profile.worldEliteIconDistance == 25)
+    display.Set("worldEliteIcons", true)
+    display.Set("worldEliteIconMode", "far")
+    display.Set("worldEliteIconDistance", 80)
     display.FinishEdit(true)
     assert(display.Get("worldCacheIconMode") == "far" and display.Get("worldBossIconDistance") == 25)
+    assert(display.Get("worldEliteIcons") and display.Get("worldEliteIconMode") == "far")
+    assert(display.Get("worldEliteIconDistance") == 80 and not display.Get("worldGuardianIcons"))
     display.BeginEdit()
     display.Load({})
     assert(display.Get("worldCacheIconMode") == "always" and display.Get("worldCacheIconDistance") == 40)

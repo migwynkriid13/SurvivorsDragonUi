@@ -58,6 +58,7 @@ function model(source) {
   walk(tree, (node) => nodes.push(node));
   const bindings = new Map();
   const tables = new Map();
+  const fieldValues = new Map();
   const aliases = new Map();
   const declared = new Set();
   function bind(name, value) {
@@ -67,6 +68,11 @@ function model(source) {
     if (value?.type === 'TableConstructorExpression') tables.set(name, value);
   }
   for (const node of nodes) {
+    if (node.type === 'TableKeyString') {
+      const name = node.key.name;
+      if (!fieldValues.has(name)) fieldValues.set(name, []);
+      fieldValues.get(name).push(node.value);
+    }
     if (node.type === 'LocalStatement' || node.type === 'AssignmentStatement') {
       node.variables.forEach((variable, index) => {
         if (variable.type === 'Identifier') {
@@ -105,33 +111,48 @@ function model(source) {
     const [head, ...tail] = name.split('.');
     return [aliases.get(head) || head, ...tail].join('.');
   }
-  function tableValues(node, seen) {
-    if (node?.type === 'Identifier') return tableValues(tables.get(node.name), seen);
+  function tableValues(node) {
+    if (node?.type === 'Identifier') return tableValues(tables.get(node.name));
     if (node?.type !== 'TableConstructorExpression') return [];
-    return node.fields.flatMap((field) => strings(field.value, seen));
+    return node.fields.flatMap((field) => strings(field.value));
   }
-  function strings(node, seen = new Set()) {
-    if (!node || seen.has(node)) return [];
-    const next = new Set(seen).add(node);
-    if (text(node) !== undefined) return [text(node)];
-    if (node.type === 'Identifier') {
-      return (bindings.get(node.name) || []).flatMap((value) => strings(value, next));
+  const resolving = new Set();
+  const stringCache = new WeakMap();
+  let cycleCount = 0;
+  function strings(node) {
+    if (!node) return [];
+    if (stringCache.has(node)) return stringCache.get(node);
+    if (resolving.has(node)) {
+      cycleCount++;
+      return [];
     }
-    if (node.type === 'CollectionValues') return tableValues(node.base, next);
+    const priorCycles = cycleCount;
+    resolving.add(node);
+    const values = resolveStrings(node);
+    resolving.delete(node);
+    // A path cut short by a cycle can yield different candidates on another path.
+    if (cycleCount === priorCycles && values.length <= 256) stringCache.set(node, values);
+    return values;
+  }
+  function resolveStrings(node) {
+    const literal = text(node);
+    if (literal !== undefined) return [literal];
+    if (node.type === 'Identifier') {
+      return (bindings.get(node.name) || []).flatMap(strings);
+    }
+    if (node.type === 'CollectionValues') return tableValues(node.base);
     if (node.type === 'LogicalExpression') {
-      return [...strings(node.left, next), ...strings(node.right, next)];
+      return [...strings(node.left), ...strings(node.right)];
     }
     if (node.type === 'BinaryExpression' && node.operator === '..') {
-      const left = strings(node.left, next);
-      const right = strings(node.right, next);
+      const left = strings(node.left);
+      const right = strings(node.right);
       if (left.length * right.length > 256) return [];
       return left.flatMap((prefix) => right.map((suffix) => prefix + suffix));
     }
-    if (node.type === 'IndexExpression') return tableValues(node.base, next);
+    if (node.type === 'IndexExpression') return tableValues(node.base);
     if (node.type === 'MemberExpression') {
-      return nodes
-        .filter((field) => field.type === 'TableKeyString' && key(field) === node.identifier.name)
-        .flatMap((field) => strings(field.value, next));
+      return (fieldValues.get(node.identifier.name) || []).flatMap(strings);
     }
     return [];
   }

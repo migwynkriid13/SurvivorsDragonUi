@@ -25,11 +25,12 @@ lets more descriptions fit on one line without shortening or cutting their
 wording. Longer descriptions and translations still wrap in their existing
 help areas.
 
-Under **Map & navigation** → **World guardian and boss icons**, choose
-**Default** or **Original** for **Boss icon** and **Guardian icon**. One boss
-choice controls both the overhead marker and run timer. The guardian choice
-applies to overhead markers, the tracker, minimap and waypoint guidance.
-Changes preview immediately and save with **Confirm**.
+Under **Map & navigation**, bosses, elites and guardians have separate world
+icon switches and distance cutoffs. **Boss icon** and **Guardian icon** offer
+**Default** and **Original**. The boss style also applies to the run timer.
+The guardian style also applies to the tracker, minimap and waypoint guidance.
+Elites use a gold star overhead. Changes preview immediately and save with
+**Confirm**.
 
 | Category         | Sections                                            |
 | ---------------- | --------------------------------------------------- |

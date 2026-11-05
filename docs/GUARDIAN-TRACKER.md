@@ -28,6 +28,12 @@ DEFAULT 12 text. Both views share `core/widgets.lua` style/text helpers; the
 tracker has no Fighting caption, and health percentages are off by default. Missing health stays text-only,
 and a prior bar is cleared when its row stops fighting or is filtered out.
 
+**Show health bars** in **Guardian tracker** defaults on. Turn it off to show
+red **Combat** text beside fighting guardians. The tracker skips native health
+reads and health text measurement while this option is off. The health number
+controls are dimmed and retain their values. The choice follows the shared
+preview, Confirm, Cancel, profile and reset behavior.
+
 **Show current health** and **Show maximum health** in **Guardian tracker** are
 both on by default. Both on shows `current / maximum`; either alone shows its
 value without a slash. With percentages off, both off hides only the health text, preserving the fill
@@ -93,9 +99,8 @@ saved boolean choices remain unchanged. The shared
 display lifecycle previews it live, saves only with Confirm, discards drafts on
 Cancel/world leave/logout/reload, and restores off through both full resets.
 
-`modules/ui/run.lua` filters only the guardian list from its encounter rows,
-retaining the received-unit-snapshot gate and native boss validation. Boss-only
-mode does not require or read the excluded guardian list. The existing row
+`modules/ui/run.lua` reads the guardian list only when the guardian option is on.
+The option is independent of **Elites in boss bar**. The existing row
 retirement clears removed guardian health/debuffs/tooltips and reflows bosses on
 the next HUD update. A valid empty boss list still takes over native `bosses`,
 which also contains guardians, so native guardian bars cannot reappear when only
@@ -280,8 +285,9 @@ returning nil for an unready roster or unknown/negative `left`; the caller sampl
 official run time once when a drawable timer is positive. Native zero still
 shows `0:00`.
 
-The tracker requests health only for fighting guardians and skips countdown
-reads when **Show dead** hides returning lairs. Counts and status still
+The tracker requests health only for fighting guardians with **Show health
+bars** enabled. It skips countdown reads when **Show dead** hides returning
+lairs. Counts and status still
 include the whole roster. The default consumer snapshot retains all available
 health and countdowns. Lair acceptance shares the current waypoint phase
 sample, while standalone snapshot reads check native phase afresh.

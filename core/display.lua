@@ -23,6 +23,7 @@ DFRL:NewMod("Display", 0, function()
         bossRows = 0,
         guardianRows = 0,
         guardianShowDead = true,
+        guardianShowHealthBars = true,
         guardianShowCurrentHealth = true,
         guardianShowMaximumHealth = true,
         guardianShowHealthPercentage = false,
@@ -40,6 +41,10 @@ DFRL:NewMod("Display", 0, function()
         attachAffixes = true,
         customBossBars = true,
         bossCombineBars = false,
+        bossBarColorMode = "default",
+        bossBarBossColor = "DB1F1A",
+        bossBarGuardianColor = "DB1F1A",
+        bossBarEliteColor = "DB1F1A",
         lootMode = "sdui",
         lootShowMarks = true,
         rarityOdds = false,
@@ -61,9 +66,16 @@ DFRL:NewMod("Display", 0, function()
         bossCountdownEndless = true,
         bossCountdownRegular = false,
         guardiansInBossBar = false,
-        nameplatesBossGuardiansOnly = false,
+        elitesInBossBar = false,
+        detachGuardianBars = false,
+        detachEliteBars = false,
+        nameplatesShowBosses = true,
+        nameplatesShowGuardians = true,
+        nameplatesShowElites = true,
+        nameplatesShowRegular = true,
         nameplatesNamesOnly = false,
         nameplateFontSize = 9,
+        nameplateDistance = 20,
         targetDebuffsOnTop = false,
         damageIcons = false,
         sctNormalHits = true,
@@ -113,6 +125,12 @@ DFRL:NewMod("Display", 0, function()
         worldBossIcons = true,
         worldBossIconMode = "always",
         worldBossIconDistance = 40,
+        worldEliteIcons = true,
+        worldEliteIconMode = "always",
+        worldEliteIconDistance = 40,
+        worldGuardianIcons = true,
+        worldGuardianIconMode = "always",
+        worldGuardianIconDistance = 40,
         bossIconStyle = "default",
         guardianIconStyle = "default",
         worldPartyIcons = true,
@@ -165,12 +183,14 @@ DFRL:NewMod("Display", 0, function()
         { value = 1, label = "1 s" },
     }
 
+    local worldIconDistanceRange = { minimum = 5, maximum = 200, integer = true }
     local ranges = {
         meterRows = { minimum = 1, maximum = 10, integer = true },
         bossRows = { minimum = 0, maximum = 40, integer = true },
         meterFontSize = { minimum = 8, maximum = 18, integer = true },
         meterNameFontSize = { minimum = 8, maximum = 18, integer = true },
         nameplateFontSize = { minimum = 6, maximum = 32, integer = true },
+        nameplateDistance = { minimum = 20, maximum = 200, integer = true },
         meterDpsWindow = { minimum = 5, maximum = 120, integer = true },
         meterRefreshRate = { minimum = 0.25, maximum = 2 },
         layoutGridSpacing = { minimum = 8, maximum = 128, integer = true },
@@ -178,8 +198,10 @@ DFRL:NewMod("Display", 0, function()
         sctScale = { minimum = 0.25, maximum = 2 },
         sctDistanceReference = { minimum = 1, maximum = 100, integer = true },
         sctDistanceMinimum = { minimum = 25, maximum = 100, integer = true },
-        worldCacheIconDistance = { minimum = 5, maximum = 200, integer = true },
-        worldBossIconDistance = { minimum = 5, maximum = 200, integer = true },
+        worldCacheIconDistance = worldIconDistanceRange,
+        worldBossIconDistance = worldIconDistanceRange,
+        worldEliteIconDistance = worldIconDistanceRange,
+        worldGuardianIconDistance = worldIconDistanceRange,
         petRows = { minimum = 1, maximum = 6, integer = true },
         petSpacing = { minimum = 0, maximum = 60, integer = true },
     }
@@ -216,13 +238,20 @@ DFRL:NewMod("Display", 0, function()
     local function NormalizeUiFontOutline(value)
         if value == "" or value == "OUTLINE" or value == "THICKOUTLINE" then return value end
     end
-    local colorKeys = { meterAbilityColor = true, meterProcColor = true }
+    local colorKeys = {
+        meterAbilityColor = true,
+        meterProcColor = true,
+        bossBarBossColor = true,
+        bossBarGuardianColor = true,
+        bossBarEliteColor = true,
+    }
+    local colorModeKeys = { meterColorMode = true, bossBarColorMode = true }
     local function NormalizeColor(value)
         if type(value) ~= "string" then return end
         value = string.gsub(value, "^#", "")
         if string.len(value) == 6 and not string.find(value, "[^%x]") then return string.upper(value) end
     end
-    local function NormalizeMeterColorMode(value)
+    local function NormalizeColorMode(value)
         if value == "default" or value == "custom" then return value end
     end
     local function NormalizeWorldIconMode(value)
@@ -280,17 +309,34 @@ DFRL:NewMod("Display", 0, function()
             math.floor(blue * 255 + 0.5)
         )
     end
+    local worldIconModeKeys = {
+        worldCacheIconMode = true,
+        worldBossIconMode = true,
+        worldEliteIconMode = true,
+        worldGuardianIconMode = true,
+    }
+    -- The old boss settings applied to every encounter kind.
+    local legacyEncounterKeys = {
+        worldEliteIcons = "worldBossIcons",
+        worldEliteIconMode = "worldBossIconMode",
+        worldEliteIconDistance = "worldBossIconDistance",
+        worldGuardianIcons = "worldBossIcons",
+        worldGuardianIconMode = "worldBossIconMode",
+        worldGuardianIconDistance = "worldBossIconDistance",
+    }
     local function Read(source, key)
         local value
-        if type(source) == "table" then value = source[key] end
+        if type(source) == "table" then
+            value = source[key]
+            local legacyKey = legacyEncounterKeys[key]
+            if value == nil and legacyKey then value = source[legacyKey] end
+        end
         if colorKeys[key] then return NormalizeColor(value) or defaults[key] end
         if iconStyleKeys[key] then return NormalizeIconStyle(value) or defaults[key] end
         if key == "jewelryFrameStyle" then return NormalizeJewelryFrameStyle(value) or defaults[key] end
         if key == "jewelryOrder" then return NormalizeJewelryOrder(value) or defaults[key] end
-        if key == "meterColorMode" then return NormalizeMeterColorMode(value) or defaults[key] end
-        if key == "worldCacheIconMode" or key == "worldBossIconMode" then
-            return NormalizeWorldIconMode(value) or defaults[key]
-        end
+        if colorModeKeys[key] then return NormalizeColorMode(value) or defaults[key] end
+        if worldIconModeKeys[key] then return NormalizeWorldIconMode(value) or defaults[key] end
         if ranges[key] then
             local number = NormalizeNumber(key, value)
             if key == "meterNameFontSize" and not number and type(source) == "table" then
@@ -316,6 +362,14 @@ DFRL:NewMod("Display", 0, function()
             return defaults[key]
         end
         if type(value) == "boolean" then return value end
+        if
+            (key == "nameplatesShowElites" or key == "nameplatesShowRegular")
+            and value == nil
+            and type(source) == "table"
+            and source.nameplatesBossGuardiansOnly == true
+        then
+            return false
+        end
         if key == "runTextRegular" or key == "runTextEndless" then
             local legacy = _G.SurvivorsDragonUiRunFont
             if type(legacy) == "table" and type(legacy.showText) == "boolean" then return legacy.showText end
@@ -336,6 +390,10 @@ DFRL:NewMod("Display", 0, function()
     end
 
     function display.Get(key) return Read(draft or _G.SurvivorsDragonUiDisplay, key) end
+    function display.GetRange(key)
+        local range = ranges[key]
+        if range then return range.minimum, range.maximum end
+    end
     function display.BossIcon() return bossArt[DFRL.display.Get("bossIconStyle")] end
     function display.GuardianIcon()
         return DFRL.display.Get("guardianIconStyle") == "original" and originalCrest
@@ -365,10 +423,10 @@ DFRL:NewMod("Display", 0, function()
         elseif key == "jewelryOrder" then
             value = NormalizeJewelryOrder(value)
             if not value then return end
-        elseif key == "meterColorMode" then
-            value = NormalizeMeterColorMode(value)
+        elseif colorModeKeys[key] then
+            value = NormalizeColorMode(value)
             if not value then return end
-        elseif key == "worldCacheIconMode" or key == "worldBossIconMode" then
+        elseif worldIconModeKeys[key] then
             value = NormalizeWorldIconMode(value)
             if not value then return end
         elseif ranges[key] then

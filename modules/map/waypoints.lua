@@ -19,6 +19,10 @@ FallenAlly.blp retains Blizzard's Raid-Icon-Rez pixels from Dragonflight
 https://raw.githubusercontent.com/Gethe/wow-ui-textures/e80e3278cc833c89e1f3fc79557b68315d750935/RAIDFRAME/Raid-Icon-Rez.PNG
 The incoming-resurrection glyph is reused as the selected Winged Soul marker;
 it does not assert that a resurrection is in progress. Copyright Blizzard.
+
+KyrianWake.blp incorporates the cyan ribbons from Blizzard's Dragonflight
+10.0.0 CovenantChoice/CovenantChoiceCelebration.PNG, at Gethe/wow-ui-textures
+commit e80e3278cc833c89e1f3fc79557b68315d750935. Copyright Blizzard Entertainment.
 ]]
 DFRL:NewMod("Waypoints", 3, function()
     local navigation = DFRL.navigation

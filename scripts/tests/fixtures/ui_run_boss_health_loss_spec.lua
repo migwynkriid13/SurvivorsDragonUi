@@ -27,6 +27,7 @@ local function New(performance)
     local create = context.Object
     function context:Object(...)
         local object = create(self, ...)
+        function object:SetParent(parent) self.parent = parent end
         local point, uv, color = object.SetPoint, object.SetTexCoord, object.SetVertexColor
         function object:SetPoint(...)
             point(self, ...)
@@ -52,6 +53,12 @@ local function New(performance)
     local source = chunk()
     local controller = source.New()
     context.source = source
+    function context:Group(key)
+        local group = env.CreateFrame("Frame", nil, env.UIParent)
+        group.layoutKey, group.rows, group.entries = key, {}, {}
+        group:SetWidth(296)
+        return group
+    end
     function context:Row()
         local frame = env.CreateFrame("Frame", nil, env.UIParent)
         local bar = env.CreateFrame("StatusBar", nil, frame)
@@ -79,6 +86,10 @@ local function New(performance)
         bar.GetTop, bar.GetHeight = bar.GetBottom, bar.GetBottom
         local row = { frame = frame, bar = bar, overlay = overlay }
         row.fill = { SetFraction = function(value) row.fillFraction = value end }
+        function row.fill.SetColor(red, green, blue, alpha)
+            row.fillColor = { red, green, blue, alpha }
+            context.writes.fillColor = (context.writes.fillColor or 0) + 1
+        end
         return row
     end
     function context:Observe(row, value, maximum, key, name)
@@ -372,9 +383,10 @@ do
     local entry = { hp = 1000, maximum = 1000, key = "boss:71", id = 71, name = "Edwin VanCleef" }
     env.DEBUFF_SIZE, env.DEBUFF_GAP = 18, 4
     env.render = { bossLoss = controller, customBosses = true, bossShown = true }
-    env.bossGroup = env.CreateFrame("Frame", nil, env.UIParent)
-    env.bossGroup:SetWidth(296)
+    env.bossGroup = context:Group("bossBars")
+    env.render.encounterGroups, env.render.detachedByKind = { env.bossGroup }, {}
     env.activeRows, env.rowOrder, env.spareRows = { [entry.key] = row }, { row }, {}
+    env.bossGroup.rows = env.rowOrder
     context.settings.bossRows = 0
     context.settings.bossShowCurrentHealth, context.settings.bossShowMaximumHealth = true, true
     context.settings.bossShortHealth = true
@@ -483,16 +495,17 @@ for _, performance in ipairs({ false, true }) do
     local context, env, controller = New(performance)
     env.ROW_HEIGHT, env.DEBUFF_SIZE, env.DEBUFF_GAP = 48, 18, 4
     env.render = { bossLoss = controller, customBosses = true }
-    env.bossGroup = env.CreateFrame("Frame", nil, env.UIParent)
-    env.bossGroup:SetWidth(296)
+    env.bossGroup = context:Group("bossBars")
+    env.render.encounterGroups, env.render.detachedByKind = { env.bossGroup }, {}
     env.activeRows, env.rowOrder, env.spareRows = {}, {}, {}
+    env.bossGroup.rows = env.rowOrder
     context.settings.bossRows, context.settings.bossCombineBars = 2, true
     context.settings.bossShowCurrentHealth, context.settings.bossShowMaximumHealth = true, true
     local entries, seen, saved, heights = {}, {}, {}, {}
     env.EncounterRows = function() return entries, seen end
     env.TakeOver = function() return true end
     env.ClearDebuffs = function(row) row.debuffHeight = 0 end
-    env.DFRL.layout.Place = function(key) assert(key == "bossBars") end
+    env.DFRL.layout.Place = function(key, group) assert(key == group.layoutKey) end
     env.NewRow = function()
         local row = table.remove(env.spareRows)
         if row then return row end
@@ -511,14 +524,14 @@ for _, performance in ipairs({ false, true }) do
         end
         return row
     end
-    env.UpdateDebuffRows = function(_, reflow)
-        for _, row in ipairs(env.rowOrder) do
+    env.UpdateDebuffRows = function(group, _, reflow)
+        for _, row in ipairs(group.rows) do
             local height = heights[row.id] or 0
             if row.debuffHeight ~= height then reflow = true end
             row.debuffHeight = height
         end
-        if reflow or env.render.rowsDirty then context.source.Reflow() end
-        env.render.rowsDirty = nil
+        if reflow or group.rowsDirty then context.source.Reflow(group) end
+        group.rowsDirty = nil
     end
     env.T.SetEncounterHealthText = function(label, current, maximum)
         env.T.SetTextIfChanged(label, current and (tostring(current) .. "/" .. tostring(maximum)) or "")
@@ -530,7 +543,7 @@ for _, performance in ipairs({ false, true }) do
                 or { hp = 1000, maximum = 1000, key = "boss:" .. index, id = index, name = "Boss " .. index }
             saved[index], entries[index], seen[entry.key] = entry, entry, true
         end
-        env.render.rowsDirty = true
+        env.bossGroup.rowsDirty = true
         context.source.Rows("playing")
     end
     local function Check(count, width)
@@ -552,7 +565,7 @@ for _, performance in ipairs({ false, true }) do
     local original = env.activeRows["boss:1"]
     local pairs = env.pairs
     env.pairs = function(list)
-        if list == env.render.visibleBosses then context.reads.viewport = (context.reads.viewport or 0) + 1 end
+        if list == env.bossGroup.visibleKeys then context.reads.viewport = (context.reads.viewport or 0) + 1 end
         return pairs(list)
     end
     context:ResetCounts()
@@ -570,7 +583,7 @@ for _, performance in ipairs({ false, true }) do
     context.source.Rows("playing")
     Check(4, 296)
     heights[2], heights[3] = 22, 66
-    env.render.rowsDirty = true
+    env.bossGroup.rowsDirty = true
     context.source.Rows("playing")
     assert(env.bossGroup:GetHeight() == 47 + 66, "combined outline omitted the deepest debuffs")
     local first = env.activeRows["boss:1"]
@@ -579,6 +592,34 @@ for _, performance in ipairs({ false, true }) do
     assert(first.bar.value == 0.8 and env.activeRows["boss:2"].bar.value == 1, "combined mode merged boss health")
     local started = first.lossStart
     assert(performance or (controller.count == 1 and first.lossTexture:IsShown()))
+    saved[1].kind, saved[2].kind, saved[3].kind = "boss", "guardian", "elite"
+    env.render.bossColors = {
+        boss = { red = 1, green = 0, blue = 0 },
+        guardian = { red = 0, green = 1, blue = 0 },
+        elite = { red = 0, green = 0, blue = 1 },
+    }
+    context:ResetCounts()
+    context.source.Rows("playing")
+    assert(context.writes.fillColor == 3, "encounter kinds did not each receive a custom fill")
+    for index = 1, 3 do
+        for channel = 1, 3 do
+            Near(env.rowOrder[index].fillColor[channel], channel == index and 1 or 0, "incorrect encounter tint")
+        end
+    end
+    controller:Update()
+    if not performance then
+        Near(first.lossTexture.vertex[1], 0.74, "loss strip did not take the new tint")
+        Near(first.lossTexture.vertex[2], 0, "loss strip retained the default tint")
+        assert(first.lossStart == started, "recoloring restarted an active loss strip")
+    end
+    context:ResetCounts()
+    context.source.Rows("playing")
+    assert(not context.writes.fillColor, "settled colors rewrote the fill")
+    env.T.EncounterHealthStyle = { red = 0.86, green = 0.12, blue = 0.1 }
+    env.render.bossColors = nil
+    context.source.Rows("playing")
+    assert(context.writes.fillColor == 3, "switching back to Default did not repaint custom rows")
+    Near(first.fillColor[1], 0.86, "default fill did not restore the original red")
     context:ResetCounts()
     env.bossGroup:SetWidth(600)
     context.source.Rows("playing")
@@ -601,11 +642,11 @@ for _, performance in ipairs({ false, true }) do
     context:ResetCounts()
     context.source.Rows("playing")
     context:NoPresentationWrites()
-    assert(env.render.rowsPresentationDirty, "hidden combined rows did not defer presentation")
+    assert(env.bossGroup.presentationDirty, "hidden combined rows did not defer presentation")
     env.bossGroup:Show()
     context.source.Rows("playing")
     context.settings.bossCombineBars = false
-    env.render.rowsDirty = true
+    env.bossGroup.rowsDirty = true
     context.source.Rows("playing")
     assert(#env.rowOrder == 2, "stacked mode did not restore the saved viewport")
     assert(env.rowOrder[1].frame:GetWidth() == 600 and env.rowOrder[2].frame:GetWidth() == 600)
@@ -618,6 +659,32 @@ for _, performance in ipairs({ false, true }) do
     Count(4)
     Check(4, 600)
     assert(#context.objects <= poolSize + 1, "combined count changes rebuilt the existing row pool")
+
+    local guardian, elite = env.activeRows["boss:2"], env.activeRows["boss:3"]
+    local guardians, elites = context:Group("guardianBars"), context:Group("eliteBars")
+    guardians:Hide()
+    elites:Hide()
+    context.source.Watch(guardians)
+    context.source.Watch(elites)
+    env.render.encounterGroups = { env.bossGroup, guardians, elites }
+    env.render.detachedByKind = { guardian = guardians, elite = elites }
+    local allocated = #context.objects
+    context.source.Rows("playing")
+    assert(#env.rowOrder == 2 and guardians.rows[1] == guardian and elites.rows[1] == elite)
+    assert(guardian.frame:GetParent() == guardians and elite.frame:GetParent() == elites)
+    assert(#context.objects == allocated, "detaching recreated encounter rows")
+    guardians:Hide()
+    saved[2].hp, saved[3].hp = 700, 750
+    context.source.Rows("playing")
+    assert(guardian.bar.value == 1 and elite.bar.value == 0.75, "a hidden group blocked or painted unrelated rows")
+    guardians:Show()
+    context.source.Rows("playing")
+    assert(guardian.bar.value == 0.7, "showing a detached group held stale health")
+    assert(not guardian.lossStart, "showing a detached group replayed damage taken while hidden")
+    env.render.detachedByKind.guardian = nil
+    context.source.Rows("playing")
+    assert(#env.rowOrder == 3 and not guardians:IsShown() and guardian.frame:GetParent() == env.bossGroup)
+    assert(elite.frame:GetParent() == elites and #context.objects <= allocated + 1)
 end
 
 do
@@ -665,7 +732,8 @@ end
 
 for _, performance in ipairs({ false, true }) do
     local context, env = New(performance)
-    env.render = { unitSequence = 1, unitBarrier = 0 }
+    env.render = { unitSequence = 1, unitBarrier = 0, detachedByKind = {} }
+    env.bossGroup = context:Group("bossBars")
     env.AZS_UNITS_UPDATED = 0
     context.settings.guardiansInBossBar = true
     local bosses = {
@@ -706,6 +774,32 @@ for _, performance in ipairs({ false, true }) do
     context.settings.guardiansInBossBar = false
     context:ResetCounts()
     assert(#context.source.Encounters("playing") == 2 and not context.reads.AZS_GetGuardians)
+    context:Load("core/tools.lua")
+    env.DFRL.layout.IsHidden = function(key) return key == "bossBars" and context.layoutHidden end
+    env.AZS_UNITS = {
+        { kind = "boss", id = 71, name = "First boss", hp = 900, hpm = 1000 },
+        { kind = "guardian", id = 73, name = "Guardian", hp = 800, hpm = 1000, state = 1 },
+        { kind = "elite", id = 74, name = "Elite", hp = 750, hpm = 1500 },
+        { kind = "elite", id = 75, name = "Elite", hp = 1500, hpm = 1500 },
+        { kind = "elite", id = 76, name = "Dead elite", hp = 0, hpm = 1500 },
+    }
+    assert(#context.source.Encounters("playing") == 2, "elites entered boss bars before opt-in")
+    context.settings.elitesInBossBar = true
+    entries = assert(context.source.Encounters("playing"))
+    assert(#entries == 4 and not context.reads.AZS_GetGuardians)
+    assert(entries[3].key == "elite:74" and entries[3].hp == 750 and entries[3].maximum == 1500)
+    assert(entries[4].key == "elite:75", "living elites with matching names merged")
+    env.AZS_UNITS[3].hp = 250
+    assert(context.source.Encounters("playing")[3].hp == 250, "elite health did not refresh")
+    env.AZS_UNITS[4].id = 74
+    assert(#context.source.Encounters("playing") == 2, "invalid optional roster displaced boss health")
+    env.AZS_UNITS[4].id = 75
+    context.layoutHidden = true
+    assert(#context.source.Encounters("playing") == 2, "hidden layout prepared elite rows")
+    context.layoutHidden = false
+    assert(#context.source.Encounters("playing") == 4, "visible layout did not recover elites")
+    context.settings.elitesInBossBar = false
+    assert(#context.source.Encounters("playing") == 2, "disabling elites kept stale rows")
     context:ResetCounts()
     assert(not context.source.Encounters("dead") and not next(context.reads), "retired phase read native encounters")
     env.AZS_UNITS_UPDATED = nil

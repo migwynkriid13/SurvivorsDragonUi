@@ -59,6 +59,8 @@ DFRL:NewMod("Layout", 0, function()
         partyFrames = "Party frames",
         tooltip = "Tooltip",
         bossBars = "Boss health",
+        guardianBars = "Guardian health",
+        eliteBars = "Elite health",
         runTimer = "Run timer",
         heroicAffixes = "Heroic affixes",
         revive = "Revive",
@@ -470,7 +472,10 @@ DFRL:NewMod("Layout", 0, function()
     end
     function layout.IsPlaced(key) return (entries[key] and entries[key].dragging) or Valid(GeometryStore()[key]) end
     local function CanShowHandle(entry)
-        return handlesVisible and entry.defaultPosition and (not entry.options.onlyWhenShown or entry.wantsShown)
+        return handlesVisible
+            and entry.defaultPosition
+            and (not entry.options.onlyWhenShown or entry.wantsShown)
+            and (not entry.options.handleAvailable or entry.options.handleAvailable())
     end
     function layout.Width(key, fallback)
         local entry = entries[key]

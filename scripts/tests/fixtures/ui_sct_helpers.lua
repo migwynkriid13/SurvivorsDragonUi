@@ -16,7 +16,7 @@ local function SCT(scrolling, setup)
     context.settings.sctAreaDamage = true
     context.settings.sctNormalHits, context.settings.sctCriticalHits = true, true
     context.settings.sctAutoAttacks, context.settings.sctMisses = true, true
-    context.settings.damageIcons, context.settings.nameplatesBossGuardiansOnly = false, false
+    context.settings.damageIcons = false
     env.SurvivorsDragonUiSctMode = "on"
     env.GetCVar = function(name)
         assert(name == "CombatDamage", "unexpected native preference read")

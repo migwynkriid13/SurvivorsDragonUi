@@ -11,6 +11,9 @@ local function Scene(performance)
             setPoint(self, ...)
             self.point = { ... }
         end
+        if frame.kind == "Texture" then
+            function frame:SetBlendMode(mode) self.blendMode = mode end
+        end
         return frame
     end
     c:Load("core/display.lua", "Display")
@@ -144,9 +147,18 @@ local function Scene(performance)
         }
         if source then
             local expected = (source.kind == "cache" or source.kind == "downedPartyMember") and "position" or "overhead"
+            if native.distant and source.unitId and attachment == "position" then expected = "position" end
             assert(attachment == expected, "consumer requested an unsupported entity attachment")
             local offset = requests[1].offset
-            if source.kind == "cache" or source.kind == "downedPartyMember" then
+            local groundMarker = source.kind == "cache" or source.kind == "downedPartyMember"
+            if source.kind == "downedPartyMember" and (not offset or offset.z == 6) then
+                assert(native.worldOffsets ~= false, "light requested unadvertised world offsets")
+                if offset then
+                    assert(not native.beamOffset or offset == native.beamOffset)
+                    native.beamOffset = offset
+                end
+                if native.lightClipped then entry.state = "clipped" end
+            elseif groundMarker then
                 assert(native.worldOffsets ~= false, "position icon requested unadvertised world offsets")
                 local expectedHeight = source.kind == "cache" and 4 or 5
                 assert(type(offset) == "table" and offset.z == expectedHeight)
@@ -176,6 +188,7 @@ local function Scene(performance)
             if requests[1].offset then entry.y = entry.y + requests[1].offset.z * (native.heightProjection or 16) end
             entry.cameraDistance, entry.cameraDepth, entry.uiUnitsPerYard = 20, 20, 16
             entry.playerDistance = source.playerDistance
+            if attachment == "position" and source.feetDistance then entry.playerDistance = source.feetDistance end
             if entry.playerDistance == nil and not native.omitDistance then entry.playerDistance = 20 end
         end
         local batch = {
@@ -257,17 +270,33 @@ local function Record(id, kind)
         projectState = "onScreen",
     }
 end
+local function DisableEncounterIcons(display)
+    display.Set("worldBossIcons", false)
+    display.Set("worldEliteIcons", false)
+    display.Set("worldGuardianIcons", false)
+end
 for _, performance in ipairs({ false, true }) do
     local c = Scene(performance)
     local native, display = c.native, c.env.DFRL.display
     local tex = c.env.DFRL:GetInfoOrCons("tex") .. "waypoint\\"
-    native.entries = { Record("boss", "boss"), Record("final", "finalBoss"), Record("guardian", "guardian") }
+    native.entries = {
+        Record("boss", "boss"),
+        Record("final", "finalBoss"),
+        Record("guardian", "guardian"),
+        Record("elite", "elite"),
+        Record("enemy", "enemy"),
+    }
+    display.Set("nameplatesShowElites", false)
     c:Service()
     c:Frame()
     local markers = c:Markers()
-    assert(#markers == 3)
+    assert(#markers == 4 and native.lastKinds.elite and not native.lastKinds.enemy)
     for _, marker in ipairs(markers) do
         local filename = marker.kind == "guardian" and "GuardianFloating.blp" or "WorldQuestBoss.blp"
+        if marker.kind == "elite" then
+            filename = "EliteWorldStar.blp"
+            assert(marker.point[5] == 206, "elite icon did not use encounter padding")
+        end
         assert(marker.icon.texture == tex .. filename, "default encounter icon did not bind")
     end
     local calls, objects = native.calls, #c.objects
@@ -276,11 +305,40 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     assert(native.calls == calls and #c.objects == objects, "changing art rebuilt markers or fetched the catalog")
     for _, marker in ipairs(markers) do
-        assert(marker.icon.texture == tex .. "GuardianClassic.blp", "existing marker did not adopt original art")
+        local filename = marker.kind == "elite" and "EliteWorldStar.blp" or "GuardianClassic.blp"
+        assert(marker.icon.texture == tex .. filename, "encounter style changed the wrong artwork")
     end
     c:ResetCounts()
     c:Frame()
     assert(not c.writes.SetTexture and not c.writes.SetTexCoord, "settled style repeated texture work")
+    display.Set("worldBossIcons", false)
+    c:Service()
+    c:Frame()
+    assert(
+        #c:Markers() == 2
+            and native.lastKinds.elite
+            and native.lastKinds.guardian
+            and not native.lastKinds.boss
+            and not native.lastKinds.finalBoss,
+        "boss switch affected the wrong encounter kinds"
+    )
+    display.Set("worldGuardianIconMode", "far")
+    display.Set("worldGuardianIconDistance", 20)
+    display.Set("worldEliteIconMode", "near")
+    display.Set("worldEliteIconDistance", 25)
+    calls = native.calls
+    c:Frame()
+    c:Frame(0.13)
+    markers = c:Markers()
+    assert(
+        #markers == 1 and markers[1].kind == "elite" and native.calls == calls,
+        "each encounter must apply its own cutoff without rebuilding discovery"
+    )
+    display.Set("worldGuardianIconDistance", 15)
+    display.Set("worldEliteIcons", false)
+    c:Frame()
+    markers = c:Markers()
+    assert(#markers == 1 and markers[1].kind == "guardian", "elite switch affected the guardian icon")
     c.api.Reset()
 end
 for _, performance in ipairs({ false, true }) do
@@ -295,7 +353,7 @@ for _, performance in ipairs({ false, true }) do
     assert(#c:Markers() == 0, "ordinary controller placed a world marker")
     c:Frame()
     assert(#c:Markers() == 3, "default-on encounter icons omitted a boss")
-    display.Set("worldBossIcons", false)
+    DisableEncounterIcons(display)
     c:Frame()
     assert(#c:Markers() == 2 and native.registers == 1 and native.handlers[native.foreign])
     local objects = #c.objects
@@ -335,7 +393,8 @@ for _, performance in ipairs({ false, true }) do
         local raised = marker.kind == "cache" or marker.kind == "downedPartyMember"
         local expectedY = marker.kind == "cache" and 264 or (raised and 280 or 206)
         local expectedSize = marker.kind == "downedPartyMember" and 29.12 or (raised and 22.4 or 25.6)
-        assert(marker.point[5] == expectedY, "marker ignored native world offset or used incorrect screen padding")
+        local tolerance = marker.kind == "downedPartyMember" and 2 or 0
+        assert(math.abs(marker.point[5] - expectedY) <= tolerance, "marker used an incorrect projected height")
         assert(marker:GetWidth() == expectedSize and marker:GetHeight() == expectedSize, "incorrect world-icon size")
     end
     native.frameCurrent = false
@@ -381,7 +440,7 @@ for _, performance in ipairs({ false, true }) do
     retired()
     assert(native.handlers[native.foreign], "old callback stole a foreign owner")
     display.Set("worldCacheIcons", false)
-    display.Set("worldBossIcons", false)
+    DisableEncounterIcons(display)
     display.Set("worldPartyIcons", false)
     c:Service()
     local reads = native.calls
@@ -400,6 +459,7 @@ for _, performance in ipairs({ false, true }) do
     c:Frame()
     local marker = c:Markers()[1]
     assert(marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 264)
+    assert(not marker.light and native.projections == 1, "cache requested a beacon")
     local objects, calls, capabilities = #c.objects, native.calls, native.capabilityReads
     c:ResetCounts()
     c:Frame()
@@ -416,13 +476,27 @@ for _, performance in ipairs({ false, true }) do
         c:Markers()[1] == marker
             and marker:GetWidth() == 29.12
             and marker:GetHeight() == 29.12
-            and marker.point[5] == 240,
+            and math.abs(marker.point[5] - 240) <= 2,
         "fallen ally lost its larger size or five-yard height"
     )
-    assert(c.writes.SetWidth == 1 and c.writes.SetHeight == 1, "cache/ally pool reuse did not resize exactly once")
+    assert(c.writes.SetWidth == 2 and c.writes.SetHeight == 2, "ally icon and beam did not each resize once")
+    local light = marker.light
+    assert(light.beam:IsShown() and light.beam.blendMode == "ADD")
+    assert(string.find(light.beam.texture, "KyrianWake.blp", 1, true))
+    native.lightClipped = true
+    c:Frame()
+    assert(marker:IsVisible() and not light.beam:IsShown(), "clipped beacon hid the icon or kept drawing")
+    native.lightClipped = nil
+    c:Frame()
     c:ResetCounts()
     c:Frame()
     assert(not c.writes.SetWidth and not c.writes.SetHeight and not c.writes.SetPoint, "settled ally rewrote geometry")
+    local firstY, beamPoint = marker.point[5], light.beam.point
+    c:Frame(0.7)
+    local highY = marker.point[5]
+    c:Frame(1.45)
+    assert(firstY < highY and marker.point[5] < highY and math.abs(marker.point[5] - 240) <= 2)
+    assert(light.beam.point == beamPoint, "bobbing icon displaced the ground beacon")
     native.entries = { Record("pooled-boss", "boss") }
     c.env.DFRL.display.Set("worldBossIcons", true)
     c:Service(0.21)
@@ -435,7 +509,8 @@ for _, performance in ipairs({ false, true }) do
         c:Markers()[1] == marker and marker:GetWidth() == 22.4 and marker:GetHeight() == 22.4 and marker.point[5] == 232,
         "mixed-kind pool failed to restore the smaller raised cache"
     )
-    assert(#c.objects == objects and native.registers == 1, "cache styling rebuilt the pool or native owner")
+    assert(not light.beam:IsShown(), "recycled cache retained the revive beacon")
+    assert(#c.objects == objects + 1 and native.registers == 1, "beacon reuse rebuilt the pool or native owner")
     c.api.Reset()
 
     local unsupported = Scene(performance)
@@ -603,42 +678,43 @@ for _, performance in ipairs({ false, true }) do
     assert(#c:Markers() == 2, "default cache icons require affordability data")
     local registrations, calls, objects = native.registers, native.calls, #c.objects
     display.Set("worldCacheAffordableOnly", true)
-    local function Check(run, stamp, expected, projected)
+    local function Check(run, stamp, expected)
         env.AZS_RUN, env.AZS_RUN_UPDATED = run, stamp
         local before = native.projections or 0
         c:Frame()
         assert(#c:Markers() == expected, "incorrect affordability visibility")
-        assert((native.projections or 0) - before == projected, "hidden cache still requested projection")
+        local projected = expected == 2 and 4 or 3
+        assert((native.projections or 0) - before == projected, "unexpected affordability projection work")
         assert(
             native.registers == registrations and native.calls == calls,
             "affordability rebound or rediscovered anchors"
         )
         assert(#c.objects == objects, "affordability allocated another marker")
     end
-    Check({ gold = 9, chest = 10 }, 1, 1, 1)
-    Check({ gold = 10, chest = 10 }, 1, 2, 2)
+    Check({ gold = 9, chest = 10 }, 1, 1)
+    Check({ gold = 10, chest = 10 }, 1, 2)
     c:ResetCounts()
-    Check({ gold = 10, chest = 10 }, 1, 2, 2)
+    Check({ gold = 10, chest = 10 }, 1, 2)
     assert(
         not c.writes.SetPoint and not c.writes.SetTexture and not c.writes.Show and not c.writes.Hide,
         "unchanged affordability repainted world icons"
     )
-    Check({ gold = 10, chest = 11 }, 1, 1, 1)
-    Check({ gold = 20, chest = 11 }, 1, 2, 2)
-    Check({ gold = 5, chest = 11 }, 1, 1, 1)
-    Check({ gold = 0, chest = 0 }, 1, 2, 2)
-    Check({ gold = 1.5, chest = 1.5 }, 1, 2, 2)
-    Check({ gold = 1.49, chest = 1.5 }, 1, 1, 1)
-    Check(nil, 1, 1, 1)
-    Check({}, 1, 1, 1)
-    Check({ gold = 10, chest = 1 }, nil, 1, 1)
-    Check({ gold = 10, chest = 1 }, 0 / 0, 1, 1)
+    Check({ gold = 10, chest = 11 }, 1, 1)
+    Check({ gold = 20, chest = 11 }, 1, 2)
+    Check({ gold = 5, chest = 11 }, 1, 1)
+    Check({ gold = 0, chest = 0 }, 1, 2)
+    Check({ gold = 1.5, chest = 1.5 }, 1, 2)
+    Check({ gold = 1.49, chest = 1.5 }, 1, 1)
+    Check(nil, 1, 1)
+    Check({}, 1, 1)
+    Check({ gold = 10, chest = 1 }, nil, 1)
+    Check({ gold = 10, chest = 1 }, 0 / 0, 1)
     for _, invalid in ipairs({ -1, "10", 0 / 0, math.huge }) do
-        Check({ gold = invalid, chest = 1 }, 1, 1, 1)
-        Check({ gold = 10, chest = invalid }, 1, 1, 1)
+        Check({ gold = invalid, chest = 1 }, 1, 1)
+        Check({ gold = 10, chest = invalid }, 1, 1)
     end
     display.Set("worldCacheAffordableOnly", false)
-    Check(nil, nil, 2, 2)
+    Check(nil, nil, 2)
     display.Set("worldCacheAffordableOnly", true)
     native.entries = { Record("cache", "cache") }
     c:Service(0.21)
@@ -936,7 +1012,7 @@ end
 for _, performance in ipairs({ false, true }) do
     local quiet = Scene(performance)
     local qn, qd = quiet.native, quiet.env.DFRL.display
-    qd.Set("worldBossIcons", false)
+    DisableEncounterIcons(qd)
     qn.partyPresent = false
     qd.Set("worldCacheAffordableOnly", true)
     quiet.env.AZS_RUN, quiet.env.AZS_RUN_UPDATED = { gold = 0, chest = 10 }, 1
@@ -994,7 +1070,7 @@ for _, performance in ipairs({ false, true }) do
         "affordability recovery rebuilt cached metadata/markers"
     )
     qd.Set("worldCacheIcons", false)
-    qd.Set("worldBossIcons", false)
+    DisableEncounterIcons(qd)
     qd.Set("worldPartyIcons", false)
     quiet:Service()
     calls, positions, phases, capabilities = qn.calls, qn.positionReads, qn.phaseReads, qn.capabilityReads
@@ -1014,7 +1090,7 @@ for _, performance in ipairs({ false, true }) do
     local alive = Scene(performance)
     alive.native.downedPresent = false
     alive.env.DFRL.display.Set("worldCacheIcons", false)
-    alive.env.DFRL.display.Set("worldBossIcons", false)
+    DisableEncounterIcons(alive.env.DFRL.display)
     for _ = 1, 20 do
         alive:Service(0.1)
         alive:Frame()
@@ -1157,7 +1233,7 @@ for _, performance in ipairs({ false, true }) do
     assert(rn.calls == calls + 1, "successful discovery did not restore the short first retry")
     rn.releaseFault = true
     retry.env.DFRL.display.Set("worldCacheIcons", false)
-    retry.env.DFRL.display.Set("worldBossIcons", false)
+    DisableEncounterIcons(retry.env.DFRL.display)
     retry.env.DFRL.display.Set("worldPartyIcons", false)
     local releases = rn.unregisters
     retry:Service()
@@ -1204,7 +1280,7 @@ for _, performance in ipairs({ false, true }) do
     end
     native.releaseFault = true
     display.Set("worldCacheIcons", false)
-    display.Set("worldBossIcons", false)
+    DisableEncounterIcons(display)
     display.Set("worldPartyIcons", false)
     c:ResetCounts()
     c:Service()
@@ -1246,6 +1322,98 @@ for _, performance in ipairs({ false, true }) do
     end
     assert(not c.reads.trims and #c:Markers() == 0, "world cleanup repeated after retirement")
     c.api.Reset()
+end
+
+do
+    local c = Scene(false)
+    local env, native = c.env, c.native
+    local display = env.DFRL.display
+    c:Load("core/tools.lua")
+    c:Load("modules/nameplates/style.lua", "NameplateStyle")
+    local object = c.Object
+    function c:Object(kind, ...)
+        local frame = object(self, kind, ...)
+        if kind == "StatusBar" then
+            function frame:GetMinMaxValues() return self.minimum or 0, self.maximum or 1 end
+            function frame:SetMinMaxValues(minimum, maximum)
+                self.minimum, self.maximum = minimum, maximum
+            end
+            function frame:GetValue() return self.value or 0 end
+            function frame:SetValue(value) self.value = value end
+        end
+        return frame
+    end
+    local units = {
+        [1] = { id = 1, kind = "guardian", name = "Guardian", hp = 15, hpm = 60 },
+        [2] = { id = 2, kind = "elite", name = "Elite", hp = 50, hpm = 100 },
+        [3] = { id = 3, kind = "final", name = "Final", hp = 100, hpm = 100 },
+    }
+    local requested, v = false, true
+    env.DFRL.sct = {
+        EnemyNameplatesVisible = function() return v end,
+        RequestDistantNameplateRoster = function(value) requested = value end,
+        DistantNameplateUnit = function(id, kind)
+            local unit = units[id]
+            if requested and unit and unit.kind == kind then return unit end
+        end,
+    }
+    native.distant = true
+    local guardian, elite, final =
+        Record("guardian", "guardian"), Record("elite", "elite"), Record("final", "finalBoss")
+    guardian.unitId, elite.unitId, final.unitId = 1, 2, 3
+    guardian.playerDistance, elite.playerDistance, final.playerDistance = 40, 200, 45
+    guardian.feetDistance, elite.feetDistance, final.feetDistance = 20, 200, 40
+    native.entries = { guardian, elite, final }
+    display.Set("worldCacheIcons", false)
+    DisableEncounterIcons(display)
+    display.Set("worldPartyIcons", false)
+    local function Visible(kind, name)
+        for _, frame in ipairs(c.objects) do
+            if frame.kind == kind and frame:IsVisible() and (not name or frame:GetText() == name) then return frame end
+        end
+    end
+    c:Service()
+    assert(display.Get("nameplateDistance") == 20 and not requested and native.registers == 0)
+    assert(display.Copy({ nameplateDistance = 500 }).nameplateDistance == 200)
+    assert(display.Copy({ nameplateDistance = 2 }).nameplateDistance == 20)
+    display.Set("nameplateDistance", 200)
+    display.Set("nameplatesShowBosses", false)
+    c:Service()
+    c:Frame()
+    assert(requested and native.lastKinds.elite and not native.lastKinds.finalBoss)
+    assert(Visible("FontString", "Elite") and Visible("StatusBar").value == 0.5)
+    assert(not Visible("FontString", "Guardian"), "head height duplicated a native plate at 20 yards")
+    assert(not Visible("FontString", "Final"), "Bosses off exposed a final boss")
+    local discoveryReads = native.calls
+    display.Set("nameplateDistance", 199)
+    c:Service()
+    c:Frame()
+    assert(not Visible("FontString", "Elite") and native.calls == discoveryReads, "range preview rebuilt the catalog")
+    display.Set("nameplateDistance", 200)
+    c:Service()
+    c:Frame()
+    assert(Visible("FontString", "Elite") and native.calls == discoveryReads, "range preview lost the accepted catalog")
+    guardian.feetDistance, elite.feetDistance = 21, 201
+    c:Frame()
+    assert(Visible("FontString", "Guardian") and not Visible("FontString", "Elite"))
+    assert(Visible("StatusBar").value == 0.25, "projected plate lost the exact unit's health")
+    display.Set("nameplatesNamesOnly", true)
+    display.Set("performanceMode", true)
+    c:Frame()
+    assert(Visible("FontString", "Guardian") and not Visible("StatusBar"), "Names only retained a distant health bar")
+    local allocated = #c.objects
+    v = false
+    c:Frame()
+    assert(not Visible("FontString", "Guardian"), "V off left a projected plate")
+    v = true
+    c:Frame()
+    assert(Visible("FontString", "Guardian") and #c.objects == allocated, "showing plates skipped pool reuse")
+    units[1].kind = "elite"
+    c:Frame()
+    assert(not Visible("FontString", "Guardian"), "a same-ID row of another kind painted a guardian")
+    display.Set("nameplateDistance", 20)
+    c:Service()
+    assert(not requested and native.unregisters == 1, "default range retained the distant owner")
 end
 
 local old = Scene(false)

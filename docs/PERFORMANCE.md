@@ -2052,7 +2052,7 @@ coverage is authored for CI only and has not been run locally.
 ## Boss health loss — 2026-10-28
 
 The optional `bossCombineBars` layout splits the existing width among all
-accepted boss/guardian rows. It reuses the same pooled pills, labels, debuff
+accepted boss, guardian and elite rows. It reuses the same pooled pills, labels, debuff
 icons, native reader and display listener in both Performance Mode states.
 Changed widths and count/order/options dirty the existing reflow; settled
 geometry skips size and anchor writes. Hidden groups defer this presentation.
@@ -2066,6 +2066,12 @@ icons until space returns. The lazy settings toggle adds one Button, five
 texture regions (checkbox, checkmark, hover and two divider strips) and two
 FontStrings, using existing artwork.
 Source review and CI-only fixtures do not establish native appearance or FPS.
+
+The default-off elite option validates the existing, bounded `AZS_UNITS`
+publication during the boss reader's refresh when the group is enabled and
+Layout allows it to be visible. Live elite rows reuse the same pool and health
+rendering. They skip the boss/guardian debuff getter. The checkbox uses the
+same settings builder and region count as the combined layout toggle above.
 
 The selected **04 Crimson echo** adds at most one lazily prepared FillWhite
 texture per pooled boss-bar row, including guardian rows in this view. Each
@@ -3953,7 +3959,7 @@ style reuses its name label, remembers its color and changes visibility only
 when the effective mode changes. Names-only updates copy changed native names
 and reaction colors, then skip cosmetic health range/value/color writes and
 raid-icon lookup/binding. Native health-loss matching, coordinate sampling,
-collision placement, V/Shift-V ownership and the boss/guardian filter keep
+collision placement, V/Shift-V ownership and enemy category filters keep
 their current lifecycles. Masked plates still skip the entire style refresh;
 showing again applies the current choice and current native state.
 
@@ -3989,30 +3995,44 @@ pinned formatting only; no local tests, standalone validation or addon/game
 execution. Settings and behavior are documented in
 [API-NOTES.md](API-NOTES.md#names-only-nameplates--2026-10-27).
 
-## Boss and guardian nameplate filter — 2026-10-27
+## Enemy nameplate filters
 
-The default-off `nameplatesBossGuardiansOnly` option adds no gameplay frame,
-texture, material or updater. It uses the current SCT controller's OnUpdate and
-existing message subscription. While enabled, phase/receipt retirement and the
-official unit-list index refresh run at five Hz. A matching source reference,
+At the default 20 yards, the range option requests no distant roster or
+projection work. Extending it reuses the five-Hz encounter reader and existing
+world-marker catalog and callback. Up to 40 published special enemies can
+contribute bars. Each matched candidate uses its overhead projection and,
+when on screen, a second same-frame projection of its feet for distance. The
+lazy pool shares the near-plate style and skips native raid-icon allocation.
+The all-on preset skips the near-plate signature index even while serving
+distant health.
+
+The four default-on enemy category checkboxes add no gameplay frame, texture,
+material or updater. They use the current SCT controller's OnUpdate and existing
+message subscription. With a mix of enabled and disabled categories,
+phase/receipt retirement and the official unit-list index refresh run at five Hz. A matching source reference,
 timestamp and receipt generation skip index rebuilding. Accepted changes reuse
 exact-name/native-range buckets, with at most the native 40 entries; retired names
-are removed. Off clears the index and skips its native metadata reads.
+are removed. Showing or hiding every category clears the index and skips its
+native metadata reads.
 
 Accepted metadata indexes the original maximum, its float32 rounding and the
 native ceil/uint32-clamped maximum with its float32 rounding. Whole-number
 publications below 2^23 also index an upper ceiling only where a fractional
 float32 actor maximum can serialize to that integer: all integers below 2^22,
 and even half-ties below 2^23. This retains at most four distinct exact keys per
-entry; it is not a per-plate tolerance search or a carried-forward identity.
+entry without a per-plate tolerance search.
 The sleeping-to-awake conversion changes accepted display metadata only. These
 numeric aliases are computed only when the accepted publication changes, reusing
-the same buckets. Published elites mark collisions
-ambiguous across those aliases too. No per-plate conversion, name-only bypass,
+the same buckets. Each signature stores a live roster entry or a shared mask
+of matching categories. Live entries reuse their records across publications.
+Each shown plate can retain one uniquely matched entry while the accepted
+roster still contains it, covering rescaling without an additional scan or poll.
+Checkbox changes update which masks are visible without rebuilding aliases
+while filtering stays active. No per-plate conversion, name-only bypass,
 tolerance search, damage estimate, percentage-to-HP inference or new getter is
 added. Names-only labels no longer depend on health-widget anchors, and unused
 bar artwork remains unallocated until an eligible regular plate needs it.
-CI-only full-controller/style mocks cover both options together, native range
+CI-only full-controller/style mocks cover Names only with category filters, native range
 representations, wake ceilings/serialization boundaries, exclusions/ambiguity, mode/V changes, retirement, lazy pooling
 and unchanged writes. Local work is source/diff review and pinned formatting.
 
@@ -4027,14 +4047,12 @@ No per-frame table, string formatting, texture bind or new artwork is introduced
 by the filter. Existing pooled skins remain allocated; excluded skins contribute
 no visible custom regions. This does not remove native plate collision work.
 
-The existing lazy settings dialog adds one category button (12 texture regions
-and one caption) and one checkbox row (four texture regions and two captions).
-These reuse the editor artwork and draw only with their shown editor parents;
-no new material or per-plate region is added. The maximum added allocation is
-16 texture regions and three FontStrings after opening the editor. Source
-counts are not measured draw calls, FPS, GPU memory or visual parity. The
+The four checkboxes replace one checkbox with a description. The lazy Nameplates
+page therefore adds a net 12 editor texture regions and two FontStrings.
+The controls reuse the existing editor artwork and draw only with their shown
+editor parents. The
 anonymous-plate identity limit and snapshot policy are documented in
-[API-NOTES.md](API-NOTES.md#boss-and-guardian-nameplate-filter--2026-10-27).
+[API-NOTES.md](API-NOTES.md#enemy-nameplate-filters).
 
 ## What changes
 
@@ -4602,16 +4620,13 @@ attachment correctness, wall visibility, camera timing, appearance or FPS.
 
 ### World-icon distance visibility and quick fades
 
-Cache, fallen-ally and encounter icon switches default on, including missing or
-invalid values and both full resets; explicit saved off choices are preserved.
-The encounter switch covers guardians, bosses and final bosses through the same
-existing discovery and projection path, without another reader or updater. Two modes
-(`worldCacheIconMode`, `worldBossIconMode`) normalize to `always`, `near` or
-`far`, initially `always`. Their existing-display-table cutoffs
-(`worldCacheIconDistance`, `worldBossIconDistance`) default to 40 yards and
-normalize to finite integer 5–200 values. The controls step by five; old/invalid
-profiles select Always/40, and all four preferences use the shared
-preview/Confirm/Cancel/profile/reset lifecycle without another SavedVariable.
+Cache, boss, guardian, elite and fallen-ally world icon switches default on.
+Final bosses share the boss options. Cache, boss, guardian and elite modes
+normalize to `always`, `near` or `far`, initially `always`. Each cutoff
+defaults to 40 yards, normalizes to an integer from 5 to 200 and steps by five.
+Missing guardian and elite settings in older saves and profiles inherit the old
+shared values. All options use the shared preview/Confirm/Cancel/profile/reset
+lifecycle in the existing display table.
 
 Distance filtering consumes `playerDistance` already supplied by the same
 current-frame projection, only when `playerDistanceMetrics` is advertised.
@@ -4620,9 +4635,10 @@ nonfinite distances hide only a filtered kind; Always preserves older metric
 providers. Camera metrics never substitute. Affordability remains an independent
 cache gate and fallen allies do not inherit these filters.
 
-Choices are copied by the existing listener. Changing a mode/cutoff does not
-dirty discovery, rebind the native callback or rebuild the pool. Hidden
-out-of-band handles still need their existing projection to detect movement
+Choices are copied by the existing listener. Disabling one icon kind omits it
+from discovery unless its distant nameplates still need the same anchors.
+Changing a mode/cutoff does not dirty discovery, rebind the native callback
+or rebuild the pool. Hidden out-of-band handles still need their existing projection to detect movement
 back into range, but do no texture preparation, frame allocation or placement
 while fully hidden. No player-position, capability or other getter is added.
 
@@ -4634,17 +4650,28 @@ world/handle retirement hide immediately and clear the fade. Hidden marker
 coordinates are never replayed to sustain a fade. Recycled views restore alpha
 and retire their fade scalars. Performance Mode settles visibility immediately,
 including an active transition, with identical range queries and cleanup.
-Fallen-ally icons retain instant visibility. No gameplay frame, region, event,
-separate updater or animation timer is added.
+Fallen-ally icons retain instant visibility. The fade uses the existing
+marker regions and callback.
 
-Two lazy Map subsections reuse the existing master switch, segmented-mode
-builder, numeric controls, scrolling and search. Cutoffs dim for Always; all
-related inputs dim while their master switch is off, preserving choices.
-They add 16 settings-only frames, 44 texture regions and 22 FontStrings across
-the two section shells/pages, six mode buttons, two numeric wrappers/four step
-buttons, headings and dividers. Existing checkboxes move into these sections.
-Prepared settings reuse those controls; hidden settings do no range-label work.
-All eleven added captions have fourteen source/runtime translations.
+Kyrian Wake uses the existing post-camera pass. Each visible fallen-ally icon
+adds two projections on the same anchor, at ground level and six yards up.
+These requests share the bounded batch and require the same camera sample.
+A clipped endpoint hides the light while the icon can still draw. Revival,
+filtering, stream changes and marker recycling retire the light.
+
+The revive shaft, ribbons and ground glow share one lazily allocated additive
+texture. Geometry and texture bindings are changed-only. One wave from the
+projection clock drives the visible light pulse and the two-unit ally icon
+bob. Performance Mode keeps the bob and settles light opacity. The beacon
+adds visible alpha overdraw. Source review and artwork simulation provide no
+live frame-time or appearance measurement.
+
+Four lazy Map subsections reuse the same world icon builder, shared dropdown
+popup, numeric controls, scrolling and search. The split adds two section
+shells, switches, dropdowns and cutoff steppers. Each mode and cutoff dims
+according to its own switch, and Always dims its cutoff. Prepared settings
+reuse those controls. Hidden settings do no range-label work. All captions have
+fourteen source/runtime translations.
 
 CI-only source/view cases cover exact/fractional boundaries, independent kinds,
 missing/unadvertised metrics, affordability conjunction, interrupted/completed

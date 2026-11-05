@@ -26,6 +26,42 @@ already resurrecting that member. The design name **Winged Soul** labels the
 user-selected proposal, rather than an official atlas name. Blizzard retains
 the artwork copyright; the public mirror supplies no additional artwork license.
 
+## Revive-beacon studies
+
+[Animated comparison](../docs/previews/revive-beacons.webp) uses the original
+64 × 64 Winged Soul glyph above the same simulated ground in all five designs.
+The lower-right panel records an earlier chest trial from the design study.
+
+The following preview components come from Blizzard's early Dragonflight
+10.0.0 (45454) texture snapshot at Gethe commit
+`e80e3278cc833c89e1f3fc79557b68315d750935`. Crop rectangles are top-left
+inclusive and bottom-right exclusive.
+
+| Study             | Artwork and assembly                                                                                                                                                   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 01 Dawn Column    | Original shaft and existing soft pool, in pale gold.                                                                                                                   |
+| 02 Kyrian Wake    | Blue shaft plus two tilted cyan ribbons from the 1024 × 512 [Covenant celebration sheet][celebration], crop `(413, 0, 775, 72)`.                                       |
+| 03 Spirit Flare   | Narrow white shaft and the complete 128 × 128 [Cooldown starburst][starburst] and [star4][star4] textures. [Cooldown.xml][cooldown] binds `star4` as its finish flash. |
+| 04 Emerald Return | Soft green shaft over two opposed crops of the celebration sheet's green braid `(12, 264, 352, 337)`.                                                                  |
+| 05 Anima Rift     | Two angled shafts over the celebration sheet's blue swirl `(12, 393, 345, 466)`, with a faint Cooldown starburst beneath it.                                           |
+
+[Blizzard's covenant toast][toast] uses the same celebration art family. The
+crop placements, color choices, layers and motion shown here are custom
+assemblies. The selected **02 Kyrian Wake** uses the cyan ribbon crop in
+`media/tex/waypoint/KyrianWake.blp`. The source sheet SHA-256 is
+`ae744fc133b8b633b4b2a2ac6cbb81b835428b7a9c0716fe3121d41611d69694`.
+The lower ribbon, original beam and soft pool are composited into one
+128 × 256 BLP2 texture. The runtime uses full UVs and additive blending with
+the ground reference at 150/174 of the canvas height. The other Blizzard
+extracts appear in the comparison preview. Blizzard retains the artwork
+copyright, and the mirror supplies no separate redistribution license.
+
+[celebration]: https://github.com/Gethe/wow-ui-textures/blob/e80e3278cc833c89e1f3fc79557b68315d750935/CovenantChoice/CovenantChoiceCelebration.PNG
+[starburst]: https://github.com/Gethe/wow-ui-textures/blob/e80e3278cc833c89e1f3fc79557b68315d750935/Cooldown/starburst.PNG
+[star4]: https://github.com/Gethe/wow-ui-textures/blob/e80e3278cc833c89e1f3fc79557b68315d750935/Cooldown/star4.PNG
+[cooldown]: https://github.com/Gethe/wow-ui-source/blob/88f272e94c202ecbe11fa44945f6035c65c15176/Interface/AddOns/Blizzard_FrameXML/Mainline/Cooldown.xml#L8
+[toast]: https://github.com/Gethe/wow-ui-source/blob/88f272e94c202ecbe11fa44945f6035c65c15176/Interface/AddOns/Blizzard_CovenantToasts/Blizzard_CovenantChoiceToast.xml#L3-L25
+
 ## Pinned texture sources
 
 The cache/navigation texture mirror snapshot used here is `9.2.7 (45114)`, commit `d23deaf8f44a7d280dc974a5c9d5321c013db59b`. Dragonflight's UI source still names the corresponding waypoint and navigation atlases; see the pinned Dragonflight references below. Those source texture files are from this earlier retail snapshot. The guardian medallion uses the separate pinned game-art source below.

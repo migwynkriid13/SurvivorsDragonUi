@@ -635,16 +635,26 @@ DFRL:NewMod("RunTimers", 5, function()
                 texture:Hide()
                 row.lossTexture = texture
             end
+            local tintChanged = not row.lossReady or row.lossColor ~= row.color
             if not row.lossReady then
                 local wanted = path .. "FillWhite.blp"
                 local loaded = texture:SetTexture(wanted)
                 local assigned = texture:GetTexture()
                 if not T.TextureAssigned(loaded, assigned, wanted) then return end
                 texture:SetTexCoord(0, 1, 0, 15 / 16)
-                -- Bake the preview's opacity against black into the tint. A
-                -- translucent strip over native red and black looks split.
-                texture:SetVertexColor(235 / 255 * 0.74, 65 / 255 * 0.74, 51 / 255 * 0.74, 1)
                 row.lossReady = true
+            end
+            if tintChanged then
+                -- Bake the opacity against black into the tint so the strip
+                -- stays uniform while the native fill catches up.
+                local color = row.color
+                texture:SetVertexColor(
+                    (color and color.red or 235 / 255) * 0.74,
+                    (color and color.green or 65 / 255) * 0.74,
+                    (color and color.blue or 51 / 255) * 0.74,
+                    1
+                )
+                row.lossColor = color
             end
             local left, span = width * row.lossTo, width * (edge - row.lossTo)
             if not T.NearlyEqual(row.lossLeft, left) then
@@ -1369,15 +1379,25 @@ DFRL:NewMod("RunTimers", 5, function()
                 if picker:IsVisible() then picker:SetValue(DFRL.display.Get(key)) end
             end
         end
-        for key, control in pairs(displayColors) do
+        for key, settings in pairs(displayColors) do
+            local control = settings.control
             if control:IsVisible() then
                 control:SetColor(DFRL.display.Get(key))
-                control:SetAvailable(DFRL.display.Get("meterColorMode") == "custom")
+                control:SetAvailable(
+                    DFRL.display.Get(settings.mode) == "custom"
+                        and (not settings.master or DFRL.display.Get(settings.master))
+                )
             end
         end
         for key, label in pairs(displayNumbers) do
             if label:IsVisible() then
                 local value = DFRL.display.Get(key)
+                local slider = label.slider
+                if slider and slider:GetValue() ~= value then
+                    slider.syncing = true
+                    slider:SetValue(value)
+                    slider.syncing = nil
+                end
                 T.SetTextIfChanged(label, label.formatValue and label.formatValue(value) or tostring(value))
             end
         end
@@ -1405,6 +1425,16 @@ DFRL:NewMod("RunTimers", 5, function()
                     enabled = DFRL.display.Get("worldCacheIcons")
                 elseif key == "guardianRespawnGuidance" then
                     enabled = DFRL.display.Get("guardianGuidance")
+                elseif key == "detachGuardianBars" or key == "detachEliteBars" then
+                    local visibleKey = key == "detachGuardianBars" and "guardiansInBossBar" or "elitesInBossBar"
+                    enabled = DFRL.display.Get("customBossBars") and DFRL.display.Get(visibleKey)
+                elseif
+                    key == "guardianShowCurrentHealth"
+                    or key == "guardianShowMaximumHealth"
+                    or key == "guardianShowHealthPercentage"
+                    or key == "guardianShortHealth"
+                then
+                    enabled = DFRL.display.Get("guardianShowHealthBars")
                 end
                 if enabled ~= nil and control.editorAvailable ~= enabled then
                     control:EnableMouse(enabled)
@@ -1648,9 +1678,15 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function RefreshTimerCaptions()
         local mode = runClock.mode or "Regular"
-        local currentEnabled = DFRL.display.Get("runCurrent" .. mode)
+        local currentEnabled, textEnabled
+        if mode == "Regular" then
+            currentEnabled = DFRL.display.Get("runCurrentRegular")
+            textEnabled = DFRL.display.Get("runTextRegular")
+        else
+            currentEnabled = DFRL.display.Get("runCurrentEndless")
+            textEnabled = DFRL.display.Get("runTextEndless")
+        end
         local maximumEnabled = mode == "Regular" and DFRL.display.Get("runMaximumRegular")
-        local textEnabled = DFRL.display.Get("runText" .. mode)
         local countdownEnabled = bossClock.option and DFRL.display.Get(bossClock.option) or false
         local hasTime = runClock.seconds ~= nil
         local seconds = currentEnabled and runClock.seconds or nil
@@ -1883,6 +1919,27 @@ DFRL:NewMod("RunTimers", 5, function()
             { "far", "Distant only", "Show icons beyond the distance cutoff." },
         }
         local encounterIconOptions = { { "default", "Default" }, { "original", "Original" } }
+        local function WorldIconSection(key, label, toggle, mode, distance, extra)
+            local options = {
+                toggle,
+                {
+                    distance,
+                    "Distance cutoff (yards)",
+                    "Nearby includes this distance; distant starts beyond it.",
+                    step = 5,
+                    wide = true,
+                    range = true,
+                },
+            }
+            if extra then table.insert(options, extra) end
+            return {
+                key = key,
+                label = label,
+                master = toggle[1],
+                mode = { key = mode, label = "When to show", after = toggle[1], values = worldIconModes },
+                options = options,
+            }
+        end
         local categories = {
             { key = "layout", label = "Layout" },
             { key = "profiles", label = "Profiles" },
@@ -1972,10 +2029,16 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Names only",
                         "Hide health bars and keep names. Custom combat text still works.",
                     },
+                    { "nameplatesShowBosses", "Bosses" },
+                    { "nameplatesShowGuardians", "Guardians" },
+                    { "nameplatesShowElites", "Elites" },
+                    { "nameplatesShowRegular", "Regular mobs" },
                     {
-                        "nameplatesBossGuardiansOnly",
-                        "Only bosses and guardians",
-                        "Hide ordinary enemy nameplates. V still shows or hides nameplates.",
+                        "nameplateDistance",
+                        "Nameplate range (yards)",
+                        "Regular mobs stay at 20 yards. This slider adjusts bosses, guardians and elites.",
+                        slider = "SurvivorsDragonUiNameplateDistance",
+                        wide = true,
                     },
                 },
             },
@@ -1983,12 +2046,24 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "bosses",
                 label = "Boss bars",
                 master = "customBossBars",
+                mode = {
+                    key = "bossBarColorMode",
+                    label = "Bar colors",
+                    after = "customBossBars",
+                    values = {
+                        { "default", "Default", "Use red health bars." },
+                        { "custom", "Custom", "Choose health bar colors for bosses, guardians and elites." },
+                    },
+                },
                 options = {
                     { "customBossBars", "Enable custom boss bars", "Off: use the game's original boss bars." },
+                    { "bossBarBossColor", "Boss color", color = true },
+                    { "bossBarGuardianColor", "Guardian color", color = true },
+                    { "bossBarEliteColor", "Elite color", color = true },
                     {
                         "bossCombineBars",
                         "Combine boss bars",
-                        "Split one row equally between all visible bosses and guardians.",
+                        "Split one row equally between all visible health bars.",
                     },
                     { "bossShowCurrentHealth", "Show current health", "Show current health on health bars." },
                     { "bossShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
@@ -1999,7 +2074,10 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Use K, M, B and T instead of full health numbers.",
                     },
                     { "bossDebuffs", "Boss debuffs", "Effects on boss and guardian health bars." },
-                    { "guardiansInBossBar", "Guardians in boss bar", "Off: show only bosses in the boss bar." },
+                    { "guardiansInBossBar", "Guardians in boss bar", "Show health bars for fighting guardians." },
+                    { "detachGuardianBars", "Detach guardian bars", "Move guardian bars separately in Layout." },
+                    { "elitesInBossBar", "Elites in boss bar", "Show health bars for living elites." },
+                    { "detachEliteBars", "Detach elite bars", "Move elite bars separately in Layout." },
                 },
             },
             {
@@ -2093,6 +2171,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "guardians",
                 label = "Guardian tracker",
                 options = {
+                    { "guardianShowHealthBars", "Show health bars", "Off shows Combat in red.", wide = true },
                     { "guardianShowCurrentHealth", "Show current health", "Show current health on health bars." },
                     { "guardianShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
                     {
@@ -2234,68 +2313,52 @@ DFRL:NewMod("RunTimers", 5, function()
                     },
                 },
             },
-            {
-                key = "cacheIcons",
-                label = "World cache icons",
-                master = "worldCacheIcons",
-                mode = {
-                    key = "worldCacheIconMode",
-                    label = "When to show",
-                    after = "worldCacheIcons",
-                    values = worldIconModes,
-                },
-                options = {
-                    { "worldCacheIcons", "Icons above caches", "Requires an updated game." },
-                    {
-                        "worldCacheIconDistance",
-                        "Distance cutoff (yards)",
-                        "Nearby includes this distance; distant starts beyond it.",
-                        step = 5,
-                        wide = true,
-                        range = true,
-                    },
-                    {
-                        "worldCacheAffordableOnly",
-                        "Only show affordable caches",
-                        "Hide world cache icons until you have enough gold.",
-                        wide = true,
-                    },
-                },
-            },
-            {
-                key = "bossIcons",
-                label = "World guardian and boss icons",
-                master = "worldBossIcons",
-                mode = {
-                    key = "worldBossIconMode",
-                    label = "When to show",
-                    after = "worldBossIcons",
-                    values = worldIconModes,
-                },
-                options = {
-                    { "worldBossIcons", "Icons above guardians and bosses", "Requires an updated game." },
-                    {
-                        "worldBossIconDistance",
-                        "Distance cutoff (yards)",
-                        "Nearby includes this distance; distant starts beyond it.",
-                        step = 5,
-                        wide = true,
-                        range = true,
-                    },
-                    {
-                        "bossIconStyle",
-                        "Boss icon",
-                        "Use this style above bosses and on the run timer.",
-                        choices = encounterIconOptions,
-                    },
-                    {
-                        "guardianIconStyle",
-                        "Guardian icon",
-                        "Use this style for guardian markers and the tracker.",
-                        choices = encounterIconOptions,
-                    },
-                },
-            },
+            WorldIconSection(
+                "cacheIcons",
+                "World cache icons",
+                { "worldCacheIcons", "Icons above caches", "Requires an updated game." },
+                "worldCacheIconMode",
+                "worldCacheIconDistance",
+                {
+                    "worldCacheAffordableOnly",
+                    "Only show affordable caches",
+                    "Hide world cache icons until you have enough gold.",
+                    wide = true,
+                }
+            ),
+            WorldIconSection(
+                "bossIcons",
+                "World boss icons",
+                { "worldBossIcons", "Icons above bosses", "Requires an updated game." },
+                "worldBossIconMode",
+                "worldBossIconDistance",
+                {
+                    "bossIconStyle",
+                    "Boss icon",
+                    "Use this style above bosses and on the run timer.",
+                    choices = encounterIconOptions,
+                }
+            ),
+            WorldIconSection(
+                "eliteIcons",
+                "World elite icons",
+                { "worldEliteIcons", "Icons above elites", "Requires an updated game." },
+                "worldEliteIconMode",
+                "worldEliteIconDistance"
+            ),
+            WorldIconSection(
+                "guardianIcons",
+                "World guardian icons",
+                { "worldGuardianIcons", "Icons above guardians", "Requires an updated game." },
+                "worldGuardianIconMode",
+                "worldGuardianIconDistance",
+                {
+                    "guardianIconStyle",
+                    "Guardian icon",
+                    "Use this style for guardian markers and the tracker.",
+                    choices = encounterIconOptions,
+                }
+            ),
             {
                 key = "minimap",
                 label = "Minimap",
@@ -2382,7 +2445,7 @@ DFRL:NewMod("RunTimers", 5, function()
             {
                 key = "map",
                 label = "Map & navigation",
-                sections = { "waypoints", "cacheIcons", "bossIcons", "minimap" },
+                sections = { "waypoints", "cacheIcons", "bossIcons", "eliteIcons", "guardianIcons", "minimap" },
             },
             {
                 key = "interface",
@@ -2824,6 +2887,43 @@ DFRL:NewMod("RunTimers", 5, function()
             displayNumbers[entry[1]] = value
             return control
         end
+        local function DisplaySlider(parent, entry, width, height)
+            local key, name = entry[1], entry.slider
+            local control = CreateFrame("Frame", nil, parent)
+            control:SetWidth(width)
+            control:SetHeight(height)
+            local title = FontEditorLabel(control, entry[2], 0, -7, 12)
+            title:SetWidth(width - 76)
+            local description = FontEditorLabel(control, entry[3], 0, -71, 9)
+            description:SetWidth(width)
+            description:SetHeight(32)
+            description:SetJustifyV("TOP")
+            description:SetTextColor(0.59, 0.59, 0.56)
+            local slider = CreateFrame("Slider", name, control, "OptionsSliderTemplate")
+            slider:SetWidth(width - 32)
+            slider:SetHeight(16)
+            slider:SetPoint("TOPLEFT", control, "TOPLEFT", 16, -36)
+            local minimum, maximum = DFRL.display.GetRange(key)
+            slider:SetMinMaxValues(minimum, maximum)
+            slider:SetValueStep(1)
+            for suffix, text in pairs({ Low = tostring(minimum), High = tostring(maximum), Text = "" }) do
+                local label = _G[name .. suffix]
+                if label then label:SetText(text) end
+            end
+            slider:SetScript("OnValueChanged", function()
+                if not slider.syncing and slider:IsVisible() then DFRL.display.Set(key, slider:GetValue()) end
+            end)
+            slider:EnableMouseWheel(true)
+            slider:SetScript("OnMouseWheel", navigation.Scroll)
+            local value = FontEditorLabel(control, "", 0, 0, 12)
+            value:ClearAllPoints()
+            value:SetPoint("TOPRIGHT", control, "TOPRIGHT", -4, -7)
+            value:SetWidth(64)
+            value:SetJustifyH("RIGHT")
+            value.slider = slider
+            displayNumbers[key] = value
+            return control
+        end
         local optionLayouts = {}
         builders.options = function(page, category)
             local dependents
@@ -2833,6 +2933,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             local columns = category.columns or (table.getn(category.options) > 1 and 2 or 1)
             local rowHeight = 88
+            local sliderHeight = 112
             local modeHeight = category.mode and 112 or 0
             local rowWidth = (contentWidth - gap * (columns - 1)) / columns
             local content = page
@@ -2851,7 +2952,7 @@ DFRL:NewMod("RunTimers", 5, function()
                         controlWidth,
                         function(value) DFRL.display.Set(key, value) end
                     )
-                    displayColors[key] = control
+                    displayColors[key] = { control = control, mode = category.mode.key, master = category.master }
                 elseif entry.choices then
                     local key = entry[1]
                     control = CreateFrame("Frame", nil, content)
@@ -2876,6 +2977,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     picker.dropdownOpenUp = true
                     fontEditor.iconSelectors = fontEditor.iconSelectors or {}
                     fontEditor.iconSelectors[key] = picker
+                elseif entry.slider then
+                    control = DisplaySlider(content, entry, controlWidth, sliderHeight)
                 elseif entry.step then
                     control = DisplayNumber(content, entry, controlWidth, rowHeight)
                     if entry.range then
@@ -2892,11 +2995,19 @@ DFRL:NewMod("RunTimers", 5, function()
                     span = span,
                     numeric = entry.step ~= nil,
                     color = entry.color,
-                    height = entry.choices and rowHeight or nil,
+                    height = entry.slider and sliderHeight or (entry.choices and rowHeight or nil),
                     entry = entry,
                 })
                 if leading and entry[1] == category.mode.after then leading = false end
-                if dependents and entry[1] ~= category.master and not entry.range and not entry.choices then
+                if
+                    dependents
+                    and entry[1] ~= category.master
+                    and not entry.range
+                    and not entry.choices
+                    and not entry.color
+                    and entry[1] ~= "detachGuardianBars"
+                    and entry[1] ~= "detachEliteBars"
+                then
                     table.insert(dependents.controls, control)
                 end
                 control:EnableMouseWheel(true)
@@ -3513,6 +3624,7 @@ DFRL:NewMod("RunTimers", 5, function()
     -- Encounters share a movable group, independent of the run clock.
     -- Its bounds include the first name and every stacked health pill.
     local bossGroup = CreateFrame("Frame", "DFRL_BossHealthGroup", UIParent)
+    bossGroup.layoutKey, bossGroup.rows, bossGroup.entries = "bossBars", {}, {}
     bossGroup:SetWidth(BAR_WIDTH + 16)
     bossGroup:SetHeight(
         math.max(47, (DFRL.display.Get("bossCombineBars") and 0 or DFRL.display.Get("bossRows")) * ROW_HEIGHT - 1)
@@ -3521,7 +3633,7 @@ DFRL:NewMod("RunTimers", 5, function()
     bossGroup:Hide()
     DFRL.layout.Register("bossBars", bossGroup, function()
         bossGroup:ClearAllPoints()
-        bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
+        bossGroup:SetPoint("TOP", run, "BOTTOM", 0, 0)
     end, {
         edgeWidth = true,
         minWidth = 120,
@@ -4048,7 +4160,6 @@ DFRL:NewMod("RunTimers", 5, function()
     local markers = {}
     local markerStates = {}
     local activeRows = {}
-    local rowOrder = {}
     local spareRows = {}
     local createdRows = 0
     local nativeParts = {
@@ -4075,6 +4186,12 @@ DFRL:NewMod("RunTimers", 5, function()
         activeMarkers = {},
         activeMarkerCount = 0,
         bossLoss = CreateBossHealthLoss(),
+        encounterGroups = { bossGroup },
+        detachedByKind = {},
+        detachOptions = {
+            { kind = "guardian", key = "guardianBars", option = "detachGuardianBars", visible = "guardiansInBossBar" },
+            { kind = "elite", key = "eliteBars", option = "detachEliteBars", visible = "elitesInBossBar" },
+        },
     }
     HookScript(run, "OnHide", function()
         if render.runShown then render.clockHidden = true end
@@ -4197,15 +4314,67 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         row.debuffCount, row.debuffHeight = 0, 0
     end
-    HookScript(bossGroup, "OnHide", function()
-        render.bossLoss:ClearAll(activeRows)
-        for _, row in pairs(activeRows) do
-            ClearDebuffs(row)
+    local function WatchEncounterGroup(group)
+        HookScript(group, "OnHide", function()
+            for _, row in ipairs(group.rows) do
+                if row.group == group then
+                    render.bossLoss:Clear(row)
+                    ClearDebuffs(row)
+                end
+            end
+        end)
+        HookScript(group, "OnShow", function()
+            refreshRows, render.readPending = true, true
+        end)
+    end
+    WatchEncounterGroup(bossGroup)
+
+    local function CreateDetachedGroup(option)
+        local group = CreateFrame("Frame", nil, UIParent)
+        local viewWidth = T.GetLocalWidth(UIParent) or 960
+        group:SetWidth(math.max(120, math.min(BAR_WIDTH + 16, (viewWidth - BAR_WIDTH - 16) / 2 - 24)))
+        group:SetHeight(ROW_HEIGHT - 1)
+        group:SetFrameStrata("HIGH")
+        group:EnableMouse(false)
+        group:Hide()
+        group.layoutKey, group.rows, group.entries = option.key, {}, {}
+        DFRL.layout.Register(option.key, group, function()
+            local left = option.kind == "guardian"
+            local point = left and "TOPLEFT" or "TOPRIGHT"
+            group:ClearAllPoints()
+            group:SetPoint(point, UIParent, point, left and 12 or -12, -92)
+        end, {
+            edgeWidth = true,
+            minWidth = 120,
+            maxWidth = 1200,
+            handleAvailable = function() return render.detachedByKind[option.kind] == group end,
+            onResize = function() group.widthDirty = true end,
+        })
+        WatchEncounterGroup(group)
+        table.insert(render.encounterGroups, group)
+        return group
+    end
+
+    function render.RefreshEncounterGroups()
+        for _, option in ipairs(render.detachOptions) do
+            local detached = render.customBosses
+                and DFRL.display.Get(option.visible)
+                and DFRL.display.Get(option.option)
+            if detached and not option.group then option.group = CreateDetachedGroup(option) end
+            local group = detached and option.group or nil
+            if render.detachedByKind[option.kind] ~= group then
+                render.detachedByKind[option.kind] = group
+                render.readPending = true
+            end
         end
-    end)
-    HookScript(bossGroup, "OnShow", function()
-        refreshRows, render.readPending = true, true
-    end)
+    end
+
+    function render.HasVisibleEncounterGroup()
+        for _, group in ipairs(render.encounterGroups) do
+            if group:IsVisible() then return true end
+        end
+        return false
+    end
 
     local function Retire(row)
         render.bossLoss:Clear(row)
@@ -4216,7 +4385,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if row.value ~= 0 then row.bar:SetValue(0) end
         row.fill.SetFraction(0)
         row.value, row.layoutOffset, row.layoutX = 0, nil, nil
-        row.id, row.key = nil, nil
+        row.id, row.key, row.kind, row.group = nil, nil, nil, nil
         table.insert(spareRows, row)
     end
 
@@ -4225,19 +4394,25 @@ DFRL:NewMod("RunTimers", 5, function()
             Retire(row)
             activeRows[key] = nil
         end
-        for index in ipairs(rowOrder) do
-            rowOrder[index] = nil
-        end
-        table.setn(rowOrder, 0)
-        if render.bossShown then
-            render.bossShown = false
-            bossGroup:Hide()
-        end
-        render.rowsDirty, render.rowsPresentationDirty = nil, nil
-        render.bossOffset, render.bossCount, bossGroup.visibleRows = 0, 0, 0
-        if render.visibleBosses then
-            for key in pairs(render.visibleBosses) do
-                render.visibleBosses[key] = nil
+        for _, group in ipairs(render.encounterGroups) do
+            for index in ipairs(group.rows) do
+                group.rows[index] = nil
+            end
+            table.setn(group.rows, 0)
+            for index in ipairs(group.entries) do
+                group.entries[index] = nil
+            end
+            table.setn(group.entries, 0)
+            if group.hasRows then
+                group.hasRows = false
+                group:Hide()
+            end
+            group.rowsDirty, group.presentationDirty, group.paint = nil, nil, nil
+            group.offset, group.count, group.visibleRows = 0, 0, 0
+            if group.visibleKeys then
+                for key in pairs(group.visibleKeys) do
+                    group.visibleKeys[key] = nil
+                end
             end
         end
     end
@@ -4662,9 +4837,12 @@ DFRL:NewMod("RunTimers", 5, function()
         -- The API initializes its unit table to {} in each new Lua VM.
         -- Until an actual unit snapshot arrives after /reload, an empty
         -- getter result does not mean the native encounters disappeared.
-        if not IsNumber(AZS_UNITS_UPDATED) then return nil end
+        local stamp = AZS_UNITS_UPDATED
+        if not IsNumber(stamp) then return nil end
         local bosses = Read("AZS_GetBosses")
         local showGuardians = DFRL.display.Get("guardiansInBossBar")
+        local guardianGroup = render.detachedByKind.guardian
+        if guardianGroup and DFRL.layout.IsHidden(guardianGroup.layoutKey) then showGuardians = false end
         local guardians = showGuardians and Read("AZS_GetGuardians") or nil
         -- The native "bosses" part includes guardians. Only awake guardians
         -- are fighting; the full list also includes sleeping lairs on the map.
@@ -4672,6 +4850,14 @@ DFRL:NewMod("RunTimers", 5, function()
         if type(bosses) ~= "table" or (showGuardians and type(guardians) ~= "table") then return nil end
         local entries, seen = render.encounters or {}, render.encounterSeen or {}
         render.encounters, render.encounterSeen = entries, seen
+        local elites
+        local eliteGroup = render.detachedByKind.elite or bossGroup
+        if DFRL.display.Get("elitesInBossBar") and not DFRL.layout.IsHidden(eliteGroup.layoutKey) then
+            local roster = AZS_UNITS
+            if T.EncounterRosterSize(roster, stamp) and T.ValidateEncounterEntries(roster, seen) then
+                elites = roster
+            end
+        end
         -- A fresh candidate may fail validation after partially copying rows;
         -- the next retirement must clear those copies as well.
         render.encountersRetired = nil
@@ -4685,6 +4871,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 -- Getter flags are booleans; also accept the native 1 form.
                 -- Lua considers 0 truthy, so do not test awake by truthiness.
                 local engaged = kind ~= "guardian" or entry.awake == true or entry.awake == 1
+                if kind == "elite" then engaged = entry.kind == "elite" and entry.hp > 0 end
                 if engaged then
                     if
                         not IsNumber(entry.id)
@@ -4711,7 +4898,13 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             return true
         end
-        if not Append(bosses, "boss") or (showGuardians and not Append(guardians, "guardian")) then return nil end
+        if
+            not Append(bosses, "boss")
+            or (showGuardians and not Append(guardians, "guardian"))
+            or (elites and not Append(elites, "elite"))
+        then
+            return nil
+        end
         for index = used + 1, table.getn(entries) do
             entries[index] = nil
         end
@@ -4719,13 +4912,13 @@ DFRL:NewMod("RunTimers", 5, function()
         return entries, seen
     end
 
-    local function NewRow()
+    local function NewRow(group)
         local row = table.remove(spareRows)
         if row then return row end
         createdRows = createdRows + 1
         local frame, bar, name, rowOverlay, fill =
             Pill("DFRL_BossHealthPill" .. tostring(createdRows), "FillWhite", true)
-        frame:SetParent(bossGroup)
+        frame:SetParent(group)
         fill.BindViewport()
         T.SetFont(name, 12, "OUTLINE")
         name:SetWidth(BAR_WIDTH)
@@ -4872,10 +5065,10 @@ DFRL:NewMod("RunTimers", 5, function()
 
     local function UpdateDebuffs(row, enabled)
         local count = 0
-        local paint = bossGroup:IsVisible()
+        local paint = row.group and row.group:IsVisible()
         if not paint then return row.debuffHeight or 0 end
         local getter = _G.AZS_GetDebuffs
-        if enabled and row.debuffsFit ~= false and type(getter) == "function" then
+        if enabled and row.kind ~= "elite" and row.debuffsFit ~= false and type(getter) == "function" then
             -- The getter owns timing and returns current effects for this exact
             -- spawn, including when no unit is targeted. Never advance a local clock.
             local ok, effects = pcall(getter, row.id)
@@ -4925,17 +5118,17 @@ DFRL:NewMod("RunTimers", 5, function()
         return math.ceil(count / row.columns) * (DEBUFF_SIZE + DEBUFF_GAP)
     end
 
-    local function ReflowRows()
-        local combined = DFRL.display.Get("bossCombineBars")
-        local count = table.getn(rowOrder)
-        local groupWidth = bossGroup:GetWidth()
+    local function ReflowRows(group)
+        local combined = group.combined
+        local count = table.getn(group.rows)
+        local groupWidth = group:GetWidth()
         local width = groupWidth / math.max(1, count)
         local offset, deepest = 0, 0
-        for index, row in ipairs(rowOrder) do
+        for index, row in ipairs(group.rows) do
             local x = combined and ((index - 0.5) * width - groupWidth / 2) or 0
             if row.layoutOffset ~= offset or not T.NearlyEqual(row.layoutX, x) then
                 row.frame:ClearAllPoints()
-                row.frame:SetPoint("TOP", bossGroup, "TOP", x, -16 - offset)
+                row.frame:SetPoint("TOP", group, "TOP", x, -16 - offset)
                 row.layoutOffset, row.layoutX = offset, x
             end
             if combined then
@@ -4944,13 +5137,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 offset = offset + ROW_HEIGHT + (row.debuffHeight or 0)
             end
         end
-        local capacity = combined and 0 or DFRL.display.Get("bossRows")
         local height = combined and (ROW_HEIGHT - 1 + deepest)
-            or (offset - 1 + math.max(0, capacity - count) * ROW_HEIGHT)
+            or (offset - 1 + math.max(0, group.capacity - count) * ROW_HEIGHT)
         height = math.max(47, height)
-        if not T.NearlyEqual(bossGroup:GetHeight(), height) then
-            bossGroup:SetHeight(height)
-            DFRL.layout.Place("bossBars", bossGroup)
+        if not T.NearlyEqual(group:GetHeight(), height) then
+            group:SetHeight(height)
+            DFRL.layout.Place(group.layoutKey, group)
         end
     end
 
@@ -4960,27 +5152,155 @@ DFRL:NewMod("RunTimers", 5, function()
         local height = UpdateDebuffs(row, enabled)
         if row.debuffHeight ~= height then
             row.debuffHeight = height
-            ReflowRows()
+            ReflowRows(row.group)
         end
     end
 
-    local function UpdateDebuffRows(phase, reflow)
-        if not bossGroup:IsVisible() then return end
+    local function UpdateDebuffRows(group, phase, reflow)
+        if not group:IsVisible() then return end
         local enabled = phase ~= "ready" and phase ~= "dead" and DFRL.display.Get("bossDebuffs")
-        for _, row in ipairs(rowOrder) do
+        for _, row in ipairs(group.rows) do
             row.RefreshDebuffs = RefreshDebuffHover
             local height = UpdateDebuffs(row, enabled)
             if row.debuffHeight ~= height then reflow = true end
             row.debuffHeight = height
         end
-        if reflow or render.rowsDirty then
-            if bossGroup:IsVisible() then
-                ReflowRows()
-                render.rowsDirty = nil
+        if reflow or group.rowsDirty then
+            if group:IsVisible() then
+                ReflowRows(group)
+                group.rowsDirty = nil
             else
-                render.rowsDirty = true
+                group.rowsDirty = true
             end
         end
+    end
+
+    local function PlanEncounterGroup(group, entries)
+        local count = table.getn(entries)
+        local combined = group == bossGroup and DFRL.display.Get("bossCombineBars")
+        local capacity = group == bossGroup and not combined and DFRL.display.Get("bossRows") or 0
+        group.combined, group.capacity, group.count = combined, capacity, count
+        group.offset = math.min(group.offset or 0, math.max(0, count - (capacity > 0 and capacity or count)))
+        local first = group.offset + 1
+        local last = capacity > 0 and math.min(count, group.offset + capacity) or count
+        group.first, group.last = first, last
+        group.visibleRows = math.max(0, last - first + 1)
+        local shown = count > 0
+        if group.hasRows ~= shown then
+            group.hasRows = shown
+            if shown then
+                group:Show()
+            else
+                group:Hide()
+            end
+        end
+        group.paint = shown and group:IsVisible()
+        group.presentationDirty = shown and not group.paint or nil
+        if not group.paint then
+            if not shown then
+                for index in ipairs(group.rows) do
+                    group.rows[index] = nil
+                end
+                table.setn(group.rows, 0)
+            end
+            return
+        end
+        local order = group.rows
+        local changed = not group.visibleKeys or group.visibleRows ~= table.getn(order)
+        if not changed then
+            for index = first, last do
+                local row = order[index - first + 1]
+                if not row or row.key ~= entries[index].key then
+                    changed = true
+                    break
+                end
+            end
+        end
+        if changed then
+            local visible = group.visibleKeys or {}
+            group.visibleKeys = visible
+            for key in pairs(visible) do
+                visible[key] = nil
+            end
+            for index = first, last do
+                visible[entries[index].key] = true
+            end
+        end
+    end
+
+    local function PaintEncounterGroup(group, entries, phase)
+        local rowOrder, first, combined = group.rows, group.first, group.combined
+        local showCurrent = DFRL.display.Get("bossShowCurrentHealth")
+        local showMaximum = DFRL.display.Get("bossShowMaximumHealth")
+        local showPercentage = DFRL.display.Get("bossShowHealthPercentage")
+        local shortenHealth = DFRL.display.Get("bossShortHealth")
+        local reflow = group.visibleRows ~= table.getn(rowOrder)
+        local width = group:GetWidth() / (combined and math.max(1, group.visibleRows) or 1)
+        local textWidth = width - 2 * math.min(8, width / 4)
+        local columns = math.max(1, math.floor((width - 16 + DEBUFF_GAP) / (DEBUFF_SIZE + DEBUFF_GAP)))
+        for sourceIndex = first, group.last do
+            local entry = entries[sourceIndex]
+            local index = sourceIndex - first + 1
+            local row = activeRows[entry.key]
+            if not row then
+                row = NewRow(group)
+                activeRows[entry.key] = row
+                reflow = true
+            end
+            if row.group ~= group then
+                if row.group then
+                    render.bossLoss:Clear(row)
+                    ClearDebuffs(row)
+                end
+                if row.frame:GetParent() ~= group then row.frame:SetParent(group) end
+                row.group, row.layoutX, row.layoutOffset = group, nil, nil
+                reflow = true
+            end
+            row.key = entry.key
+            row.id, row.kind = entry.id, entry.kind
+            local rowWidth = row.frame:GetWidth()
+            if not T.NearlyEqual(rowWidth, width) then
+                row.frame:SetWidth(width)
+                rowWidth = row.frame:GetWidth()
+                reflow = true
+            end
+            if row.frame.paintedOuterWidth ~= rowWidth then row.frame.RefreshWidth(rowWidth) end
+            row.debuffsFit = textWidth >= DEBUFF_SIZE
+            if not T.NearlyEqual(row.name:GetWidth(), textWidth) then row.name:SetWidth(textWidth) end
+            if not T.NearlyEqual(row.health:GetWidth(), textWidth) then row.health:SetWidth(textWidth) end
+            if row.columns ~= columns then
+                row.columns, reflow = columns, true
+            end
+            local value = math.min(1, entry.hp / entry.maximum)
+            if row.value ~= value then row.bar:SetValue(value) end
+            row.fill.SetFraction(value)
+            row.value = value
+            local color = render.bossColors and render.bossColors[entry.kind]
+            if row.color ~= color then
+                local tint = color or T.EncounterHealthStyle
+                row.fill.SetColor(tint.red, tint.green, tint.blue, 1)
+                row.color = color
+            end
+            T.SetTextIfChanged(row.name, entry.name)
+            T.SetEncounterHealthText(
+                row.health,
+                entry.hp,
+                entry.maximum,
+                showCurrent,
+                showMaximum,
+                shortenHealth,
+                showPercentage
+            )
+            if not row.frame:IsShown() then row.frame:Show() end
+            render.bossLoss:Observe(row, value, entry.maximum, entry.key, entry.name)
+            if rowOrder[index] ~= row then reflow = true end
+            rowOrder[index] = row
+        end
+        for index = group.visibleRows + 1, table.getn(rowOrder) do
+            rowOrder[index] = nil
+        end
+        table.setn(rowOrder, group.visibleRows)
+        UpdateDebuffRows(group, phase, reflow)
     end
 
     local function UpdateRows(phase)
@@ -4994,123 +5314,44 @@ DFRL:NewMod("RunTimers", 5, function()
             Restore("bosses")
             return
         end
+        local detached, groups = render.detachedByKind, render.encounterGroups
+        local attached = entries
+        if detached.guardian or detached.elite then
+            for _, group in ipairs(groups) do
+                group.entryCount = 0
+            end
+            for _, entry in ipairs(entries) do
+                local group = detached[entry.kind] or bossGroup
+                group.entryCount = group.entryCount + 1
+                group.entries[group.entryCount] = entry
+            end
+            attached = bossGroup.entries
+        else
+            for _, group in ipairs(groups) do
+                group.entryCount = 0
+            end
+        end
+        for _, group in ipairs(groups) do
+            for index = group.entryCount + 1, table.getn(group.entries) do
+                group.entries[index] = nil
+            end
+            table.setn(group.entries, group.entryCount)
+            PlanEncounterGroup(group, group == bossGroup and attached or group.entries)
+        end
         for key, row in pairs(activeRows) do
-            if not seen[key] then
+            local target = detached[row.kind] or bossGroup
+            if
+                not seen[key]
+                or (target.paint and not target.visibleKeys[key])
+                or (not target.paint and target ~= row.group)
+            then
                 Retire(row)
                 activeRows[key] = nil
             end
         end
-        local count = table.getn(entries)
-        local combined = DFRL.display.Get("bossCombineBars")
-        local capacity = combined and 0 or DFRL.display.Get("bossRows")
-        render.bossCount = count
-        render.bossOffset = math.min(render.bossOffset or 0, math.max(0, count - (capacity > 0 and capacity or count)))
-        local first = render.bossOffset + 1
-        local last = capacity > 0 and math.min(count, render.bossOffset + capacity) or count
-        bossGroup.visibleRows = math.max(0, last - first + 1)
-        local shown = count > 0
-        if render.bossShown ~= shown then
-            render.bossShown = shown
-            if shown then
-                bossGroup:Show()
-            else
-                bossGroup:Hide()
-            end
+        for _, group in ipairs(groups) do
+            if group.paint then PaintEncounterGroup(group, group == bossGroup and attached or group.entries, phase) end
         end
-        local paint = bossGroup:IsVisible()
-        render.rowsPresentationDirty = not paint and shown or nil
-        if not paint then
-            if not TakeOver("bosses") then
-                ClearRows()
-                Restore("bosses")
-            end
-            return
-        end
-        -- Keep complete validated native entries, but allocate/paint only the viewport.
-        local showCurrent = DFRL.display.Get("bossShowCurrentHealth")
-        local showMaximum = DFRL.display.Get("bossShowMaximumHealth")
-        local showPercentage = DFRL.display.Get("bossShowHealthPercentage")
-        local shortenHealth = DFRL.display.Get("bossShortHealth")
-        local viewportChanged = not render.visibleBosses or bossGroup.visibleRows ~= table.getn(rowOrder)
-        if not viewportChanged then
-            for sourceIndex = first, last do
-                local row = rowOrder[sourceIndex - first + 1]
-                if not row or row.key ~= entries[sourceIndex].key then
-                    viewportChanged = true
-                    break
-                end
-            end
-        end
-        if viewportChanged then
-            local visible = render.visibleBosses or {}
-            render.visibleBosses = visible
-            for key in pairs(visible) do
-                visible[key] = nil
-            end
-            for index = first, last do
-                visible[entries[index].key] = true
-            end
-            for key, row in pairs(activeRows) do
-                if not visible[key] then
-                    Retire(row)
-                    activeRows[key] = nil
-                end
-            end
-        end
-        local reflow = bossGroup.visibleRows ~= table.getn(rowOrder)
-        local width = bossGroup:GetWidth() / (combined and math.max(1, bossGroup.visibleRows) or 1)
-        local textWidth = width - 2 * math.min(8, width / 4)
-        local columns = math.max(1, math.floor((width - 16 + DEBUFF_GAP) / (DEBUFF_SIZE + DEBUFF_GAP)))
-        for sourceIndex = first, last do
-            local entry = entries[sourceIndex]
-            local index = sourceIndex - first + 1
-            local row = activeRows[entry.key]
-            if not row then
-                row = NewRow()
-                activeRows[entry.key] = row
-                reflow = true
-            end
-            row.key = entry.key
-            row.id = entry.id
-            if paint then
-                local rowWidth = row.frame:GetWidth()
-                if not T.NearlyEqual(rowWidth, width) then
-                    row.frame:SetWidth(width)
-                    rowWidth = row.frame:GetWidth()
-                    reflow = true
-                end
-                if row.frame.paintedOuterWidth ~= rowWidth then row.frame.RefreshWidth(rowWidth) end
-                row.debuffsFit = textWidth >= DEBUFF_SIZE
-                if not T.NearlyEqual(row.name:GetWidth(), textWidth) then row.name:SetWidth(textWidth) end
-                if not T.NearlyEqual(row.health:GetWidth(), textWidth) then row.health:SetWidth(textWidth) end
-                if row.columns ~= columns then
-                    row.columns, reflow = columns, true
-                end
-                local value = math.min(1, entry.hp / entry.maximum)
-                if row.value ~= value then row.bar:SetValue(value) end
-                row.fill.SetFraction(value)
-                row.value = value
-                T.SetTextIfChanged(row.name, entry.name)
-                T.SetEncounterHealthText(
-                    row.health,
-                    entry.hp,
-                    entry.maximum,
-                    showCurrent,
-                    showMaximum,
-                    shortenHealth,
-                    showPercentage
-                )
-                if not row.frame:IsShown() then row.frame:Show() end
-                render.bossLoss:Observe(row, value, entry.maximum, entry.key, entry.name)
-            end
-            if rowOrder[index] ~= row then reflow = true end
-            rowOrder[index] = row
-        end
-        for index = bossGroup.visibleRows + 1, table.getn(rowOrder) do
-            rowOrder[index] = nil
-        end
-        table.setn(rowOrder, bossGroup.visibleRows)
-        UpdateDebuffRows(phase, reflow)
         if not TakeOver("bosses") then
             ClearRows()
             Restore("bosses")
@@ -5124,18 +5365,40 @@ DFRL:NewMod("RunTimers", 5, function()
         local offset = math.max(
             0,
             math.min(
-                math.max(0, (render.bossCount or 0) - capacity),
-                (render.bossOffset or 0) - (tonumber(direction) or 0)
+                math.max(0, (bossGroup.count or 0) - capacity),
+                (bossGroup.offset or 0) - (tonumber(direction) or 0)
             )
         )
-        if render.bossOffset ~= offset then
-            render.bossOffset, refreshRows, render.readPending = offset, true, true
+        if bossGroup.offset ~= offset then
+            bossGroup.offset, refreshRows, render.readPending = offset, true, true
         end
     end
     bossGroup:EnableMouseWheel(true)
     bossGroup:SetScript("OnMouseWheel", function() bossGroup.ScrollRows(arg1) end)
 
+    function render.RefreshBossColors()
+        if DFRL.display.Get("bossBarColorMode") ~= "custom" then
+            render.bossColors = nil
+            return
+        end
+        local colors = render.bossColors or {}
+        local selected = {
+            boss = DFRL.display.Get("bossBarBossColor"),
+            guardian = DFRL.display.Get("bossBarGuardianColor"),
+            elite = DFRL.display.Get("bossBarEliteColor"),
+        }
+        for kind, hex in pairs(selected) do
+            if not colors[kind] or colors[kind].hex ~= hex then
+                local red, green, blue = DFRL.display.ColorRGB(hex)
+                colors[kind] = { hex = hex, red = red, green = green, blue = blue }
+            end
+        end
+        render.bossColors = colors
+    end
+    render.RefreshBossColors()
+
     DFRL.display.Listen(function()
+        render.RefreshBossColors()
         if render.bossIcon ~= DFRL.display.BossIcon() then render.markerStatesDirty = true end
         local performance = DFRL.display.Get("performanceMode")
         if performanceMode ~= performance then
@@ -5155,6 +5418,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         SyncReplacements()
+        render.RefreshEncounterGroups()
         run.affixes:SyncAttachment()
         UpdateDisplayLabels()
         RefreshDisplayTimerFont()
@@ -5162,9 +5426,9 @@ DFRL:NewMod("RunTimers", 5, function()
         local combined = DFRL.display.Get("bossCombineBars")
         local capacity = DFRL.display.Get("bossRows")
         if render.bossCapacity ~= capacity or render.bossCombined ~= combined then
-            render.bossCapacity, render.bossCombined, render.bossOffset = capacity, combined, 0
+            render.bossCapacity, render.bossCombined, bossGroup.offset = capacity, combined, 0
             -- Keep the shared edit outline useful without painting hidden rows.
-            local slots = combined and 1 or (capacity > 0 and capacity or render.bossCount or 0)
+            local slots = combined and 1 or (capacity > 0 and capacity or bossGroup.count or 0)
             local height = math.max(47, slots * ROW_HEIGHT - 1)
             if not T.NearlyEqual(bossGroup:GetHeight(), height) then
                 bossGroup:SetHeight(height)
@@ -5176,7 +5440,9 @@ DFRL:NewMod("RunTimers", 5, function()
         for _, row in pairs(activeRows) do
             ClearDebuffs(row)
         end
-        render.rowsDirty = true
+        for _, group in ipairs(render.encounterGroups) do
+            group.rowsDirty = true
+        end
     end)
 
     -- Keep boundary and clock work in separate closures. Lua 5.0 permits only
@@ -5375,11 +5641,10 @@ DFRL:NewMod("RunTimers", 5, function()
         render.hudReleased = false
         UpdateRunBoundary(phase)
         if refreshRows or run:IsVisible() then UpdateClock(phase) end
-        if render.rowsPresentationDirty and bossGroup:IsVisible() then refreshRows = true end
-        -- A missing zone/clock snapshot must not block valid counters or
-        -- encounter lists from reconnecting to their own native HUD parts.
-        if bossGroup.widthDirty then
-            refreshRows, bossGroup.widthDirty = true, nil
+        for _, group in ipairs(render.encounterGroups) do
+            if group:IsVisible() and (group.presentationDirty or group.widthDirty) then
+                refreshRows, group.widthDirty = true, nil
+            end
         end
         if refreshRows then
             refreshRows = false
@@ -5501,7 +5766,7 @@ DFRL:NewMod("RunTimers", 5, function()
         if
             not tallyDue
             and not run:IsVisible()
-            and not bossGroup:IsVisible()
+            and not render.HasVisibleEncounterGroup()
             and not render.readPending
             and pollAge < 0.1
         then
@@ -5515,5 +5780,6 @@ DFRL:NewMod("RunTimers", 5, function()
         Update(tallyDue)
     end)
     SyncReplacements()
+    render.RefreshEncounterGroups()
     Update()
 end)

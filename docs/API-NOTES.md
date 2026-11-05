@@ -454,7 +454,7 @@ The movable stream still skips enemy-origin
 matching, health-loss sampling and combat-event plate discovery. It does not
 force native hostile plates on: with V off, the captured native HideNameplates
 restores normal overhead-name eligibility. Native name preferences still
-apply. With V on, nameplate styling, Names only and the bosses/guardians filter
+apply. With V on, nameplate styling, Names only and enemy category filters
 retain their current behavior. The default over-enemy style keeps its original
 tracking, matching and animation equations.
 
@@ -472,8 +472,8 @@ and CI-only mocked coverage in [PR-CHECKS.md](PR-CHECKS.md).
 `nameplatesNamesOnly` boolean lives in the existing display table and shares
 live preview, Confirm-only saving, Cancel/world/logout/reload discard, profiles
 and both full resets. It works in every SCT mode. V still shows or hides enemy
-names, Shift-V retains friendly visibility and **Only bosses and guardians**
-continues to exclude ordinary enemy plates.
+names, Shift-V retains friendly visibility and the enemy category checkboxes
+apply to names-only plates too.
 
 **Font size** in the same category changes the custom name label in both
 regular and names-only plates. `nameplateFontSize` defaults to the original 9,
@@ -508,19 +508,34 @@ was source/diff review and pinned formatting only; local tests, standalone
 validation and addon/game execution were not run. See the source-level drawing
 costs in [PERFORMANCE.md](PERFORMANCE.md#names-only-nameplates--2026-10-27).
 
-## Boss and guardian nameplate filter — 2026-10-27
+## Enemy nameplate filters
 
-`/sdui` → **Nameplates** has **Only bosses and guardians**, off by default.
-The normalized `nameplatesBossGuardiansOnly` boolean uses the existing display
-table, live preview, Confirm-only saving, Cancel/world/logout/reload discard,
-profiles and both full resets. It works in every SCT mode and independently of
-boss bars and guardian guidance. V still controls requested enemy-plate visibility;
-friendly plates keep their native Shift-V behavior.
+`/sdui` → **Combat** → **Nameplates** has **Bosses**, **Guardians**,
+**Elites** and **Regular mobs** checkboxes. All default to on. Bosses include
+final bosses. Older saves and profiles with **Only bosses and guardians**
+enabled start with Elites and Regular mobs unchecked unless they already
+specify those choices. Both full resets enable all four categories.
+
+The checkboxes use the existing display table, live preview, Confirm-only
+saving, Cancel/world/logout/reload discard and profiles. They work in every SCT
+mode and independently of boss bars and guardian guidance. V controls enemy
+plate visibility and Shift-V controls friendly plates.
+
+The **Nameplate range (yards)** slider defaults to 20 and can extend boss,
+guardian and elite nameplates up to 200 in one-yard steps. The extension joins living world
+anchors to accepted `AZS_UNITS` health by native spawn ID and category. It uses
+the existing post-camera world-anchor callback, the overhead point for drawing
+and the feet position for distance. It respects V, the corresponding enemy
+checkboxes, Names only, font size and Performance Mode. Bars beyond 20 are
+display-only. The game owns regular mob plates and near-range interaction.
+The addon requires the unit to be on screen with both projections and valid
+health in the native roster, which lists at most 40 special enemies. World
+projection does not check line of sight, so bars can show through terrain.
 
 The existing SCT controller reads phase first and accepts only received
 `AZS_UNITS` publications. It keeps an unsaved index of exact native names and
-maximum health for `final`, `boss` and `guardian` entries, including sleeping
-guardians. Each accepted maximum indexes its original value and exact float32
+maximum health for `final`, `boss`, `guardian` and `elite` entries, including
+sleeping guardians. Each accepted maximum indexes its original value and exact float32
 representation, plus its native ceil/uint32-clamped value and that value's
 float32 representation. Float conversion rounds halfway ties to even.
 The retained Rust formatter also uses
@@ -553,24 +568,30 @@ live guardian's actual values.
 
 There is no inferred health or conversion of a percentage bar to absolute HP.
 This handles native plate storage that cannot retain the full published maximum,
-including the Names only/filter combination and waking conversion. Published
-ordinary `elite` entries colliding with any of those native representations
-make that signature ambiguous and hide it. The complete list is validated
-before replacing the index; failed or unavailable data hides hostile plates until
-usable data arrives or the option is turned off. Zone/world boundaries, terminal
+including the Names only/filter combination and waking conversion. When
+published entries share a signature, the plate is visible only if every
+matching category is enabled. A unique exact match can keep its category while
+the plate stays shown and that same spawn is still alive in the accepted roster.
+This covers the native bar and the roster publishing a health rescale in either
+order. A current exact match takes precedence. A recycled plate starts fresh,
+and an invalid range or a percentage-only mismatch cannot use the earlier match.
+The complete list is validated before replacing
+the index. With a mix of enabled and disabled categories, unavailable data
+hides hostile plates until a usable roster arrives. Zone/world boundaries, terminal
 phases and observed native-clock rollback retire prior publications; receipts are
 read only on the existing deferred OnUpdate, at five Hz. Unchanged publications
-reuse the index, and disabling skips these phase/table reads and clears it.
+reuse the index. Showing all or hiding all skips these phase/table reads
+and clears the index.
 
 This is a display filter with an identity limit. Anonymous plates expose their
 name and raw health range, but no supported spawn-ID binding; the reference
 [native plate implementation](https://github.com/samwhosung/benilla/blob/main/crates/benilla-ui/src/script/nameplate.rs)
-keeps its key inside the engine. An ordinary enemy absent from the published
-special-enemy list can still match a boss/guardian with the identical name and
-native-representable maximum health. Known ambiguous signatures are hidden, which
-can also hide a guardian. Percentage-only or otherwise unmatched bars stay hidden. No fuzzy
-names, guessed unit tokens, health estimates or persistent identity registry are
-used; source compatibility does not prove the packaged client's rendering.
+keeps its key inside the engine. With an accepted roster, unmatched signatures
+use Regular mobs. A special enemy outside the roster's 40-entry limit can
+therefore appear as regular. An ordinary enemy with a matching name and native
+maximum can follow a special category. Unmatched percentage-only bars that
+share a known special enemy's name stay hidden. Matching uses exact signatures
+and has not been verified in the packaged client.
 
 The public engine's [plate state](https://github.com/samwhosung/benilla/blob/7c7a7f3e7ce168f819f676e6c2a423c6088731ca/crates/benilla-ui/src/script/nameplate.rs#L66-L75)
 describes raw unit-field health stored as float32. This is a compatibility lead,
@@ -596,7 +617,7 @@ A right-button press on a visible enemy plate starts native mouse-look only
 when the client also exposes a usable `IsMouseButtonDown("RightButton")` read.
 Clients without that read keep native nameplate input. Left-click targeting,
 existing handlers, mouse flags, hit rectangles, click registration, V and the
-boss/guardian filter stay native. Both Performance Mode states and all SCT
+enemy category filters retain their existing behavior. Both Performance Mode states and all SCT
 modes/styles share this input behavior.
 
 The reference client's [movement calls](https://github.com/Arnesen/wenilla/blob/ea514d8bb724c0571fc74183f23de7b1bbb303cf/crates/benilla-ui/src/script/input_verbs.rs#L510)

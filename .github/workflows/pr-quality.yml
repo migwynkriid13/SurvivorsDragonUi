@@ -13,18 +13,157 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: pr-quality-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Formatting and local dead code
+  formatting:
+    name: Source formatting
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    defaults:
-      run:
-        shell: bash
+    outputs:
+      prettier: ${{ steps.prettier.outcome }}
+      stylua: ${{ steps.stylua.outcome }}
+    steps:
+      - name: Check out the PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Select all tracked source and owned text files
+        id: sources
+        run: python3 scripts/pr_quality.py collect
+
+      - name: Set up Node for static source checks
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install pinned Prettier
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pr-quality-node" \
+            --ignore-scripts --no-audit --no-fund --package-lock=false \
+            --save-exact prettier@3.9.10
+          echo "PR_PRETTIER=$RUNNER_TEMP/pr-quality-node/node_modules/.bin/prettier" >> "$GITHUB_ENV"
+
+      - name: Install pinned StyLua
+        if: steps.sources.outputs.lua_count != '0'
+        run: |
+          curl --fail --location --retry 3 \
+            https://github.com/JohnnyMorganz/StyLua/releases/download/v2.6.0/stylua-linux-x86_64.zip \
+            --output "$RUNNER_TEMP/stylua.zip"
+          echo "a485f72bbfa22e4642e77a84b5edc2611a5cab7477b34e2e709dd8f78e919895  $RUNNER_TEMP/stylua.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/stylua.zip" -d "$RUNNER_TEMP/pr-quality-bin"
+          chmod +x "$RUNNER_TEMP/pr-quality-bin/stylua"
+          echo "$RUNNER_TEMP/pr-quality-bin" >> "$GITHUB_PATH"
+
+      - name: Check owned text and CI JavaScript formatting
+        id: prettier
+        if: steps.sources.outputs.prettier_count != '0'
+        continue-on-error: true
+        run: python3 scripts/pr_quality.py prettier
+
+      - name: Check Lua formatting
+        id: stylua
+        if: steps.sources.outputs.lua_count != '0'
+        continue-on-error: true
+        run: python3 scripts/pr_quality.py lua-format
+
+      - name: Upload this job's reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pr-quality-part-formatting
+          path: dist/pr-quality/
+          overwrite: true
+          retention-days: 7
+
+      - name: Enforce this job's check results
+        if: always() && contains(steps.*.outcome, 'failure')
+        run: exit 1
+
+  lua:
+    name: Lua analysis and mocked UI
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      deadcode: ${{ steps.deadcode.outcome }}
+      fixtures: ${{ steps.fixtures.outcome }}
+      uilifecycle: ${{ steps.uilifecycle.outcome }}
+    steps:
+      - name: Check out the PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Select all tracked source and owned text files
+        id: sources
+        run: python3 scripts/pr_quality.py collect
+
+      - name: Set up Node for static source checks
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install the pinned Lua parser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pr-quality-node" \
+            --ignore-scripts --no-audit --no-fund --package-lock=false \
+            --save-exact luaparse@0.3.1
+          echo "PR_LUAPARSE=$RUNNER_TEMP/pr-quality-node/node_modules/luaparse" >> "$GITHUB_ENV"
+
+      - name: Install Lua 5.1 and pinned Luacheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes lua5.1 liblua5.1-0-dev luarocks
+          sudo luarocks --lua-version=5.1 install luacheck 1.2.0-1
+
+      - name: Check local Lua dead code
+        id: deadcode
+        if: steps.sources.outputs.lua_count != '0'
+        continue-on-error: true
+        run: python3 scripts/pr_quality.py dead-code
+
+      - name: Test CI checks with broken and valid source fixtures
+        id: fixtures
+        continue-on-error: true
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_*.py' -v 2>&1 | tee dist/pr-quality/fixtures.log
+
+      - name: Test UI write budgets, pooling and failure cleanup with mocks
+        id: uilifecycle
+        continue-on-error: true
+        run: python3 -B scripts/run_ui_contracts.py 2>&1 | tee dist/pr-quality/ui-lifecycle.log
+
+      - name: Upload this job's reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pr-quality-part-lua
+          path: |
+            dist/pr-quality/
+            !dist/pr-quality/source-files.json
+          overwrite: true
+          retention-days: 7
+
+      - name: Enforce this job's check results
+        if: always() && contains(steps.*.outcome, 'failure')
+        run: exit 1
+
+  contracts:
+    name: Addon source contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      contracts: ${{ steps.contracts.outcome }}
     steps:
       - name: Check out the PR head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -33,9 +172,60 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Select all tracked source and owned text files
-        id: sources
-        run: python3 scripts/pr_quality.py collect
+      - name: Set up Node for static source checks
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Install the pinned Lua parser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pr-quality-node" \
+            --ignore-scripts --no-audit --no-fund --package-lock=false \
+            --save-exact luaparse@0.3.1
+          echo "PR_LUAPARSE=$RUNNER_TEMP/pr-quality-node/node_modules/luaparse" >> "$GITHUB_ENV"
+
+      - name: Check settings, captions and callback registrations
+        id: contracts
+        continue-on-error: true
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python3 -B scripts/check_addon_contracts.py
+
+      - name: Upload this job's reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pr-quality-part-contracts
+          path: dist/pr-quality/
+          overwrite: true
+          retention-days: 7
+
+      - name: Enforce this job's check results
+        if: always() && contains(steps.*.outcome, 'failure')
+        run: exit 1
+
+  payload:
+    name: Package and artwork
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.version.outcome }}
+      hygiene: ${{ steps.hygiene.outcome }}
+      timer: ${{ steps.timer.outcome }}
+      assetroot: ${{ steps.assetroot.outcome }}
+      batching: ${{ steps.batching.outcome }}
+      sampling: ${{ steps.sampling.outcome }}
+    steps:
+      - name: Check out the PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create the report directory
+        run: mkdir -p dist/pr-quality
 
       - name: Require a TOC version bump for ZIP payload changes
         id: version
@@ -51,50 +241,12 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Install pinned formatting and Lua parser tools
+      - name: Install the pinned Lua parser
         run: |
           npm install --prefix "$RUNNER_TEMP/pr-quality-node" \
             --ignore-scripts --no-audit --no-fund --package-lock=false \
-            --save-exact prettier@3.9.10 luaparse@0.3.1
-          echo "PR_PRETTIER=$RUNNER_TEMP/pr-quality-node/node_modules/.bin/prettier" >> "$GITHUB_ENV"
+            --save-exact luaparse@0.3.1
           echo "PR_LUAPARSE=$RUNNER_TEMP/pr-quality-node/node_modules/luaparse" >> "$GITHUB_ENV"
-
-      - name: Install pinned Lua analysis tools
-        if: steps.sources.outputs.lua_count != '0'
-        run: |
-          curl --fail --location --retry 3 \
-            https://github.com/JohnnyMorganz/StyLua/releases/download/v2.6.0/stylua-linux-x86_64.zip \
-            --output "$RUNNER_TEMP/stylua.zip"
-          echo "a485f72bbfa22e4642e77a84b5edc2611a5cab7477b34e2e709dd8f78e919895  $RUNNER_TEMP/stylua.zip" | sha256sum --check
-          unzip -q "$RUNNER_TEMP/stylua.zip" -d "$RUNNER_TEMP/pr-quality-bin"
-          chmod +x "$RUNNER_TEMP/pr-quality-bin/stylua"
-          echo "$RUNNER_TEMP/pr-quality-bin" >> "$GITHUB_PATH"
-          sudo apt-get update
-          sudo apt-get install --yes lua5.1 liblua5.1-0-dev luarocks
-          sudo luarocks --lua-version=5.1 install luacheck 1.2.0-1
-
-      - name: Check owned text and CI JavaScript formatting
-        id: prettier
-        if: steps.sources.outputs.prettier_count != '0'
-        continue-on-error: true
-        run: python3 scripts/pr_quality.py prettier
-
-      - name: Check Lua formatting
-        id: stylua
-        if: steps.sources.outputs.lua_count != '0'
-        continue-on-error: true
-        run: python3 scripts/pr_quality.py lua-format
-
-      - name: Check local Lua dead code
-        id: deadcode
-        if: steps.sources.outputs.lua_count != '0'
-        continue-on-error: true
-        run: python3 scripts/pr_quality.py dead-code
-
-      - name: Test CI checks with broken and valid source fixtures
-        id: fixtures
-        continue-on-error: true
-        run: python3 -B -m unittest discover -s scripts/tests -p 'test_*.py' -v 2>&1 | tee dist/pr-quality/fixtures.log
 
       - name: Check runtime assets, package contents and new duplicate files
         id: hygiene
@@ -102,18 +254,6 @@ jobs:
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: python3 -B scripts/check_runtime_hygiene.py
-
-      - name: Check settings, captions and callback registrations
-        id: contracts
-        continue-on-error: true
-        env:
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: python3 -B scripts/check_addon_contracts.py
-
-      - name: Test UI write budgets, pooling and failure cleanup with mocks
-        id: uilifecycle
-        continue-on-error: true
-        run: python3 -B scripts/run_ui_contracts.py 2>&1 | tee dist/pr-quality/ui-lifecycle.log
 
       - name: Compare fixed timer artwork sampling
         id: timer
@@ -138,37 +278,66 @@ jobs:
         # A standalone reference, not addon/client execution or pixel acceptance.
         run: python3 scripts/check_jewelry_repeat_sampling.py | tee dist/pr-quality/jewelry-repeat-sampling.log
 
+      - name: Upload this job's reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pr-quality-part-payload
+          path: dist/pr-quality/
+          overwrite: true
+          retention-days: 7
+
+      - name: Enforce this job's check results
+        if: always() && contains(steps.*.outcome, 'failure')
+        run: exit 1
+
+  quality:
+    name: Formatting and local dead code
+    needs: [formatting, lua, contracts, payload]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out the PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Download reports from the parallel checks
+        if: always()
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: pr-quality-part-*
+          path: dist/pr-quality/
+          merge-multiple: true
+
       - name: Report all quality results together
-        if: always() && steps.sources.outcome == 'success'
+        if: always()
         env:
-          VERSION_OUTCOME: ${{ steps.version.outcome }}
-          PRETTIER_OUTCOME: ${{ steps.prettier.outcome }}
-          STYLUA_OUTCOME: ${{ steps.stylua.outcome }}
-          DEADCODE_OUTCOME: ${{ steps.deadcode.outcome }}
-          FIXTURES_OUTCOME: ${{ steps.fixtures.outcome }}
-          HYGIENE_OUTCOME: ${{ steps.hygiene.outcome }}
-          CONTRACTS_OUTCOME: ${{ steps.contracts.outcome }}
-          UILIFECYCLE_OUTCOME: ${{ steps.uilifecycle.outcome }}
-          TIMER_OUTCOME: ${{ steps.timer.outcome }}
-          ASSETROOT_OUTCOME: ${{ steps.assetroot.outcome }}
-          BATCHING_OUTCOME: ${{ steps.batching.outcome }}
-          SAMPLING_OUTCOME: ${{ steps.sampling.outcome }}
+          VERSION_OUTCOME: ${{ needs.payload.outputs.version }}
+          PRETTIER_OUTCOME: ${{ needs.formatting.outputs.prettier }}
+          STYLUA_OUTCOME: ${{ needs.formatting.outputs.stylua }}
+          DEADCODE_OUTCOME: ${{ needs.lua.outputs.deadcode }}
+          FIXTURES_OUTCOME: ${{ needs.lua.outputs.fixtures }}
+          HYGIENE_OUTCOME: ${{ needs.payload.outputs.hygiene }}
+          CONTRACTS_OUTCOME: ${{ needs.contracts.outputs.contracts }}
+          UILIFECYCLE_OUTCOME: ${{ needs.lua.outputs.uilifecycle }}
+          TIMER_OUTCOME: ${{ needs.payload.outputs.timer }}
+          ASSETROOT_OUTCOME: ${{ needs.payload.outputs.assetroot }}
+          BATCHING_OUTCOME: ${{ needs.payload.outputs.batching }}
+          SAMPLING_OUTCOME: ${{ needs.payload.outputs.sampling }}
         run: python3 scripts/pr_quality.py summary
 
       - name: Upload formatting patches and analysis logs
-        if: always() && steps.sources.outcome == 'success'
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pr-quality-${{ github.event.pull_request.number }}
           path: dist/pr-quality/
+          overwrite: true
           retention-days: 7
 
-      - name: Enforce check results
-        if: always()
-        env:
-          RESULTS: ${{ join(steps.*.outcome, ',') }}
-        run: |
-          if [[ ",$RESULTS," == *,failure,* ]]; then
-            echo 'A setup or quality check failed. See the logs and pr-quality artifact.'
-            exit 1
-          fi
+      - name: Enforce all quality results
+        if: always() && (failure() || contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped'))
+        run: exit 1

@@ -105,6 +105,19 @@ env.CreateFrame = function(kind, name, parent, template)
             slider.maximum = math.max(0, self.child:GetHeight() - self:GetHeight())
             slider:SetValue(math.min(slider:GetValue(), slider.maximum))
         end
+    elseif template == "OptionsSliderTemplate" then
+        for _, suffix in ipairs({ "Low", "High", "Text" }) do
+            frame:CreateFontString(name .. suffix)
+        end
+        function frame:SetMinMaxValues(minimum, maximum)
+            self.minimum, self.maximum = minimum, maximum
+        end
+        function frame:SetValueStep(step) self.step = step end
+        function frame:GetValue() return self.value or self.minimum end
+        function frame:SetValue(value)
+            self.value = math.max(self.minimum, math.min(self.maximum, value))
+            context:Call(self, "OnValueChanged", self.value)
+        end
     end
     return frame
 end
@@ -531,6 +544,7 @@ assert(env.T.CompactEditorToggle(toggle) == 64, "available metrics did not repai
 local compact = env.T.CreateEditorToggle(panel, "Performance Mode", nil, 232)
 compact:SetHeight(36)
 compact.label:SetHeight(28)
+assert(env.T.CompactEditorToggle(compact) == 36, "caption-only checkbox did not retain its row height")
 assert(
     compact.label.point[1] == "LEFT" and compact.label.point[5] == 0 and compact.label.justifyV == "MIDDLE",
     "compact checkbox caption drifted when its height changed"
@@ -993,6 +1007,55 @@ assert(
 
 dialog.navigation.Select("combat")
 assert(pages.combat and pages.nameplates and not pages.meter, "Combat still prepares Damage meter")
+local distanceLabel = env.displayNumbers.nameplateDistance
+local distanceSlider = distanceLabel.slider
+assert(
+    distanceSlider.minimum == 20
+        and distanceSlider.maximum == 200
+        and distanceSlider.step == 1
+        and distanceLabel:GetText() == "20",
+    "nameplate slider lost its bounds or initial value"
+)
+distanceSlider:SetValue(137)
+assert(
+    distanceLabel:GetText() == "137" and display.Get("nameplateDistance") == 137 and not env.SurvivorsDragonUiDisplay,
+    "dragging the nameplate slider did not preview its selected distance"
+)
+local distanceProfile = display.Snapshot()
+distanceProfile.nameplateDistance = 83
+display.Load(distanceProfile)
+assert(distanceSlider:GetValue() == 83 and distanceLabel:GetText() == "83", "profile did not refresh the slider")
+display.Set("nameplateDistance", 20)
+for _, entry in ipairs({
+    { "nameplatesShowBosses", "Bosses" },
+    { "nameplatesShowGuardians", "Guardians" },
+    { "nameplatesShowElites", "Elites" },
+    { "nameplatesShowRegular", "Regular mobs" },
+}) do
+    local key, caption = entry[1], entry[2]
+    local control = env.displayControls[key]
+    assert(control.label:GetText() == caption and control.editorChecked, "nameplate category did not default on")
+    context:Call(control, "OnClick")
+    assert(display.Get(key) == false and not env.SurvivorsDragonUiDisplay, "nameplate preview skipped Confirm")
+    context:Call(control, "OnClick")
+    assert(display.Get(key) == true, "nameplate checkbox did not restore its category")
+end
+local legacyPlates = display.Copy({ nameplatesBossGuardiansOnly = true, nameplatesShowElites = true })
+assert(
+    legacyPlates.nameplatesShowBosses
+        and legacyPlates.nameplatesShowGuardians
+        and legacyPlates.nameplatesShowElites
+        and legacyPlates.nameplatesShowRegular == false
+        and legacyPlates.nameplatesBossGuardiansOnly == nil,
+    "legacy profile migration did not preserve its filter and explicit new choices"
+)
+dialog.navigation.Search("Regular mobs")
+assert(
+    #dialog.navigation.results == 2
+        and dialog.navigation.results[1].target == "nameplatesShowRegular"
+        and dialog.navigation.results[2].target == "nameplateDistance",
+    "search did not find both the regular-mob checkbox and the range hint"
+)
 dialog.navigation.Search("damage over time")
 assert(#dialog.navigation.results == 1, "custom combat filters were absent from search")
 dialog.navigation.OpenResult(1)
@@ -1354,10 +1417,34 @@ do
     )
     dialog.navigation.OpenResult(1)
     local combinedBosses = assert(env.displayControls.bossCombineBars, "missing combined boss checkbox")
+    local elites = assert(env.displayControls.elitesInBossBar, "missing elite boss-bar checkbox")
+    local detachGuardians = assert(env.displayControls.detachGuardianBars)
+    local detachElites = assert(env.displayControls.detachEliteBars)
+    assert(not elites.editorChecked and not display.Get("elitesInBossBar"), "elite boss bars defaulted on")
     assert(not combinedBosses.editorChecked and not display.Get("bossCombineBars"), "combined bosses defaulted on")
+    assert(not detachGuardians.mouse and not detachElites.mouse, "detaching enabled for an excluded kind")
+    local bossColors = {}
+    for _, object in ipairs(context.objects) do
+        if object:GetParent() == pages.bosses and object.input and object.pickerButton then
+            bossColors[object.label:GetText()] = object
+        end
+    end
+    local boss, guardian, elite = bossColors["Boss color"], bossColors["Guardian color"], bossColors["Elite color"]
+    assert(boss and guardian and elite and not boss.available and not guardian.available and not elite.available)
+    SelectChoice(dialog.displayModes.bossBarColorMode.dropdown, "custom")
+    assert(boss.available and guardian.available and elite.available and guardian.input.keyboard)
+    display.Set("bossBarGuardianColor", "#12AB90")
+    editor.Display()
+    assert(guardian.input:GetText() == "#12AB90" and display.Get("meterColorMode") == "default")
+    context:Call(elites, "OnClick")
     context:Call(combinedBosses, "OnClick")
     editor.Display()
     assert(combinedBosses.editorChecked and display.Get("bossCombineBars"), "combined bosses did not preview")
+    assert(elites.editorChecked and display.Get("elitesInBossBar") and not display.Get("guardiansInBossBar"))
+    assert(detachElites.mouse and not detachGuardians.mouse, "one kind unlocked both detach switches")
+    context:Call(detachElites, "OnClick")
+    editor.Display()
+    assert(display.Get("detachEliteBars") and not display.Get("detachGuardianBars"))
     assert(not env.SurvivorsDragonUiDisplay, "combined bosses saved before Confirm")
     display.Set("customBossBars", false)
     editor.Display()
@@ -1365,10 +1452,16 @@ do
         not combinedBosses.mouse and combinedBosses:GetAlpha() == 0.45 and combinedBosses.editorChecked,
         "native boss bars did not disable and retain the combined choice"
     )
+    assert(not elites.mouse and elites.editorChecked, "native boss bars lost the elite preference")
+    assert(not detachElites.mouse and display.Get("detachEliteBars"), "native boss bars lost the detached preference")
+    assert(not guardian.available and not guardian.input.keyboard and display.Get("bossBarGuardianColor") == "12AB90")
     display.FinishEdit(false)
     display.BeginEdit()
     editor.Display()
     assert(not combinedBosses.editorChecked and display.Get("customBossBars"), "Cancel retained combined boss previews")
+    assert(not elites.editorChecked and not display.Get("elitesInBossBar"), "Cancel retained the elite preview")
+    assert(not display.Get("detachEliteBars"), "Cancel retained the detached preview")
+    assert(display.Get("bossBarColorMode") == "default" and display.Get("bossBarGuardianColor") == "DB1F1A")
     dialog.navigation.Search("")
 end
 -- Prepare every lazy category before counting; the next walk checks reuse.
@@ -1380,7 +1473,13 @@ for _ in pairs(pages) do
     pageCount = pageCount + 1
 end
 assert(
-    pageCount == 23 and pages.cacheIcons and pages.bossIcons and pages.rarityOdds and layoutBuilds == 1,
+    pageCount == 25
+        and pages.cacheIcons
+        and pages.bossIcons
+        and pages.eliteIcons
+        and pages.guardianIcons
+        and pages.rarityOdds
+        and layoutBuilds == 1,
     "full category walk lost or rebuilt sections"
 )
 local allCategoryObjects = #context.objects
@@ -1450,10 +1549,9 @@ display.BeginEdit()
 dialog:Show()
 dialog.navigation.Select("map")
 local affordableOnly = assert(env.displayControls.worldCacheAffordableOnly, "missing affordability checkbox")
-assert(
-    env.displayControls.worldBossIcons.editorChecked and display.Get("worldBossIcons"),
-    "guardian and boss world icons did not default on in settings"
-)
+for _, key in ipairs({ "worldBossIcons", "worldGuardianIcons", "worldEliteIcons" }) do
+    assert(env.displayControls[key].editorChecked and display.Get(key), "encounter icon did not default on")
+end
 assert(
     dialog.navigation.selected == "map" and pages.cacheIcons:IsVisible() and affordableOnly:IsVisible(),
     "affordability case did not open the visible Map & navigation category"
@@ -1495,14 +1593,11 @@ dialog.navigation.ClearSearch()
 display.Set("worldCacheAffordableOnly", false)
 local cacheModes = assert(dialog.displayModes.worldCacheIconMode, "missing cache visibility modes")
 local bossModes = assert(dialog.displayModes.worldBossIconMode, "missing encounter visibility modes")
-local cacheRange, bossRange
+local ranges = {}
 for _, group in ipairs(dialog.worldIconRanges) do
-    if group.master == "worldCacheIcons" then
-        cacheRange = group
-    else
-        bossRange = group
-    end
+    ranges[group.master] = group
 end
+local cacheRange, bossRange = ranges.worldCacheIcons, ranges.worldBossIcons
 assert(cacheRange and bossRange and not cacheRange.enabled and not bossRange.enabled)
 SelectChoice(cacheModes.dropdown, "near")
 editor.Display()
@@ -1522,7 +1617,7 @@ SelectChoice(bossModes.dropdown, "far")
 editor.Display()
 assert(cacheRange.enabled and bossRange.enabled and display.Get("worldBossIconMode") == "far")
 dialog.navigation.Search("Nearby only")
-assert(#dialog.navigation.results == 2, "distance modes were missing from settings search")
+assert(#dialog.navigation.results == 4, "distance modes were missing from settings search")
 dialog.navigation.OpenResult(1)
 assert(dialog.navigation.selected == "map", "distance search did not open Map & navigation")
 dialog.navigation.ClearSearch()
@@ -1532,6 +1627,20 @@ display.Set("worldCacheIconDistance", 40)
 display.Set("worldBossIcons", false)
 editor.Display()
 assert(not cacheRange.enabled and not bossRange.enabled, "Always retained an unnecessary cutoff control")
+do
+    local eliteModes = dialog.displayModes.worldEliteIconMode
+    local guardianModes = dialog.displayModes.worldGuardianIconMode
+    SelectChoice(eliteModes.dropdown, "near")
+    SelectChoice(guardianModes.dropdown, "far")
+    context:Call(env.displayControls.worldEliteIcons, "OnClick")
+    editor.Display()
+    assert(not display.Get("worldEliteIcons") and display.Get("worldGuardianIcons"))
+    assert(not eliteModes.dropdown.mouse and not ranges.worldEliteIcons.enabled)
+    assert(guardianModes.dropdown.mouse and ranges.worldGuardianIcons.enabled)
+    context:Call(env.displayControls.worldEliteIcons, "OnClick")
+    editor.Display()
+    assert(ranges.worldEliteIcons.enabled and display.Get("worldEliteIconMode") == "near")
+end
 do
     local bossIcon = assert(dialog.iconSelectors.bossIconStyle)
     local guardianIcon = assert(dialog.iconSelectors.guardianIconStyle)

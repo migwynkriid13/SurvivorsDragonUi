@@ -2,10 +2,13 @@
 
 Every PR push runs formatting, static Lua analysis, package and asset inventory,
 source contracts, checker regression fixtures, mocked UI lifecycle tests and the
-existing artwork checks. No game starts. Only the separate mocked UI test step
-executes selected production Lua against fake native boundaries. Keep the `Formatting and local dead code` job as a required
-check in the repository's branch rules; editing a workflow does not configure
-branch protection by itself.
+existing artwork checks. Formatting, Lua analysis and mocked UI, source
+contracts, and package and artwork checks run in parallel. The source contract
+job analyzes the PR head and merge base concurrently before comparing their
+findings. The `Formatting and local dead code` job collects all results and
+remains the required check in the repository's branch rules. Only the mocked
+UI tests execute selected production Lua against fake native boundaries. No
+game starts.
 
 The rarity odds fixture drives the production panel with mocked phase, run
 and stats feeds. It covers the shared quest header, the compact reward table,
@@ -978,6 +981,12 @@ The assertions cover:
   Performance Mode allocates no loss artwork or cosmetic clock work. The
   existing HUD-controller case also asserts frame-cadence loss updates. These
   are CI-only mocked contracts, authored without local execution or live FPS proof.
+- The combined boss bar fixture also checks independent fills by native kind,
+  changed-only recoloring, Default restoration and the tint of an active loss
+  strip without restarting it. The editor fixture checks color controls in
+  Default and Custom, the native-bar switch, meter independence and Cancel.
+- Detached encounter cases cover independent guardian and elite groups,
+  row reuse on detach and reattach, and health recovery after hiding one group.
 - Full production guardian tracker mocks cover status-caption reuse, native
   rounding boundaries, static statuses, language changes, actual text resets,
   failed setters, hidden work, pooled-row reuse, options/world cleanup and
@@ -1096,12 +1105,22 @@ The assertions cover:
   assertions.
   See [DIABLO-SCT.md](DIABLO-SCT.md) for the video study and tuning.
 - Full SCT/filter and nameplate-style fixtures combine Names only with the
-  boss/guardian filter. They cover exact capped/float32 ranges and halfway
+  four enemy category filters. They cover independent toggles, paired elites,
+  final bosses, all-on and all-off, friendly plates, shared signatures across
+  categories and reuse of unchanged aliases. With Guardians and Elites on,
+  they exercise guardian rescaling in both publication orders, immediate
+  checkbox changes and retirement on same-name plate reuse or spawn replacement.
+  Existing cases cover exact capped/float32 ranges and halfway
   rounding, sleeping-to-awake ceiling conversion and its float32 serialization
   boundaries, ordinary/ambiguous elite exclusion, percentage-only rejection,
-  both toggles, V and zone retirement, independent name visibility, lazy bar
-  allocation/reuse and no unchanged cosmetic writes. The scrolling and plate
+  V and zone retirement, independent name visibility, lazy bar
+  allocation/reuse and no unchanged cosmetic writes. Editor cases cover the four
+  checkbox defaults, preview, search and migration of a legacy profile. The scrolling and plate
   fixtures share explicit native setup; production algorithms are not copied.
+- Distant nameplate fixtures exercise the 20- and 200-yard boundaries,
+  feet versus overhead distance, exact spawn ID and kind joins, native roster
+  demand with all categories enabled, and V/Names only/checkbox transitions.
+  They exercise the shared world-anchor callback and reused plate style.
 - Native marks messages use exact templates in all fourteen catalogs. Tests
   preserve item links/colors and original integer/decimal amounts/totals, keep zero-reward
   duplicates hidden, leave conversations/unknown suffixes unchanged and reject
