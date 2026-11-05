@@ -1420,6 +1420,19 @@ do
     local elites = assert(env.displayControls.elitesInBossBar, "missing elite boss-bar checkbox")
     assert(not elites.editorChecked and not display.Get("elitesInBossBar"), "elite boss bars defaulted on")
     assert(not combinedBosses.editorChecked and not display.Get("bossCombineBars"), "combined bosses defaulted on")
+    local bossColors = {}
+    for _, object in ipairs(context.objects) do
+        if object:GetParent() == pages.bosses and object.input and object.pickerButton then
+            bossColors[object.label:GetText()] = object
+        end
+    end
+    local boss, guardian, elite = bossColors["Boss color"], bossColors["Guardian color"], bossColors["Elite color"]
+    assert(boss and guardian and elite and not boss.available and not guardian.available and not elite.available)
+    SelectChoice(dialog.displayModes.bossBarColorMode.dropdown, "custom")
+    assert(boss.available and guardian.available and elite.available and guardian.input.keyboard)
+    display.Set("bossBarGuardianColor", "#12AB90")
+    editor.Display()
+    assert(guardian.input:GetText() == "#12AB90" and display.Get("meterColorMode") == "default")
     context:Call(elites, "OnClick")
     context:Call(combinedBosses, "OnClick")
     editor.Display()
@@ -1433,11 +1446,13 @@ do
         "native boss bars did not disable and retain the combined choice"
     )
     assert(not elites.mouse and elites.editorChecked, "native boss bars lost the elite preference")
+    assert(not guardian.available and not guardian.input.keyboard and display.Get("bossBarGuardianColor") == "12AB90")
     display.FinishEdit(false)
     display.BeginEdit()
     editor.Display()
     assert(not combinedBosses.editorChecked and display.Get("customBossBars"), "Cancel retained combined boss previews")
     assert(not elites.editorChecked and not display.Get("elitesInBossBar"), "Cancel retained the elite preview")
+    assert(display.Get("bossBarColorMode") == "default" and display.Get("bossBarGuardianColor") == "DB1F1A")
     dialog.navigation.Search("")
 end
 -- Prepare every lazy category before counting; the next walk checks reuse.

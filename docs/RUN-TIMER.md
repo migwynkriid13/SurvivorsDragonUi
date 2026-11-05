@@ -306,6 +306,17 @@ reported by the game after bosses and enabled guardians. Elite rows show
 health and use the same stacked or combined layout. The game's debuff feed
 covers bosses and guardians.
 
+In **Boss bars**, set **Bar colors** to **Custom** to choose a separate fill
+for bosses, guardians and elites. Click a swatch or enter a six-digit hex
+color. **Default** uses the original red and keeps your custom choices for
+later. Changes preview immediately and save with **Confirm**. The choices
+follow the same profile and reset behavior as damage meter colors.
+
+Both layouts apply the tint to visible pooled rows by native encounter type.
+The loss strip follows the chosen color in normal mode and uses its existing
+crimson tint in Default. The renderer decodes RGB on display changes and
+reuses the existing fill, loss strip and refresh path.
+
 Combined mode ignores the saved vertical row limit, height dragging and wheel
 scrolling. Turning it off restores the saved stacked viewport. The shared
 outline includes the deepest debuff column. `bossCombineBars` uses the existing

@@ -79,6 +79,10 @@ local function New(performance)
         bar.GetTop, bar.GetHeight = bar.GetBottom, bar.GetBottom
         local row = { frame = frame, bar = bar, overlay = overlay }
         row.fill = { SetFraction = function(value) row.fillFraction = value end }
+        function row.fill.SetColor(red, green, blue, alpha)
+            row.fillColor = { red, green, blue, alpha }
+            context.writes.fillColor = (context.writes.fillColor or 0) + 1
+        end
         return row
     end
     function context:Observe(row, value, maximum, key, name)
@@ -579,6 +583,34 @@ for _, performance in ipairs({ false, true }) do
     assert(first.bar.value == 0.8 and env.activeRows["boss:2"].bar.value == 1, "combined mode merged boss health")
     local started = first.lossStart
     assert(performance or (controller.count == 1 and first.lossTexture:IsShown()))
+    saved[1].kind, saved[2].kind, saved[3].kind = "boss", "guardian", "elite"
+    env.render.bossColors = {
+        boss = { red = 1, green = 0, blue = 0 },
+        guardian = { red = 0, green = 1, blue = 0 },
+        elite = { red = 0, green = 0, blue = 1 },
+    }
+    context:ResetCounts()
+    context.source.Rows("playing")
+    assert(context.writes.fillColor == 3, "encounter kinds did not each receive a custom fill")
+    for index = 1, 3 do
+        for channel = 1, 3 do
+            Near(env.rowOrder[index].fillColor[channel], channel == index and 1 or 0, "incorrect encounter tint")
+        end
+    end
+    controller:Update()
+    if not performance then
+        Near(first.lossTexture.vertex[1], 0.74, "loss strip did not take the new tint")
+        Near(first.lossTexture.vertex[2], 0, "loss strip retained the default tint")
+        assert(first.lossStart == started, "recoloring restarted an active loss strip")
+    end
+    context:ResetCounts()
+    context.source.Rows("playing")
+    assert(not context.writes.fillColor, "settled colors rewrote the fill")
+    env.T.EncounterHealthStyle = { red = 0.86, green = 0.12, blue = 0.1 }
+    env.render.bossColors = nil
+    context.source.Rows("playing")
+    assert(context.writes.fillColor == 3, "switching back to Default did not repaint custom rows")
+    Near(first.fillColor[1], 0.86, "default fill did not restore the original red")
     context:ResetCounts()
     env.bossGroup:SetWidth(600)
     context.source.Rows("playing")

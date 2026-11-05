@@ -40,6 +40,10 @@ DFRL:NewMod("Display", 0, function()
         attachAffixes = true,
         customBossBars = true,
         bossCombineBars = false,
+        bossBarColorMode = "default",
+        bossBarBossColor = "DB1F1A",
+        bossBarGuardianColor = "DB1F1A",
+        bossBarEliteColor = "DB1F1A",
         lootMode = "sdui",
         lootShowMarks = true,
         rarityOdds = false,
@@ -231,13 +235,20 @@ DFRL:NewMod("Display", 0, function()
     local function NormalizeUiFontOutline(value)
         if value == "" or value == "OUTLINE" or value == "THICKOUTLINE" then return value end
     end
-    local colorKeys = { meterAbilityColor = true, meterProcColor = true }
+    local colorKeys = {
+        meterAbilityColor = true,
+        meterProcColor = true,
+        bossBarBossColor = true,
+        bossBarGuardianColor = true,
+        bossBarEliteColor = true,
+    }
+    local colorModeKeys = { meterColorMode = true, bossBarColorMode = true }
     local function NormalizeColor(value)
         if type(value) ~= "string" then return end
         value = string.gsub(value, "^#", "")
         if string.len(value) == 6 and not string.find(value, "[^%x]") then return string.upper(value) end
     end
-    local function NormalizeMeterColorMode(value)
+    local function NormalizeColorMode(value)
         if value == "default" or value == "custom" then return value end
     end
     local function NormalizeWorldIconMode(value)
@@ -321,7 +332,7 @@ DFRL:NewMod("Display", 0, function()
         if iconStyleKeys[key] then return NormalizeIconStyle(value) or defaults[key] end
         if key == "jewelryFrameStyle" then return NormalizeJewelryFrameStyle(value) or defaults[key] end
         if key == "jewelryOrder" then return NormalizeJewelryOrder(value) or defaults[key] end
-        if key == "meterColorMode" then return NormalizeMeterColorMode(value) or defaults[key] end
+        if colorModeKeys[key] then return NormalizeColorMode(value) or defaults[key] end
         if worldIconModeKeys[key] then return NormalizeWorldIconMode(value) or defaults[key] end
         if ranges[key] then
             local number = NormalizeNumber(key, value)
@@ -409,8 +420,8 @@ DFRL:NewMod("Display", 0, function()
         elseif key == "jewelryOrder" then
             value = NormalizeJewelryOrder(value)
             if not value then return end
-        elseif key == "meterColorMode" then
-            value = NormalizeMeterColorMode(value)
+        elseif colorModeKeys[key] then
+            value = NormalizeColorMode(value)
             if not value then return end
         elseif worldIconModeKeys[key] then
             value = NormalizeWorldIconMode(value)

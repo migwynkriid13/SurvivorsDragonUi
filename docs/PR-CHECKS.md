@@ -981,6 +981,10 @@ The assertions cover:
   Performance Mode allocates no loss artwork or cosmetic clock work. The
   existing HUD-controller case also asserts frame-cadence loss updates. These
   are CI-only mocked contracts, authored without local execution or live FPS proof.
+- The combined boss bar fixture also checks independent fills by native kind,
+  changed-only recoloring, Default restoration and the tint of an active loss
+  strip without restarting it. The editor fixture checks color controls in
+  Default and Custom, the native-bar switch, meter independence and Cancel.
 - Full production guardian tracker mocks cover status-caption reuse, native
   rounding boundaries, static statuses, language changes, actual text resets,
   failed setters, hidden work, pooled-row reuse, options/world cleanup and

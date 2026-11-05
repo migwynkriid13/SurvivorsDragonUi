@@ -635,16 +635,26 @@ DFRL:NewMod("RunTimers", 5, function()
                 texture:Hide()
                 row.lossTexture = texture
             end
+            local tintChanged = not row.lossReady or row.lossColor ~= row.color
             if not row.lossReady then
                 local wanted = path .. "FillWhite.blp"
                 local loaded = texture:SetTexture(wanted)
                 local assigned = texture:GetTexture()
                 if not T.TextureAssigned(loaded, assigned, wanted) then return end
                 texture:SetTexCoord(0, 1, 0, 15 / 16)
-                -- Bake the preview's opacity against black into the tint. A
-                -- translucent strip over native red and black looks split.
-                texture:SetVertexColor(235 / 255 * 0.74, 65 / 255 * 0.74, 51 / 255 * 0.74, 1)
                 row.lossReady = true
+            end
+            if tintChanged then
+                -- Bake the opacity against black into the tint so the strip
+                -- stays uniform while the native fill catches up.
+                local color = row.color
+                texture:SetVertexColor(
+                    (color and color.red or 235 / 255) * 0.74,
+                    (color and color.green or 65 / 255) * 0.74,
+                    (color and color.blue or 51 / 255) * 0.74,
+                    1
+                )
+                row.lossColor = color
             end
             local left, span = width * row.lossTo, width * (edge - row.lossTo)
             if not T.NearlyEqual(row.lossLeft, left) then
@@ -1369,10 +1379,14 @@ DFRL:NewMod("RunTimers", 5, function()
                 if picker:IsVisible() then picker:SetValue(DFRL.display.Get(key)) end
             end
         end
-        for key, control in pairs(displayColors) do
+        for key, settings in pairs(displayColors) do
+            local control = settings.control
             if control:IsVisible() then
                 control:SetColor(DFRL.display.Get(key))
-                control:SetAvailable(DFRL.display.Get("meterColorMode") == "custom")
+                control:SetAvailable(
+                    DFRL.display.Get(settings.mode) == "custom"
+                        and (not settings.master or DFRL.display.Get(settings.master))
+                )
             end
         end
         for key, label in pairs(displayNumbers) do
@@ -2016,8 +2030,20 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "bosses",
                 label = "Boss bars",
                 master = "customBossBars",
+                mode = {
+                    key = "bossBarColorMode",
+                    label = "Bar colors",
+                    after = "customBossBars",
+                    values = {
+                        { "default", "Default", "Use red health bars." },
+                        { "custom", "Custom", "Choose health bar colors for bosses, guardians and elites." },
+                    },
+                },
                 options = {
                     { "customBossBars", "Enable custom boss bars", "Off: use the game's original boss bars." },
+                    { "bossBarBossColor", "Boss color", color = true },
+                    { "bossBarGuardianColor", "Guardian color", color = true },
+                    { "bossBarEliteColor", "Elite color", color = true },
                     {
                         "bossCombineBars",
                         "Combine boss bars",
@@ -2907,7 +2933,7 @@ DFRL:NewMod("RunTimers", 5, function()
                         controlWidth,
                         function(value) DFRL.display.Set(key, value) end
                     )
-                    displayColors[key] = control
+                    displayColors[key] = { control = control, mode = category.mode.key, master = category.master }
                 elseif entry.choices then
                     local key = entry[1]
                     control = CreateFrame("Frame", nil, content)
@@ -2954,7 +2980,13 @@ DFRL:NewMod("RunTimers", 5, function()
                     entry = entry,
                 })
                 if leading and entry[1] == category.mode.after then leading = false end
-                if dependents and entry[1] ~= category.master and not entry.range and not entry.choices then
+                if
+                    dependents
+                    and entry[1] ~= category.master
+                    and not entry.range
+                    and not entry.choices
+                    and not entry.color
+                then
                     table.insert(dependents.controls, control)
                 end
                 control:EnableMouseWheel(true)
@@ -3579,7 +3611,7 @@ DFRL:NewMod("RunTimers", 5, function()
     bossGroup:Hide()
     DFRL.layout.Register("bossBars", bossGroup, function()
         bossGroup:ClearAllPoints()
-        bossGroup:SetPoint("TOP", UIParent, "TOP", 0, -77)
+        bossGroup:SetPoint("TOP", run, "BOTTOM", 0, 0)
     end, {
         edgeWidth = true,
         minWidth = 120,
@@ -4133,6 +4165,7 @@ DFRL:NewMod("RunTimers", 5, function()
         activeMarkers = {},
         activeMarkerCount = 0,
         bossLoss = CreateBossHealthLoss(),
+        bossColorKeys = { boss = "bossBarBossColor", guardian = "bossBarGuardianColor", elite = "bossBarEliteColor" },
     }
     HookScript(run, "OnHide", function()
         if render.runShown then render.clockHidden = true end
@@ -5163,6 +5196,12 @@ DFRL:NewMod("RunTimers", 5, function()
                 if row.value ~= value then row.bar:SetValue(value) end
                 row.fill.SetFraction(value)
                 row.value = value
+                local color = render.bossColors and render.bossColors[entry.kind]
+                if row.color ~= color then
+                    local tint = color or T.EncounterHealthStyle
+                    row.fill.SetColor(tint.red, tint.green, tint.blue, 1)
+                    row.color = color
+                end
                 T.SetTextIfChanged(row.name, entry.name)
                 T.SetEncounterHealthText(
                     row.health,
@@ -5208,7 +5247,25 @@ DFRL:NewMod("RunTimers", 5, function()
     bossGroup:EnableMouseWheel(true)
     bossGroup:SetScript("OnMouseWheel", function() bossGroup.ScrollRows(arg1) end)
 
+    function render.RefreshBossColors()
+        if DFRL.display.Get("bossBarColorMode") ~= "custom" then
+            render.bossColors = nil
+            return
+        end
+        local colors = render.bossColors or {}
+        for kind, key in pairs(render.bossColorKeys) do
+            local hex = DFRL.display.Get(key)
+            if not colors[kind] or colors[kind].hex ~= hex then
+                local red, green, blue = DFRL.display.ColorRGB(hex)
+                colors[kind] = { hex = hex, red = red, green = green, blue = blue }
+            end
+        end
+        render.bossColors = colors
+    end
+    render.RefreshBossColors()
+
     DFRL.display.Listen(function()
+        render.RefreshBossColors()
         if render.bossIcon ~= DFRL.display.BossIcon() then render.markerStatesDirty = true end
         local performance = DFRL.display.Get("performanceMode")
         if performanceMode ~= performance then
