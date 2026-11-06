@@ -1338,9 +1338,10 @@ The source-extracted foam fixture also covers the Endless wash: reuse of the
 twelve existing flecks, one height read, low peak opacity, full-width and cap
 clipping, the brighter end crest and retained regular-run placement. This is
 CI-only drawing-boundary coverage, with no local execution or FPS evidence.
-The extracted live fill owner checks Normal and Heroic I–V palettes, higher-rank
-fallback, invalid metadata, lazy bounded glint growth, full-width Endless,
-moving pinpoints, shared throttle, cleanup/reuse and Performance Mode. Native
+The extracted live fill owner checks Normal and Heroic I–X palettes, the
+above-X fallback, invalid metadata, lazy bounded glint growth, VI–X retirement
+of unused streams, foam and glints, full-width Endless, moving pinpoints,
+shared throttle, cleanup/reuse and Performance Mode. Native
 caption cases return only accepted `endl` modes; clock cases verify that the
 same mode controls fill without changing native elapsed time or inferring
 Endless from the duration. Pending publications retain no old rank or mode.

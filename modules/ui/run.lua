@@ -523,6 +523,11 @@ DFRL:NewMod("RunTimers", 5, function()
         { 1, 0.65, 0.43 },
         { 1, 0.3, 0.18 },
         { 1, 0.1, 0.08 },
+        { 1, 161 / 255, 108 / 255 },
+        { 252 / 255, 116 / 255, 122 / 255 },
+        { 244 / 255, 135 / 255, 169 / 255 },
+        { 222 / 255, 157 / 255, 205 / 255 },
+        { 1, 211 / 255, 200 / 255 },
     }
 
     local function NewHeroicNumeral(bar, border, affixes)
@@ -584,7 +589,7 @@ DFRL:NewMod("RunTimers", 5, function()
             if self.paintedRank ~= rank then
                 local column, row = math.mod(rank - 1, 4), math.floor((rank - 1) / 4)
                 texture:SetTexCoord(column / 4, (column + 1) / 4, row / 4, (row + 1) / 4)
-                local color = HEROIC_NUMERAL_COLORS[math.min(rank, 5)]
+                local color = HEROIC_NUMERAL_COLORS[rank]
                 texture:SetVertexColor(color[1], color[2], color[3], 1)
                 self.paintedRank = rank
             end
@@ -762,17 +767,70 @@ DFRL:NewMod("RunTimers", 5, function()
             glintG = 0.8,
             glintB = 0.7,
         },
+        [6] = {
+            fill = { 154 / 255, 29 / 255, 12 / 255, 0.94 },
+            light = { 1, 109 / 255, 46 / 255 },
+            flowSlots = 4,
+            flecks = 1,
+            sparkles = 9,
+            glow = 0,
+            speed = 1,
+            strength = 0.62,
+        },
+        [7] = {
+            fill = { 132 / 255, 13 / 255, 26 / 255, 0.94 },
+            light = { 1, 62 / 255, 69 / 255 },
+            flowSlots = 4,
+            flecks = 1,
+            sparkles = 7,
+            glow = 0,
+            speed = 0.94,
+            strength = 0.57,
+        },
+        [8] = {
+            fill = { 110 / 255, 16 / 255, 48 / 255, 0.94 },
+            light = { 238 / 255, 64 / 255, 110 / 255 },
+            flowSlots = 3,
+            flecks = 0,
+            sparkles = 6,
+            glow = 0,
+            speed = 0.83,
+            strength = 0.52,
+        },
+        [9] = {
+            fill = { 83 / 255, 22 / 255, 69 / 255, 0.94 },
+            light = { 203 / 255, 100 / 255, 172 / 255 },
+            flowSlots = 3,
+            flecks = 0,
+            sparkles = 5,
+            glow = 0,
+            speed = 0.73,
+            strength = 0.49,
+        },
+        [10] = {
+            fill = { 54 / 255, 19 / 255, 44 / 255, 0.94 },
+            light = { 1, 118 / 255, 111 / 255 },
+            flowSlots = 2,
+            flecks = 0,
+            sparkles = 4,
+            glow = 0,
+            speed = 0.62,
+            strength = 0.44,
+        },
     }
 
     local function RunTier(heroic)
         if not IsNumber(heroic) or heroic ~= math.floor(heroic) then return 0 end
-        return math.min(heroic, 5)
+        return RUN_TIER_STYLES[heroic] and heroic or 5
     end
 
-    local function ApplyRunFill(bar, tier)
+    local function ApplyRunFill(bar, tier, previousTier)
         local style = RUN_TIER_STYLES[tier]
+        local previous = RUN_TIER_STYLES[previousTier]
         local fill = style.fill
-        bar:SetStatusBarTexture(path .. (fill and "FillWhite" or "FillBlue") .. ".blp")
+        if not previous or (previous.fill ~= nil) ~= (fill ~= nil) then
+            bar:SetStatusBarTexture(path .. (fill and "FillWhite" or "FillBlue") .. ".blp")
+        end
         if fill then
             bar:SetStatusBarColor(fill[1], fill[2], fill[3], fill[4])
         else
@@ -782,8 +840,10 @@ DFRL:NewMod("RunTimers", 5, function()
 
     -- One reusable effect pool; only received rank and mode select its artwork.
     local function AnimatedRunFill(bar)
-        local dynamicWidth, dynamicSpacing, dynamicSpan = BAR_WIDTH, FLOW_SPACING, FLOW_SPAN
+        local dynamicWidth, dynamicSpan = BAR_WIDTH, FLOW_SPAN
         local style, endless = RUN_TIER_STYLES[0], false
+        local flowSlots, fleckCount = FLOW_COUNT, 0
+        local strength, sparkleOpacity = 1, RED_SPARKLE_OPACITY
         local sparkleCount, effectRight = 0, 0
         local configured, geometryDirty = false, true
         local effectWidth, effectSeconds, effectMaximum, effectEndless, filledWidth
@@ -814,7 +874,7 @@ DFRL:NewMod("RunTimers", 5, function()
         runGlow:SetVertexColor(0.65, 0.04, 0.055)
         runGlow:Hide()
         local glowShown, glowAlpha, lastGlowWidth = false, nil, nil
-        local runFlows = {}
+        local runFlows, activeFlows = {}, {}
         local flowUpdatedAt
         -- Broad, soft ripples in three staggered streams form a continuous
         -- current. Each stream drifts right at its own speed and gently bends.
@@ -826,8 +886,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 texture:Hide()
                 table.insert(runFlows, {
                     texture = texture,
-                    offset = (index - 1) * dynamicSpacing + (lane - 1) * FLOW_WIDTH / 3,
-                    speed = FLOW_SPEED + (lane - 2) * 6,
+                    lane = lane,
+                    slot = index,
                     phase = lane * 1.7 + index * 1.2,
                 })
             end
@@ -869,7 +929,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
 
         local function HideFlowStreams()
-            for _, flow in ipairs(runFlows) do
+            for _, flow in ipairs(activeFlows) do
                 if flow.shown then
                     flow.texture:Hide()
                     flow.shown = false
@@ -914,11 +974,11 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
 
-        local function UpdateBlueFoam(now, filledWidth, halfHeight)
+        local function UpdateBlueFoam(now, filledWidth, halfHeight, fleckCount)
             -- A broad, uneven crest feathers past the native edge while
             -- puffs wash back into the current, inside the metal pill.
             local acrossBar = endless
-            local spacing = acrossBar and filledWidth / table.getn(foamFlecks) or 0
+            local spacing = acrossBar and fleckCount > 0 and filledWidth / fleckCount or 0
             DrawFoam(foamGlow, filledWidth - 11, 0, 17, 15, 0.42 + 0.08 * math.sin(now * 4.1), filledWidth, halfHeight)
             DrawFoam(
                 foamCrest,
@@ -943,7 +1003,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     halfHeight
                 )
             end
-            for index, fleck in ipairs(foamFlecks) do
+            for index = 1, fleckCount do
+                local fleck = foamFlecks[index]
                 local age = math.mod(now / fleck.period + fleck.phase, 1)
                 local swell = math.sin(age * math.pi)
                 local width, height, left, alpha
@@ -982,17 +1043,19 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
 
+        local function SpaceFlowStreams()
+            local spacing = dynamicSpan / flowSlots
+            for _, flow in ipairs(activeFlows) do
+                flow.offset = (flow.slot - 1) * spacing + (flow.lane - 1) * FLOW_WIDTH / 3
+            end
+        end
+
         local function ResizeEffects(filledWidth)
             local width = bar.layoutWidth or BAR_WIDTH
             if not T.NearlyEqual(dynamicWidth, width) then
                 dynamicWidth = width
-                dynamicSpacing = (width + FLOW_WIDTH) / 5 / 1.7
-                dynamicSpan = dynamicSpacing * FLOW_COUNT
-                for index, flow in ipairs(runFlows) do
-                    local lane = math.floor((index - 1) / FLOW_COUNT) + 1
-                    local slot = math.mod(index - 1, FLOW_COUNT)
-                    flow.offset = slot * dynamicSpacing + (lane - 1) * FLOW_WIDTH / 3
-                end
+                dynamicSpan = (width + FLOW_WIDTH) / 5 / 1.7 * FLOW_COUNT
+                SpaceFlowStreams()
                 geometryDirty = true
             end
             if filledWidth ~= nil and not T.NearlyEqual(effectRight, filledWidth) then
@@ -1052,54 +1115,80 @@ DFRL:NewMod("RunTimers", 5, function()
         local function SetAnimatedAppearance(tier, isEndless, force)
             local wanted = RUN_TIER_STYLES[tier]
             if configured and style == wanted and endless == isEndless and not force then return end
+            if wanted.glow > 0 and style.glow == 0 then geometryDirty = true end
             HideAnimatedFlow()
             style, endless, configured = wanted, isEndless, true
+            flowSlots = style.flowSlots or FLOW_COUNT
+            fleckCount = style.flecks or table.getn(foamFlecks)
+            strength = style.strength or 1
+            sparkleOpacity = RED_SPARKLE_OPACITY * strength
+            local light = style.light
             if sparkleCount ~= style.sparkles then geometryDirty = true end
             sparkleCount = style.sparkles
             if glowAlpha ~= style.glow then
                 runGlow:SetAlpha(style.glow)
                 glowAlpha = style.glow
             end
+            local activeCount = 0
             for index, flow in ipairs(runFlows) do
-                local lane = math.floor((index - 1) / FLOW_COUNT) + 1
-                local slot = math.mod(index - 1, FLOW_COUNT) + 1
-                local point = endless and lane == 3
-                local red = math.mod((index - 1) * 10, FLOW_COUNT * 3) < style.redFlows
-                if flow.red ~= red or flow.sparkle ~= point then
-                    local r, g, b = red and 1 or 0.22, red and 0.22 or 0.75, red and 0.08 or 1
-                    if point then
-                        r, g, b = red and 1 or 0.65, red and 0.65 or 0.9, red and 0.45 or 1
+                local lane, slot = flow.lane, flow.slot
+                if slot <= flowSlots then
+                    activeCount = activeCount + 1
+                    activeFlows[activeCount] = flow
+                    local point = endless and lane == 3
+                    local red = not light and math.mod((index - 1) * 10, FLOW_COUNT * 3) < style.redFlows
+                    if flow.light ~= light or flow.red ~= red or flow.sparkle ~= point then
+                        local r, g, b = red and 1 or 0.22, red and 0.22 or 0.75, red and 0.08 or 1
+                        if light then
+                            r, g, b = light[1], light[2], light[3]
+                        elseif point then
+                            r, g, b = red and 1 or 0.65, red and 0.65 or 0.9, red and 0.45 or 1
+                        end
+                        flow.texture:SetVertexColor(r, g, b)
+                        flow.texture:SetAlpha(
+                            point and 0.35 * strength
+                                or math.min(1, (lane == 2 and 0.7644 or 0.546) * (red and 1.25 or strength))
+                        )
                     end
-                    flow.texture:SetVertexColor(r, g, b)
-                    flow.texture:SetAlpha(
-                        point and 0.35 or math.min(1, (lane == 2 and 0.7644 or 0.546) * (red and 1.25 or 1))
-                    )
+                    if flow.sparkle ~= point then
+                        flow.texture:SetHeight(point and 3 + math.mod(slot, 3) or (lane == 2 and 4 or 3))
+                        flow.y = point and (math.mod(slot - 1, 3) - 1) * 4 or (lane - 2) * 4
+                        flow.width = point and 4 + math.mod(slot, 3) * 2 or FLOW_WIDTH
+                        flow.texture:SetWidth(flow.width)
+                        flow.frequency = point and 5.4 or 1.7
+                    end
+                    flow.speed = (FLOW_SPEED + (lane - 2) * 6) * (style.speed or 1)
+                    flow.light, flow.red, flow.sparkle = light, red, point
                 end
-                if flow.sparkle ~= point then
-                    flow.texture:SetHeight(point and 3 + math.mod(slot, 3) or (lane == 2 and 4 or 3))
-                    flow.y = point and (math.mod(slot - 1, 3) - 1) * 4 or (lane - 2) * 4
-                    flow.width = point and 4 + math.mod(slot, 3) * 2 or FLOW_WIDTH
-                    flow.texture:SetWidth(flow.width)
-                    flow.frequency = point and 5.4 or 1.7
-                end
-                flow.red, flow.sparkle = red, point
             end
-            for _, piece in ipairs(blueFoam) do
-                local red = piece.rank < style.redFoam
-                if piece.red ~= red then
-                    if red then
+            for index = activeCount + 1, table.getn(activeFlows) do
+                activeFlows[index] = nil
+            end
+            SpaceFlowStreams()
+            for index = 1, 4 + fleckCount do
+                local piece = blueFoam[index]
+                local red = not light and piece.rank < style.redFoam
+                if piece.light ~= light or piece.red ~= red then
+                    if light then
+                        piece.texture:SetVertexColor(light[1] * strength, light[2] * strength, light[3] * strength)
+                    elseif red then
                         piece.texture:SetVertexColor(1, piece.redG, piece.redB)
                     else
                         piece.texture:SetVertexColor(piece.r, piece.g, piece.b)
                     end
-                    piece.red = red
+                    piece.light, piece.red = light, red
                 end
             end
             EnsureSparkles(sparkleCount)
-            for index, sparkle in ipairs(redSparkles) do
-                if sparkle.g ~= style.glintG or sparkle.b ~= style.glintB then
-                    sparkle.texture:SetVertexColor(1, style.glintG, style.glintB)
-                    sparkle.g, sparkle.b = style.glintG, style.glintB
+            local r, g, b = 1, style.glintG, style.glintB
+            if light then
+                r, g, b = light[1], light[2], light[3]
+            end
+            for index = 1, sparkleCount do
+                local sparkle = redSparkles[index]
+                if sparkle.r ~= r or sparkle.g ~= g or sparkle.b ~= b then
+                    sparkle.texture:SetVertexColor(r, g, b)
+                    sparkle.r, sparkle.g, sparkle.b = r, g, b
                 end
                 sparkle.period = (1.1 + math.mod(index, 7) * 0.2) / (endless and 1.2 or 1)
             end
@@ -1159,10 +1248,10 @@ DFRL:NewMod("RunTimers", 5, function()
                 else
                     intensity = 0.22 + 0.68 * pulse * pulse * pulse
                 end
-                sparkle.texture:SetAlpha(intensity * RED_SPARKLE_OPACITY)
+                sparkle.texture:SetAlpha(intensity * sparkleOpacity)
             end
             local span = dynamicSpan
-            for _, flow in ipairs(runFlows) do
+            for _, flow in ipairs(activeFlows) do
                 local width = flow.width
                 local left = math.mod(now * flow.speed + flow.offset, span) - width
                 if left < filledWidth and left + width > 0 then
@@ -1170,7 +1259,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     local y = flow.y + 0.65 * wave
                     if flow.sparkle then
                         local pulse = 0.5 + 0.5 * wave
-                        flow.texture:SetAlpha(0.2 + 0.8 * pulse * pulse * pulse)
+                        flow.texture:SetAlpha((0.2 + 0.8 * pulse * pulse * pulse) * strength)
                     end
                     flow.texture:SetPoint("LEFT", bar, "LEFT", left, y)
                     if not flow.shown then
@@ -1182,7 +1271,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     flow.shown = false
                 end
             end
-            UpdateBlueFoam(now, filledWidth, height / 2)
+            UpdateBlueFoam(now, filledWidth, height / 2, fleckCount)
             if not clipShown then
                 fillClip:Show()
                 foamClip:Show()
@@ -1210,7 +1299,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local tier = RunTier(heroic)
         runEffects.tier, runEffects.endless = tier, endless
         if runEffects.paintedTier ~= tier then
-            ApplyRunFill(runBar, tier)
+            ApplyRunFill(runBar, tier, runEffects.paintedTier)
             runEffects.paintedTier = tier
         end
         if not performanceMode and runEffects.Appearance then
