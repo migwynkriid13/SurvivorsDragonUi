@@ -94,7 +94,7 @@ Portraits use 2D images by default. Under **Unit frames**, choose **Experimental
 
 Right-click the player, target or a party member's portrait or health bar to open the raid icons. Pick an icon or choose **None** to clear the unit's mark.
 
-**Show health** and **Show health percentage** choose the text on unit health bars. A single value is centered. Enable both for health on the left and percentage on the right, or disable both to hide the text. On the player bar, blue `+` numbers show remaining shield (absorb). Its percentage uses maximum HP: 7K shield with 1K maximum HP is `+700%`. **Shorten health numbers** starts on; turn it off for full numbers without K/M/B/T. **Encounters** → **Boss bars** and **Guardian tracker** each have their own shortening and percentage switches; percentages start off. **Class-colored health** uses each character's class color for player and party health bars.
+**Show health** and **Show health percentage** choose the text on unit health bars. A single value is centered. Enable both for health on the left and percentage on the right, or disable both to hide the text. While a shield is active, the player bar shows health plus shield in pale blue. With 731 of 731 HP and a 173 HP shield, the labels show `904` and `124%`. **Shorten health numbers** starts on; turn it off for full numbers without K/M/B/T. **Encounters** → **Boss bars** and **Guardian tracker** each have their own shortening and percentage switches; percentages start off. **Class-colored health** uses each character's class color for player and party health bars.
 
 ### Profiles and tooltips
 

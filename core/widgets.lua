@@ -518,7 +518,6 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead, showDeathStat
     local previousCurrent, previousMaximum, previousValueShown, previousPercentShown, previousShortHealth
     local previousStatus
     local absorbValue, absorbMaximum, previousAbsorb, previousAbsorbMaximum, absorbPending
-    local absorbText, absorbPercentText = "", ""
     local valueText, percentText = "", ""
 
     function labels.Update()
@@ -552,42 +551,32 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead, showDeathStat
             or absorbMaximum ~= previousAbsorbMaximum
             or status ~= previousStatus
         then
-            if
-                absorbValue ~= previousAbsorb
-                or absorbMaximum ~= previousAbsorbMaximum
-                or valueShown ~= previousValueShown
-                or percentShown ~= previousPercentShown
-                or shorten ~= previousShortHealth
-            then
-                absorbText, absorbPercentText = "", ""
-                if absorbValue then
-                    if valueShown then absorbText = "|cffA6D9FF+" .. T.CompactHealth(absorbValue, shorten) .. "|r" end
-                    if percentShown then
-                        -- Shield capacity is not published. Express current absorb
-                        -- against the accepted maximum HP, without the bar's cap.
-                        local percent = absorbValue / absorbMaximum * 100
-                        if percent - percent == 0 then
-                            absorbPercentText = "|cffA6D9FF+"
-                                .. string.format("%.0f", math.floor(percent + 0.5))
-                                .. "%|r"
-                        end
-                    end
-                end
-            end
             previousCurrent, previousMaximum = current, maximum
             previousValueShown, previousPercentShown = valueShown, percentShown
             previousShortHealth = shorten
             previousAbsorb, previousAbsorbMaximum = absorbValue, absorbMaximum
             previousStatus = status
-            valueText = status or (current and valueShown and T.CompactHealth(current, shorten) or "")
-            percentText = ""
-            if current and percentShown and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then
-                percentText = tostring(math.floor(math.min(1, current / maximum) * 100 + 0.5)) .. "%"
-            end
+            local combined
             if current and current > 0 and absorbValue then
-                if absorbText ~= "" then valueText = valueText .. " " .. absorbText end
-                if absorbPercentText ~= "" then
-                    percentText = percentText .. (percentText ~= "" and " " or "") .. absorbPercentText
+                local total = current + absorbValue
+                if total - total == 0 then combined = total end
+            end
+            valueText = status or ""
+            if current and valueShown then
+                valueText = T.CompactHealth(combined or current, shorten)
+                if combined then valueText = "|cffA6D9FF" .. valueText .. "|r" end
+            end
+            percentText = ""
+            if current and percentShown then
+                if combined then
+                    -- Use the maximum HP that accompanied the absorb and allow overflow past 100%.
+                    local percent = combined / absorbMaximum * 100
+                    if percent - percent == 0 then
+                        percentText = "|cffA6D9FF" .. string.format("%.0f", math.floor(percent + 0.5)) .. "%|r"
+                    end
+                end
+                if percentText == "" and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then
+                    percentText = tostring(math.floor(math.min(1, current / maximum) * 100 + 0.5)) .. "%"
                 end
             end
         end
