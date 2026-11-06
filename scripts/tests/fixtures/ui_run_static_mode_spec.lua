@@ -61,10 +61,12 @@ source.Appearance(nil, false)
 assert(env.runBar.fillTexture == "timer\\FillBlue.blp" and not source.effects.Appearance)
 source.Appearance(5, true)
 assert(env.runBar.fillTexture == "timer\\FillWhite.blp" and env.runBar.fillColor[1] == 0.72)
+source.Appearance(10, true)
+assert(env.runBar.fillColor[1] == 54 / 255 and not source.effects.Appearance)
 assert(#textures == allocated and #viewports == 0, "Performance Mode allocated decoration")
 context:ResetCounts()
 for _ = 1, 60 do
-    source.Appearance(5, true)
+    source.Appearance(10, true)
     source.Update(960, 960)
 end
 context:NoPresentationWrites()
@@ -147,8 +149,8 @@ source.Appearance(5, false)
 context.now = context.now + 0.04
 source.Update(42, 960)
 assert(#textures == prepared and context.reads.pulses, "mode exit rebuilt or failed to restore effects")
-source.Appearance(10, false)
-assert(source.effects.tier == 5, "higher ranks exceeded the known palette")
+source.Appearance(11, false)
+assert(source.effects.tier == 5, "unsupported future ranks lost the established fallback")
 source.Appearance(1.5, false)
 assert(
     source.effects.tier == 0 and env.runBar.fillTexture == "timer\\FillBlue.blp",
@@ -204,3 +206,55 @@ assert(fillClip:GetWidth() == 280 and foamClip:GetWidth() == 280)
 assert(not context.writes.SetTexCoord, "completion reintroduced a material crop")
 assert(#textures == prepared, "progress and correction rebuilt the effect pool")
 print("PASS progress growth defers cosmetic writes, clips corrections immediately and reuses settled glint geometry")
+
+local highTiers = { { 4, 1, 9 }, { 4, 1, 7 }, { 3, 0, 6 }, { 3, 0, 5 }, { 2, 0, 4 } }
+local lastRed = env.runBar.fillColor[1]
+for offset, limits in ipairs(highTiers) do
+    local tier = offset + 5
+    local slots, flecks, sparkles = unpack(limits)
+    context:ResetCounts()
+    source.Appearance(tier, false)
+    source.Update(960, 960)
+    assert(source.effects.tier == tier and env.runBar.fillColor[1] < lastRed, "high tier reused a lower fill tint")
+    assert(
+        not context.writes.fillTexture and not context.writes.SetTexCoord,
+        "tier retint rebound or recropped artwork"
+    )
+    assert(#textures == prepared and not glow:IsShown(), "high tier rebuilt the pool or kept the old fill glow")
+    lastRed = env.runBar.fillColor[1]
+    for index = 1, 27 do
+        local slot = (index - 1) % 9 + 1
+        if slot > slots then assert(not textures[allocated + 1 + index]:IsShown(), "retired stream stayed visible") end
+    end
+    for index = flecks + 1, 12 do
+        assert(not textures[allocated + 32 + index]:IsShown(), "retired foam fleck stayed visible")
+    end
+    for index = 1, 28 do
+        assert(textures[allocated + 44 + index]:IsShown() == (index <= sparkles), "incorrect high-tier glint count")
+    end
+end
+source.Appearance(9, false)
+env.runBar.layoutWidth = 310
+source.Update(960, 960)
+source.Appearance(2, false)
+source.Update(960, 960)
+assert(glow:IsShown() and glow:GetWidth() == 310, "lower tier restored a stale glow width with the same glint count")
+env.runBar.layoutWidth = 280
+source.Appearance(10, true)
+source.Update(100, 960)
+assert(fillClip:GetWidth() == 280 and foamClip:GetWidth() == 280, "Heroic X lost its full Endless clip")
+local activePoints = 0
+for index = allocated + 20, allocated + 28 do
+    local texture = textures[index]
+    if texture:IsShown() and texture:GetWidth() <= 8 then activePoints = activePoints + 1 end
+end
+assert(activePoints > 0 and activePoints <= 2, "Heroic X did not reuse the two eligible Endless pinpoints")
+env.performanceMode = true
+source.Hide()
+context:ResetCounts()
+source.Update(100, 960)
+assert(not next(context.reads) and not next(context.writes), "static Heroic X ran cosmetic work")
+assert(env.runBar.fillColor[1] == 54 / 255 and not fillClip:IsShown() and not foamClip:IsShown())
+print(
+    "PASS Heroic VI–X darken the static fill and retire surplus pooled effects in regular, Endless and static modes"
+)

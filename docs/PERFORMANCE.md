@@ -1461,10 +1461,11 @@ validation and addon/game execution were not run.
 
 ## Heroic run timer
 
-The timer selects one of six cosmetic palettes from accepted `AZS_ZONE.heroic`
-metadata: blue for Normal, then the authored Heroic I–V progression toward red.
-Higher ranks use V's palette while the separate I–X marker retains the exact
-received level. Unknown/invalid ranks use the blue fallback without a numeral.
+The timer selects its palette from accepted `AZS_ZONE.heroic` metadata. Normal
+uses blue, Heroic I–V progress toward red, and Heroic VI–X darken from ember to
+near-black plum. The existing I–X numeral uses the received rank's tint. Positive
+ranks above X keep V's fallback fill without a numeral. Missing or invalid ranks
+use blue without a numeral.
 The existing caption reader returns its accepted `AZS_RUN.endl` mode to the
 same clock pass. Only that flag selects Endless; passing the native duration
 never changes the palette or mode. `AZS_GetRunTime` and the native duration own
@@ -1474,10 +1475,26 @@ native time, counters, schedule or gameplay tables.
 There is one timer and one lazy, reusable cosmetic pool. Performance Mode and
 empty regular progress allocate no decoration. First visible normal-mode
 progress prepares 44 regions: 27 flow textures, 16 foam pieces and one glow.
-Rank-dependent glints grow lazily to 0, 2, 5, 10, 18 or 28 regions, retaining
-the prepared maximum for reuse. The upper bound is 72 cosmetic textures, plus
-one lazy numeral texture for a supported Heroic rank; no new frame, asset,
-event, updater, option or SavedVariable is added by rank/mode selection.
+Rank-dependent glints grow lazily to the highest count visited, up to 28. The
+upper bound is 72 cosmetic textures, plus one lazy numeral texture for a
+supported Heroic rank. Rank selection reuses the existing frames, assets and
+controller.
+
+| Heroic rank | Active streams | Active foam pieces | Active glints | Maximum active effects |
+| ----------- | -------------- | ------------------ | ------------- | ---------------------- |
+| VI          | 12             | 5                  | 9             | 26                     |
+| VII         | 12             | 5                  | 7             | 24                     |
+| VIII        | 9              | 4                  | 6             | 19                     |
+| IX          | 9              | 4                  | 5             | 18                     |
+| X           | 6              | 4                  | 4             | 14                     |
+
+VI–X use the same three lanes with fewer slots in each. The active slots are
+spaced on rank or width changes, and only those slots enter the animation pass.
+The four crest pieces remain active, and VI–VII add one fleck. The full-width
+glow stays hidden for these ranks. The table bounds visible cosmetic regions
+before clipping. Retired regions stay pooled and hidden. Static tints reuse
+the existing fill and numeral textures. Changing between ranks with the same
+fill texture only changes its tint.
 
 Rank changes recolor stable scattered stream/foam positions rather than splitting
 or overlaying the native fill. Unchanged tier colors, base fill, sizes,
@@ -1488,15 +1505,14 @@ width, stepped progress, duration or appearance changes. Those changes are
 applied before the paint gate. Pool retirement hides active pieces, and later
 accepted state reuses their artwork.
 
-Endless retains its tier palette and changes one existing nine-texture stream
-lane into moving glitter points. The remaining eighteen broad streaks preserve
-their original movement. Each point shares one sine sample between its pulse
-and vertical motion, adding one alpha write per visible point. Existing glints
-pulse 20% faster with squared peaks and alpha from `0.28 * 0.85` to `0.85`.
-Regular glints retain the authored cubic pulse. All cosmetic animation uses
-the same thirty-Hz cap through the existing visible HUD reader.
+Endless retains its tier palette and changes one stream lane into moving
+glitter points. Each point shares one sine sample between its pulse and vertical
+motion, adding one alpha write per visible point. Glints pulse 20% faster with
+squared peaks, and regular glints retain the authored cubic pulse. VI–X scale
+stream, crest and glint intensity down. Cosmetic animation uses the existing
+20 Hz cap through the visible HUD reader.
 
-The twelve existing foam flecks spread across Endless's full fill. They swell
+Active foam flecks spread across Endless's full fill. They swell
 through most of its height, with final alpha from `0.04 * 1.4 = 0.056` to
 `(0.04 + 0.28) * 1.4 = 0.448`; the four brighter crest pieces stay at the end.
 This pass shares one native height read. Regular flecks retain their original
@@ -1514,10 +1530,11 @@ disabling and reload clear active information through the existing lifecycle.
 
 CI-only source-extracted contracts cover API mode handoff, rank acceptance and
 retirement, invalid input, all tier palettes, higher-rank fallback, bounded/lazy
-allocation, width/progress changes, full Endless rendering, glitter/foam opacity,
-throttle, cleanup/reuse and Performance Mode. Source review and pinned formatting
-are not in-game appearance, BLP decoding, live API delivery or FPS proof. Local
-tests, standalone validation and addon/game execution were not run.
+allocation, VI–X effect retirement, width/progress changes, full Endless
+rendering, glitter/foam opacity, throttle, cleanup/reuse and Performance Mode.
+In-game appearance, BLP decoding, live API delivery and FPS require live
+evidence. Local tests, standalone validation and addon/game execution were not
+run.
 
 ## Settings navigation — 2026-10-29
 

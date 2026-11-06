@@ -68,6 +68,7 @@ for rank = 1, 10 do
     lastTint = texture.color
 end
 assert(texture.uv[1] == 0.25 and texture.uv[2] == 0.5 and texture.uv[3] == 0.5, "X selected the wrong cell")
+assert(texture.color[2] == 211 / 255 and texture.color[3] == 200 / 255, "X retained the lower-tier tint")
 for _, rank in ipairs({ 0, -1, 1.5, 11, "5", math.huge }) do
     view:Update(rank, 960, 280)
     assert(not texture:IsShown(), "unsupported rank displayed a previous numeral")
@@ -142,9 +143,9 @@ assert(alignedTexture.point[4] == 52.5, "detached or absent affixes lost the per
 for _, performance in ipairs({ false, true }) do
     env.performanceMode = performance
     affixes.center = 91.75
-    aligned:Update(5, 960, 280)
+    aligned:Update(10, 960, 280)
     c:ResetCounts()
-    aligned:Update(5, 1200, 280)
+    aligned:Update(10, 1200, 280)
     c:NoPresentationWrites()
     assert(alignedTexture.point[4] == 91.75 and alignedTexture.point[5] == -0.25 and alignedTexture:IsShown())
 end

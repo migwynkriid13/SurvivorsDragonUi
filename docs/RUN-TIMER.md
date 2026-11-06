@@ -78,7 +78,8 @@ visible attached affix and uses the same percentage when no affix is available.
 Normal runs have no numeral. The atlas
 contains I–X, made only from I, V and X; unavailable, fractional or unsupported
 ranks hide the marker instead of displaying an old value. Tier colors move
-from bright blue through steel blue and copper to red. Ranks above V use the final red tint.
+from bright blue through steel blue and copper to red. Heroic VI–X use ember,
+rose and plum tints, ending with a pale numeral on the darkest fill.
 
 One static, transparent BLP cell supplies each marker, including its dark
 outline. It stays visible in Performance Mode. Its horizontal center comes from
@@ -106,10 +107,9 @@ and [drawing costs](PERFORMANCE.md#static-heroic-numerals--2026-10-29).
 The timer uses the received `AZS_ZONE.heroic` rank to choose its appearance.
 Normal runs keep the original blue fill. Heroic I adds scattered warm streams;
 Heroic II moves to muted blue, III to warm copper, IV to crimson and V to deep
-red. The entire fill changes together, with no abrupt blue/red boundary.
-The known Heroic V palette also serves higher positive ranks; I–X numerals
-continue to display their exact received rank. Missing or invalid ranks use
-the neutral blue presentation and hide the numeral.
+red. Heroic VI–X darken from ember red to near-black plum. The entire fill
+changes together. Positive ranks above X use the Heroic V palette without a
+numeral. Missing or invalid ranks use the neutral blue presentation.
 
 The same accepted `AZS_RUN.endl` flag used by the captions selects Endless:
 exactly `1` enables it, `0` selects regular mode, and unavailable or unaccepted
@@ -120,12 +120,12 @@ Endless fills the bar completely while retaining the current tier's colors.
 Captions and boss countdowns retain their own native times and settings.
 
 Regular mode keeps three right-moving stream lanes and the brighter end froth.
-Heroic ranks progressively recolor 4, 9, 16, 23 and 27 streams and 2, 5, 10, 14
-and 16 foam pieces. Glow and stationary glints build with the tier. In Endless,
-one nine-texture stream lane becomes small moving glitter points; two broad
-lanes remain. Existing stationary glints twinkle 20% faster, with brighter and
-longer peaks. The twelve small foam flecks form a broad wash across the bar,
-with roughly 6–45% opacity, while the four brighter crest pieces stay at the end.
+Heroic I–V progressively recolor the streams and foam and build up the glow and
+stationary glints. VI–X keep the same rightward flow with fewer, slower streams,
+fewer glints and a subdued crest. In Endless, one stream lane becomes small
+moving glitter points while two broad lanes remain. Glints twinkle 20% faster,
+and the active foam flecks spread across the fill while the crest stays at the
+end.
 
 One reusable effect pool handles rank and mode changes. The existing visible
 reader accepts rank changes through the affix publication/retirement gates;
