@@ -185,13 +185,12 @@ the shield exceeds maximum health, it moves left inside the bar so the shield
 is still visible at full health. Its width represents shield / maximum health,
 capped at one full bar.
 
-The existing health labels add the current absorb in pale blue: **Show health**
-shows `1K +7K`, and **Show health percentage** shows `100% +700%` for 1K maximum
-HP and 7K shield. Each control remains independent; **Shorten health numbers**
-also applies to the absorb amount. The shield percentage uses received maximum
-HP and is not capped at 100%, so depletion remains readable while the segment
-still fills the bar. It is not a percentage of original shield capacity: the
-official API publishes current total absorb, not the full capacity of each buff.
+With an active shield, the existing labels show current health plus absorb in
+pale blue. At full health with 1K maximum HP and a 7K shield, **Show health**
+shows `8K` and **Show health percentage** shows `800%`. Each control remains
+independent. **Shorten health numbers** applies after the sum, and the percentage
+uses the received maximum HP and can exceed 100%. Without a shield, the labels
+return to ordinary health text.
 Performance Mode retains these static numbers while hiding the segment and divider.
 The existing label anchors and font size remain unchanged; narrow bars with
 long full-number captions may need wider Layout geometry.
@@ -207,8 +206,8 @@ presentation until visible again.
 Run packets request a deferred read through the existing resource controller.
 
 The shared labels receive only validated shield/maximum-HP scalars from that
-reader, without consulting buffs or rereading native run tables. Successful
-formatting is cached separately from health changes; failed text writes retry
+reader, without consulting buffs or rereading native run tables. Combined
+captions are cached until their inputs change; failed text writes retry
 through the existing reader. No text region or display setting is added.
 
 The segment inherits the actual health rectangle, including width handles,
