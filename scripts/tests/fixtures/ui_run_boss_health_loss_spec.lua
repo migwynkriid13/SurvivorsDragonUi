@@ -86,6 +86,16 @@ local function New(performance)
         bar.GetTop, bar.GetHeight = bar.GetBottom, bar.GetBottom
         local row = { frame = frame, bar = bar, overlay = overlay }
         row.fill = { SetFraction = function(value) row.fillFraction = value end }
+        -- Moving the row drops native scroll membership until the fill rebinds.
+        local setParent = frame.SetParent
+        function frame:SetParent(parent)
+            setParent(self, parent)
+            row.clipParent = nil
+        end
+        function row.fill.BindViewport()
+            row.clipParent = frame:GetParent()
+            context.writes.bindViewport = (context.writes.bindViewport or 0) + 1
+        end
         function row.fill.SetColor(red, green, blue, alpha)
             row.fillColor = { red, green, blue, alpha }
             context.writes.fillColor = (context.writes.fillColor or 0) + 1
@@ -669,9 +679,12 @@ for _, performance in ipairs({ false, true }) do
     env.render.encounterGroups = { env.bossGroup, guardians, elites }
     env.render.detachedByKind = { guardian = guardians, elite = elites }
     local allocated = #context.objects
+    context:ResetCounts()
     context.source.Rows("playing")
     assert(#env.rowOrder == 2 and guardians.rows[1] == guardian and elites.rows[1] == elite)
     assert(guardian.frame:GetParent() == guardians and elite.frame:GetParent() == elites)
+    assert(guardian.clipParent == guardians and elite.clipParent == elites, "detaching dropped fill clipping")
+    assert(context.writes.bindViewport == 2, "detaching rebound a fill that did not move")
     assert(#context.objects == allocated, "detaching recreated encounter rows")
     guardians:Hide()
     saved[2].hp, saved[3].hp = 700, 750
@@ -684,7 +697,20 @@ for _, performance in ipairs({ false, true }) do
     env.render.detachedByKind.guardian = nil
     context.source.Rows("playing")
     assert(#env.rowOrder == 3 and not guardians:IsShown() and guardian.frame:GetParent() == env.bossGroup)
+    assert(guardian.clipParent == env.bossGroup, "reattaching did not restore fill clipping")
     assert(elite.frame:GetParent() == elites and #context.objects <= allocated + 1)
+
+    seen[entries[3].key] = nil
+    entries[3] = { hp = 376, maximum = 1000, key = "boss:9", id = 9, name = "New boss", kind = "boss" }
+    seen["boss:9"] = true
+    context:ResetCounts()
+    context.source.Rows("playing")
+    assert(env.activeRows["boss:9"] == elite, "boss did not reuse the retired detached row")
+    assert(elite.clipParent == env.bossGroup and elite.fillFraction == 0.376, "reused boss fill lost its clip")
+    assert(context.writes.bindViewport == 1, "row reuse rebound a fill that did not move")
+    context:ResetCounts()
+    context.source.Rows("playing")
+    assert(not context.writes.bindViewport, "settled encounter rows rebound their fills")
 end
 
 do
