@@ -510,7 +510,7 @@ DFRL:NewMod("RunBanners", 4, function()
             screen = screen,
             sequence = sequence,
         }
-        if queueCount == 0 and Push(copy, GetTime()) then return end
+        if queueCount == 0 and Push(copy, T.AnimationTime()) then return end
         if queueCount == MAX_QUEUE then
             table.remove(queue, 1)
             queueCount = queueCount - 1
@@ -849,7 +849,8 @@ DFRL:NewMod("RunBanners", 4, function()
         end
         if (not active and not fallback) or visibleCount == 0 or painted < 1 / 30 then return end
         painted = 0
-        local now = GetTime()
+        local now, paused, resumed = T.AnimationTime()
+        if paused or resumed then return end
         if nextPaintAt and now >= lastPaintAt and now < nextPaintAt then return end
         Paint(now)
     end
@@ -865,7 +866,7 @@ DFRL:NewMod("RunBanners", 4, function()
     end
     HookScript(root, "OnShow", function()
         if awardScreen then ObserveAwardScreen() end
-        local ok, message = pcall(Paint, GetTime())
+        local ok, message = pcall(Paint, T.AnimationTime())
         if not ok then Failed(message) end
         if awardScreen then SyncScreenCards() end
     end)
@@ -879,7 +880,7 @@ DFRL:NewMod("RunBanners", 4, function()
         if performanceMode ~= enabled then
             performanceMode = enabled
             nextPaintAt = nil
-            local ok, message = pcall(Paint, GetTime())
+            local ok, message = pcall(Paint, T.AnimationTime())
             if not ok then Failed(message) end
         end
         Refresh()

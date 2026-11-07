@@ -19,7 +19,7 @@ DFRL:NewMod("LootView", 4, function()
     local FADE_IN, FADE_START, LIFETIME = 0.2, 4, 5.5
     local pool, visible, count = {}, {}, 0
     local ready, needsReflow, prepared = true, false, false
-    local nextUpdateAt
+    local nextUpdateAt, nextRetryAt
     local performanceMode = DFRL.display.Get("performanceMode")
     local frame = CreateFrame("Frame", "DFRL_LootNotifications", UIParent)
     frame:SetWidth(WIDTH)
@@ -84,7 +84,7 @@ DFRL:NewMod("LootView", 4, function()
             card:EnableMouse(false)
             card.hoverEnabled = nil
         end
-        card.entry, card.started, card.retryAt = nil, nil, nil
+        card.entry, card.started, card.retryAt, card.retryUntil = nil, nil, nil, nil
         card.presentationDirty = nil
         card.rewardText, card.rewardMarks = nil, nil
         if card.icon:GetTexture() ~= nil then card.icon:SetTexture(nil) end
@@ -102,7 +102,7 @@ DFRL:NewMod("LootView", 4, function()
             visible[index] = nil
         end
         count = 0
-        nextUpdateAt = nil
+        nextUpdateAt, nextRetryAt = nil, nil
         table.setn(visible, 0)
         if animation:GetScript("OnUpdate") then animation:SetScript("OnUpdate", nil) end
         if frame:IsShown() then frame:Hide() end
@@ -218,16 +218,18 @@ DFRL:NewMod("LootView", 4, function()
     end
 
     local function Update()
-        local now, changed = GetTime(), false
-        local waiting = nextUpdateAt and now < nextUpdateAt
+        local realNow, changed = GetTime(), false
+        local now, paused, resumed = T.AnimationTime(realNow)
+        local held = paused or resumed
+        local waiting = nextUpdateAt and now < nextUpdateAt and (not nextRetryAt or realNow < nextRetryAt)
         if waiting and not needsReflow then return end
         local paint = frame:IsVisible()
         if waiting and not paint then return end
-        local nextAt, animating
+        local nextAt, retryAt, animating
         for index = count, 1, -1 do
             local card = visible[index]
             local elapsed = now - card.started
-            if elapsed >= LIFETIME then
+            if not held and elapsed >= LIFETIME then
                 Retire(card)
                 table.remove(visible, index)
                 count = count - 1
@@ -237,27 +239,27 @@ DFRL:NewMod("LootView", 4, function()
                     if card.presentationDirty then Refresh(card) end
                     -- A cold native template may arrive after the first hover.
                     -- Use the card's existing updater, and yield to another tooltip.
-                    if card.tooltipRetryAt and now >= card.tooltipRetryAt then
+                    if card.tooltipRetryAt and realNow >= card.tooltipRetryAt then
                         if
-                            now < card.tooltipRetryUntil
+                            realNow < card.tooltipRetryUntil
                             and GameTooltip
                             and not GameTooltip:IsShown()
                             and BindTooltip(card)
                         then
-                            card.tooltipRetryAt = now + 0.2
+                            card.tooltipRetryAt = realNow + 0.2
                         else
                             card.tooltipRetryAt, card.tooltipRetryUntil = nil, nil
                         end
                     end
                     if card.tooltipRetryAt then
-                        nextAt = nextAt and math.min(nextAt, card.tooltipRetryAt) or card.tooltipRetryAt
+                        retryAt = retryAt and math.min(retryAt, card.tooltipRetryAt) or card.tooltipRetryAt
                     end
                     local alpha = 1
                     if not performanceMode then
                         alpha = math.min(1, math.max(0, elapsed / FADE_IN))
                         if elapsed > FADE_START then alpha = (LIFETIME - elapsed) / (LIFETIME - FADE_START) end
                     end
-                    SetAlpha(card, alpha)
+                    if not held or card.paintedAlpha == nil then SetAlpha(card, alpha) end
                     if not performanceMode and (elapsed < FADE_IN or elapsed > FADE_START) then
                         animating = true
                     else
@@ -270,12 +272,13 @@ DFRL:NewMod("LootView", 4, function()
                 end
                 -- Exact item references sometimes acquire native metadata after
                 -- delivery. Retry for two seconds, never by a guessed item name.
-                if card.retryAt and now >= card.retryAt then
+                if card.retryAt and realNow >= card.retryAt then
                     card.entry = loot.Resolve(card.entry)
-                    card.retryAt = elapsed < 2 and card.entry.iconSource ~= "native" and now + 0.2 or nil
+                    card.retryAt = realNow < card.retryUntil and card.entry.iconSource ~= "native" and realNow + 0.2
+                        or nil
                     Refresh(card)
                 end
-                if card.retryAt then nextAt = nextAt and math.min(nextAt, card.retryAt) or card.retryAt end
+                if card.retryAt then retryAt = retryAt and math.min(retryAt, card.retryAt) or card.retryAt end
             end
         end
         if changed then table.setn(visible, count) end
@@ -284,7 +287,7 @@ DFRL:NewMod("LootView", 4, function()
             animation:SetScript("OnUpdate", nil)
             frame:Hide()
         end
-        nextUpdateAt = not animating and nextAt or nil
+        nextUpdateAt, nextRetryAt = not animating and nextAt or nil, retryAt
     end
     local function Tick()
         if not pcall(Update) then
@@ -307,7 +310,7 @@ DFRL:NewMod("LootView", 4, function()
         if not card then return false end
         local markReward = loot.IsMarkReward(entry)
         if not markReward then entry = loot.Resolve(entry) end
-        card.entry, card.started = entry, GetTime()
+        card.entry, card.started = entry, T.AnimationTime()
         if
             not markReward
             and entry.tooltipReference
@@ -318,8 +321,10 @@ DFRL:NewMod("LootView", 4, function()
             card.hoverEnabled = true
         end
         nextUpdateAt = nil
-        card.retryAt = not markReward and entry.itemReference and entry.iconSource ~= "native" and card.started + 0.2
-            or nil
+        if not markReward and entry.itemReference and entry.iconSource ~= "native" then
+            local realNow = GetTime()
+            card.retryAt, card.retryUntil = realNow + 0.2, realNow + 2
+        end
         Refresh(card)
         count = count + 1
         visible[count] = card

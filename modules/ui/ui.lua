@@ -124,7 +124,9 @@ DFRL:NewMod("Ui", 5, function()
     end
     local function AnimateWarning()
         if not running or not inWorld then return end
-        elapsed = elapsed + arg1
+        local delta = T.AnimationElapsed(arg1)
+        if delta <= 0 then return end
+        elapsed = elapsed + delta
         if elapsed < 0.05 then return end
         pulse = pulse + elapsed * (1 + 7 * intensity)
         local alpha = 0.7 * (0.1 + 0.9 * intensity) * (0.3 + 0.7 * (sin(pulse) + 1) / 2)

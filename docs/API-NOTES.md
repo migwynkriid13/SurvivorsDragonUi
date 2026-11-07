@@ -397,17 +397,30 @@ Each hit now interpolates only its cosmetic follow coordinates with an elapsed-t
 
 Smoothing never resets a hit's start time, arc, critical pop, color, alpha or full lifetime. Retired incarnations keep their last valid target position; frame reuse cannot redirect their hits. Native V tracking, draw-layer/click masking and native collision placement remain unchanged. No private state is persisted. This is an addon-side mitigation; it does not claim to fix the separate first-allocation stock-plate flash or provide exact enemy identity. No local validation, tests, syntax checks, addon execution or game startups were run; the reported in-game behavior still needs confirmation.
 
-## Nameplate appearance integration — 2026-10-15
+## Dragonflight nameplate appearance
 
-The nameplate style adapts the [Kui Nameplates Vanilla port's beta0.16 release](https://github.com/laytya/Kui-Namaplates/releases/tag/beta0.16), using the `Kui-Namaplates_beta0.16b.zip` asset. Its fixed 100-by-10 outer bar has a one-pixel black border, a 98-by-8 health fill and a centered name above, with native raid markers retained. The cyan target glow and arrows were removed at the user's request on 2026-10-16. Health percentages and all level indicators, including the unknown-level skull, are omitted. The style retains the imported health-fill and frame-shadow artwork; target-focus textures are no longer referenced by its Lua renderer. Upstream authorship/media notices and the full GPL-3.0 license remain in the shipped style module and `third_party/Kui-Nameplates-NOTICE.txt`; imported material retains its upstream terms. Appearance defaults are fixed in code and use DEFAULT. No upstream settings, profiles, estimated auras, cast tracking, health estimates, unit caches, libraries or client extensions are imported.
+Nearby and projected plates use Dragonflight 10.0 artwork, with a 100-by-7 bar,
+a one-unit border, a centered reaction-colored name and native raid markers.
+The gold dragon sits on the bar's left edge for elites, guardians and bosses.
+The [artwork notes](../third_party/Nameplates-ARTWORK.md) pin the client build,
+source textures and crop. Names only keeps the name and hides the bar, border,
+dragon and raid marker. Both Performance Mode states use the same art.
 
-Each skin is a mouse-disabled child of the native plate. It reads the original health bar's range, value and reaction color and the original name region without modifying them. Native plate geometry, alpha, shown state and mouse-enabled state remain controlled by the client. Native artwork and omitted label regions are made transparent; the native border texture identity remains available for plate discovery. None of the upstream name-based targeting scans, GUID caches or native targeting changes are included.
+Projected plates use their accepted native unit kind. Nearby plates reuse the
+bounded encounter roster and its exact native name and maximum-health aliases.
+A shared signature can grant the badge when every possible kind earns it.
+Unknown and percentage-only matches have no badge. The selected nearby plate
+uses the pale border when its name matches the current target and its native
+alpha is full, following the [BeNilla plate alpha rule][plate-alpha].
 
-The same discovery loop refreshes appearance in all SCT modes. It builds each skin before applying the existing recursive draw-layer/hit-rectangle mask, so V-off custom SCT tracking also masks the new artwork. The style never enables draw layers or changes nameplate visibility. Native names, health-change evidence, live and retired coordinates, combat parsing and independent hit animations remain the inputs to SCT. Native collision displacement remains a client limitation.
+The cosmetic children are mouse-disabled. Health and names come from the
+original plate, with the same filter, V masking, hit rectangle and SCT
+tracking. The existing roster reader builds badge aliases while eligible
+plates are visible, with no additional reader or event. Both artwork bindings
+reuse their regions and retry a missing texture on an eligible refresh.
+In-game appearance remains unverified.
 
-V-off masking also hides the entire custom visual child explicitly, including its black background and shadow. Restoring presentation shows that child again. Native plate and health-bar frames remain shown with their original alpha, so invisible coordinate tracking and SCT animations continue. The complete-child masking from the black-rectangle fix is retained with the replacement style.
-
-No tests, syntax checks, validation, addon execution or game startups were run; visual appearance and SCT coexistence remain unverified in the packaged game.
+[plate-alpha]: https://github.com/samwhosung/benilla/blob/3f7772917157e4858e07e4045fcf7d899a34f54f/crates/benilla-app/src/vplates.rs#L138
 
 ## MSBT-style combat text — 2026-10-27
 
@@ -686,7 +699,7 @@ Scheduled boss-spawn markers use `Interface\\TargetingFrame\\UI-TargetingFrame-S
 
 ## Mark official boss state — 2026-10-15
 
-The user superseded elapsed-time completion with the official schedule's boss state. After validating the complete native schedule, the addon keeps every marker at its native `at` position and uses `state` for appearance: `due` displays the default 18-by-18 skull at full opacity without a checkmark or glow; `up` displays the same skull over a red outline following its native silhouette without tinting the skull; `dead` displays an 80%-size skull at 0.70 alpha with a green native checkmark and no active glow. The outline uses eight native skull copies at the unchanged 18-by-18 size, tinted with the original outline RGB `(1, 0.25, 0)`. Over a smooth 2.4-second cycle, each copy has additive alpha from 0.25 to 0.50 and its directional offset moves from 0.90 to 4.55 pixels. The minimum reach is 20% farther outward than the previous 0.75-pixel minimum; the maximum reach remains unchanged. Normalized diagonal offsets keep expansion even. The increased per-copy opacity makes the original outline color stronger throughout the pulse; animated offsets provide inward/outward motion instead of only changing brightness. The rejected circular halo texture is removed from the source and runtime manifest; no additional artwork is required. Cosmetic phase comes from UI `GetTime()` so the glow continues breathing during pause/card selection; it never supplies run time, progress or schedule state. The foreground skull, marker anchor geometry and dead/due styles are unchanged. The checkmark indicates a killed boss. Passing a scheduled time and disappearing from `AZS_GetBosses()` never establish activation or death; no private clock advances boss state.
+The user superseded elapsed-time completion with the official schedule's boss state. After validating the complete native schedule, the addon keeps every marker at its native `at` position and uses `state` for appearance: `due` displays the default 18-by-18 skull at full opacity without a checkmark or glow; `up` displays the same skull over a red outline following its native silhouette without tinting the skull; `dead` displays an 80%-size skull at 0.70 alpha with a green native checkmark and no active glow. The outline uses eight native skull copies at the unchanged 18-by-18 size, tinted with the original outline RGB `(1, 0.25, 0)`. Over a smooth 2.4-second cycle, each copy has additive alpha from 0.25 to 0.50 and its directional offset moves from 0.90 to 4.55 pixels. The minimum reach is 20% farther outward than the previous 0.75-pixel minimum; the maximum reach remains unchanged. Normalized diagonal offsets keep expansion even. The increased per-copy opacity makes the original outline color stronger throughout the pulse; animated offsets provide inward/outward motion instead of only changing brightness. The rejected circular halo texture is removed from the source and runtime manifest; no additional artwork is required. The glow uses the shared cosmetic clock. It holds its phase during a native pause and continues through card selection. It never supplies run time, progress or schedule state. The foreground skull, marker anchor geometry and dead/due styles are unchanged. The checkmark indicates a killed boss. Passing a scheduled time and disappearing from `AZS_GetBosses()` never establish activation or death; no private clock advances boss state.
 
 Schedule completeness checks include all recognized `due`, `up` and `dead` states; marker positions, the 0.1-second schedule/geometry refresh, native table ownership and independent clock/reload recovery stay unchanged. Without a complete live schedule or eligible reload handoff, missing schedule data clears the skull, glow and checkmark while keeping a valid clock visible. Unused pooled markers and clock release also hide all three visuals. Replayed schedules after `/reload` and fresh schedules for new runs restore appearance from their official states; the later handoff exception can also preserve those states through an eligible reload. No tests, syntax checks, validation, addon execution or game startups were run for this edit.
 

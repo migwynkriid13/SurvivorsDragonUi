@@ -421,7 +421,10 @@ DFRL:NewMod("Revive", 4, function()
             age = 0
             Refresh()
         end
-        view.Animate(elapsed, visibilityConfirmed)
+        if not performanceMode and view.active then
+            local delta, held = T.AnimationElapsed(elapsed)
+            if not held then view.Animate(delta, visibilityConfirmed) end
+        end
     end
     local function Tick()
         local elapsed = math.max(0, tonumber(arg1) or 0)

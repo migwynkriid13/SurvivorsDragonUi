@@ -9,6 +9,53 @@ DFRL.tools.RightHudStyle = {
     bodyColor = { 1, 1, 1 },
 }
 
+-- Only cosmetic playback uses this clock. Native timestamps, gameplay reads
+-- and retry deadlines keep their original clocks.
+local animationSample, animationTime, animationPaused, animationResumed
+local phaseDirty, phaseReceipt = true, nil
+function DFRL.tools.InvalidateAnimationPhase()
+    phaseDirty, phaseReceipt = true, GetTime()
+end
+
+function DFRL.tools.AnimationTime(now)
+    now = now or GetTime()
+    if now ~= animationSample then
+        local paused = animationPaused
+        -- Sample after the receipt frame so the native parser can finish first.
+        if phaseDirty and now ~= phaseReceipt then
+            phaseDirty = false
+            local getter = _G.AZS_GetPhase
+            if type(getter) == "function" then
+                local ok, phase = pcall(getter)
+                if ok then paused = phase == "paused" end
+            else
+                paused = false
+            end
+        end
+        animationResumed = animationPaused and not paused
+        if not animationSample then
+            animationTime = now
+        elseif not paused and not animationResumed and now > animationSample then
+            animationTime = animationTime + (now - animationSample)
+        end
+        animationSample, animationPaused = now, paused
+    end
+    return animationTime, animationPaused, animationResumed
+end
+
+function DFRL.tools.AnimationHeld()
+    if phaseDirty or animationResumed then
+        local _, paused, resumed = DFRL.tools.AnimationTime()
+        return paused or resumed or false
+    end
+    return animationPaused == true
+end
+
+function DFRL.tools.AnimationElapsed(elapsed)
+    if DFRL.tools.AnimationHeld() then return 0, true end
+    return elapsed, false
+end
+
 -- Native screen-unit setters now round through 24-bit floats. Their getters
 -- need not return the exact Lua number that was set, even at a fixed viewport.
 function DFRL.tools.NearlyEqual(a, b)

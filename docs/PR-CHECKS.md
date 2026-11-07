@@ -868,11 +868,11 @@ The assertions cover:
   calls while native visibility/opacity repair remains immediate. The full
   production owner covers level/stat coalescing, pending text on inactive panes,
   future slides, wheel reveal/hold/expiry, hidden delivery deferral and mode/Show
-  recovery without view allocation. Nameplate cases require Performance Mode to
-  skip first shadow allocation, actually hide retained shadows, preserve names
-  and health, defer hidden preparation and reuse shadows through names-only and
-  normal recovery. These authored cases remain CI-only and do not prove FPS or
-  packaged-client appearance.
+  recovery without view allocation. Nameplate cases cover Dragonflight artwork,
+  native target-border selection, elite/guardian/boss badges, unknown and
+  percentage-only plates, and badge reuse through Names only. Projected plates
+  use their accepted native kind. These authored cases remain CI-only and do
+  not establish FPS or packaged-client appearance.
 - Extracted production unit-border transitions actually hide inactive party and
   portrait variants, restore the retained artwork on option changes and skip
   unchanged writes. These assertions distinguish shown state from alpha; they
@@ -1021,6 +1021,13 @@ The assertions cover:
   target sample serves each pass while visible buttons retain independent
   range reads; missing/friendly/hostile transitions and hidden allocation/cleanup
   use fresh native boundaries.
+- The pause cases hold an in-flight range fade and native combat text, keep the
+  combat cursor current, and verify the first resumed frame uses the held pose.
+  Chat cases cover the native fade hold and resume calls for selected and
+  inactive panes. Waypoint cases cover holding and resuming its display blend.
+  These are CI-only mocks. They do not exercise Escape in the packaged client,
+  the renderer's native chat fade timer, or a real native combat-text anchor
+  expiring during pause.
 - Loot service cadence cases retain queued notifications through the former
   200-ms interval and deliver at the 1.5-second boundary in both Performance Mode
   states. Failed native handoffs use that same interval; renderer backpressure,

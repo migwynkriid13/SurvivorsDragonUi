@@ -66,7 +66,12 @@ update(tracker, 0.01)
 assert(atanReads == 0 and wraps == 0, "settled new sample repeated interpolation math")
 phase, distance, stamp = "paused", 8, 10.2
 update(tracker, 0.05)
-assert(tracker.distance == 8, "paused source was extrapolated")
+assert(tracker.distance == 6, "paused source changed the held distance")
+phase = "playing"
+update(tracker, 0.05)
+assert(tracker.distance == 6, "first resumed frame skipped the held distance")
+update(tracker, 0.05)
+assert(tracker.distance > 6 and tracker.distance < 8, "resumed guidance did not blend from the held distance")
 phase, distance, stamp = "playing", 7, 9
 update(tracker, 0.05)
 assert(tracker.distance == 7, "regressed native time reused prior interpolation")

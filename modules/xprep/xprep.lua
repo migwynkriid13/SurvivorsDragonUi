@@ -361,7 +361,6 @@ DFRL:NewMod("Xprep", 1, function()
     end
 
     OnUpdate = function()
-        local elapsed = Number(arg1) and arg1 or 0
         -- Read after native XP/level event delivery so one update sees the latest
         -- native tuple. The updater exists only for pending reads or visible FX.
         if pending then
@@ -377,6 +376,8 @@ DFRL:NewMod("Xprep", 1, function()
             StopAnimation()
             return
         end
+        local elapsed = T.AnimationElapsed(Number(arg1) and arg1 or 0)
+        if elapsed <= 0 then return end
         if fadeAge then
             fadeAge = fadeAge + elapsed
             if fadeAge >= 0.35 then

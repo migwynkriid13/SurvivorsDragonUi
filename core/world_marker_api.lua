@@ -217,6 +217,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         ClearMap(state.seen)
         ClearMap(state.cursors)
         state.world, state.stream = nil, nil
+        state.beaconWave = nil
         state.mapId, state.runId, state.spaceId, state.clock = nil, nil, nil, nil
         state.discoveryAt, state.discoveryStarted, state.discoveryFailures = nil, nil, nil
     end
@@ -254,7 +255,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         local cutoff = state.choices[style.distance]
         return (mode == "near" and distance <= cutoff) or (mode == "far" and distance > cutoff)
     end
-    local function UpdateVisibility(marker, visible, now, animate)
+    local function UpdateVisibility(marker, visible, now, animate, paused)
         if not animate or state.choices.performanceMode then
             if not visible then
                 HideMarker(marker)
@@ -276,7 +277,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
         if marker.fadeTarget ~= target then
             marker.fadeStarted, marker.fadeFrom, marker.fadeTarget = now, marker.alpha or 1, target
         end
-        if marker.fadeStarted then
+        if marker.fadeStarted and not paused then
             local progress = math.max(0, math.min(1, (now - marker.fadeStarted) / 0.12))
             local alpha = marker.fadeFrom + (target - marker.fadeFrom) * progress
             if marker.alpha ~= alpha then marker:SetAlpha(alpha) end
@@ -575,15 +576,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             distant.views[unit.id] = view
         end
         if view.drawPass == state.drawPass then return end
-        style.UpdateProjected(
-            view,
-            unit,
-            point.x,
-            point.plateY,
-            distant.namesOnly,
-            distant.fontSize,
-            state.choices.performanceMode
-        )
+        style.UpdateProjected(view, unit, point.x, point.plateY, distant.namesOnly, distant.fontSize)
         view.drawPass = state.drawPass
     end
     local function Project()
@@ -693,9 +686,15 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             end
             if not accepted then return end
         end
-        local lightAlpha, wave = nil, 0
+        local lightAlpha, animationNow, paused, resumed
+        if allyOnScreen or not state.choices.performanceMode then
+            animationNow, paused, resumed = T.AnimationTime()
+        end
+        local held = paused or resumed
+        local wave = 0
         if allyOnScreen then
-            wave = math.sin(clock * 2.2)
+            if not held or state.beaconWave == nil then state.beaconWave = math.sin(animationNow * 2.2) end
+            wave = state.beaconWave
             local ready, failure = SampleReviveBeacons(total, sample, clock)
             if failure == "STREAM_CHANGED" then
                 ClearCatalog()
@@ -725,7 +724,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
                         marker.x, marker.y = point.x, y
                     end
                     marker.drawPass = state.drawPass
-                    UpdateVisibility(marker, point.visible, clock, styles[record.kind].mode ~= nil)
+                    UpdateVisibility(marker, point.visible, animationNow, styles[record.kind].mode ~= nil, held)
                     if record.kind == "downedPartyMember" and lightAlpha and point.visible then
                         DrawReviveBeacon(marker, point, lightAlpha)
                     else

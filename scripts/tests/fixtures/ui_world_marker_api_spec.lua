@@ -29,11 +29,13 @@ local function Scene(performance)
         catalog = "catalog",
         world = "world",
         stream = "stream",
+        phase = "playing",
         frame = 0,
         queryKinds = {},
     }
     local position = { mapId = 0, runId = "run", spaceId = "instance" }
     c.native, c.position = native, position
+    env.AZS_GetPhase = function() return native.phase end
     native.foreign = function() end
     native.handlers[native.foreign] = true
     env.AZS_GetWorldAnchorCapabilities = function()
@@ -218,7 +220,7 @@ local function Scene(performance)
         Phase = function()
             assert(native.inService, "marker callback repeated the native phase getter")
             native.phaseReads = (native.phaseReads or 0) + 1
-            return "playing"
+            return native.phase
         end,
         HasParty = function() return native.partyPresent ~= false end,
         NeedsPartyMarker = function() return native.downedPresent ~= false end,
@@ -352,7 +354,7 @@ for _, performance in ipairs({ false, true }) do
     c:Service()
     assert(#c:Markers() == 0, "ordinary controller placed a world marker")
     c:Frame()
-    assert(#c:Markers() == 3, "default-on encounter icons omitted a boss")
+    assert(#c:Markers() == 3, "cache, fallen ally and boss did not draw in the same frame")
     DisableEncounterIcons(display)
     c:Frame()
     assert(#c:Markers() == 2 and native.registers == 1 and native.handlers[native.foreign])
@@ -497,6 +499,23 @@ for _, performance in ipairs({ false, true }) do
     c:Frame(1.45)
     assert(firstY < highY and marker.point[5] < highY and math.abs(marker.point[5] - 240) <= 2)
     assert(light.beam.point == beamPoint, "bobbing icon displaced the ground beacon")
+    local heldY, heldAlpha = marker.point[5], light.beam:GetAlpha()
+    native.phase = "paused"
+    c.env.T.InvalidateAnimationPhase()
+    c:Frame(0.04)
+    c:Frame(4)
+    assert(marker.point[5] == heldY and light.beam:GetAlpha() == heldAlpha, "pause advanced fallen-ally animation")
+    native.phase = "playing"
+    c.env.T.InvalidateAnimationPhase()
+    c:Frame(0.04)
+    assert(marker.point[5] == heldY and light.beam:GetAlpha() == heldAlpha, "resume skipped the held animation pose")
+    c:Frame(0.04)
+    assert(marker.point[5] ~= heldY, "fallen-ally bobbing did not resume")
+    if performance then
+        assert(light.beam:GetAlpha() == 0.85, "Performance Mode animated the beacon opacity")
+    else
+        assert(light.beam:GetAlpha() ~= heldAlpha, "beacon pulse did not resume")
+    end
     native.entries = { Record("pooled-boss", "boss") }
     c.env.DFRL.display.Set("worldBossIcons", true)
     c:Service(0.21)
@@ -1372,6 +1391,12 @@ do
             if frame.kind == kind and frame:IsVisible() and (not name or frame:GetText() == name) then return frame end
         end
     end
+    local function VisibleDragon()
+        local art = env.DFRL:GetInfoOrCons("tex") .. "nameplates\\DragonflightElite.blp"
+        for _, frame in ipairs(c.objects) do
+            if frame.kind == "Texture" and frame:IsVisible() and frame:GetTexture() == art then return frame end
+        end
+    end
     c:Service()
     assert(display.Get("nameplateDistance") == 20 and not requested and native.registers == 0)
     assert(display.Copy({ nameplateDistance = 500 }).nameplateDistance == 200)
@@ -1381,7 +1406,7 @@ do
     c:Service()
     c:Frame()
     assert(requested and native.lastKinds.elite and not native.lastKinds.finalBoss)
-    assert(Visible("FontString", "Elite") and Visible("StatusBar").value == 0.5)
+    assert(Visible("FontString", "Elite") and Visible("StatusBar").value == 0.5 and VisibleDragon())
     assert(not Visible("FontString", "Guardian"), "head height duplicated a native plate at 20 yards")
     assert(not Visible("FontString", "Final"), "Bosses off exposed a final boss")
     local discoveryReads = native.calls
@@ -1400,7 +1425,10 @@ do
     display.Set("nameplatesNamesOnly", true)
     display.Set("performanceMode", true)
     c:Frame()
-    assert(Visible("FontString", "Guardian") and not Visible("StatusBar"), "Names only retained a distant health bar")
+    assert(
+        Visible("FontString", "Guardian") and not Visible("StatusBar") and not VisibleDragon(),
+        "Names only retained distant bar artwork"
+    )
     local allocated = #c.objects
     v = false
     c:Frame()
