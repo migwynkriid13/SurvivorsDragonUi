@@ -694,13 +694,9 @@ DFRL:NewMod("Bars", 1, function()
         ClearSelection()
         if DFRL.ClearActionBarCooldowns then DFRL.ClearActionBarCooldowns() end
         for _, button in ipairs(DFRL.actionButtons or {}) do
-            for _, field in ipairs({ "DFRL_BorderOverlay", "DFRL_swapSelection", "rangeIndicator" }) do
+            for _, field in ipairs({ "DFRL_BorderOverlay", "DFRL_swapSelection" }) do
                 local region = button[field]
                 if region then
-                    if field == "rangeIndicator" and type(UIFrameFadeRemoveFrame) == "function" then
-                        UIFrameFadeRemoveFrame(region)
-                        region.showing = false
-                    end
                     if region:IsShown() then region:Hide() end
                 end
             end

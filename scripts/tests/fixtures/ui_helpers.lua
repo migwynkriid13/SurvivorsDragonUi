@@ -226,8 +226,6 @@ function H.New()
             "SetJustifyV",
             "SetShadowColor",
             "SetShadowOffset",
-            "UIFrameFadeIn",
-            "UIFrameFadeOut",
         }) do
             assert((self.writes[name] or 0) == 0, name .. " wrote unchanged or hidden presentation")
         end
@@ -245,12 +243,6 @@ function H.New()
     env.UnitExists = function() return true end
     env.UnitCanAttack = function() return true end
     env.IsActionInRange = function() return context.inRange and 1 or 0 end
-    env.UIFrameFadeIn = function(object)
-        Write(object, "UIFrameFadeIn")
-        object:Show()
-    end
-    env.UIFrameFadeOut = function(object) Write(object, "UIFrameFadeOut") end
-    env.UIFrameFadeRemoveFrame = function(object) Write(object, "UIFrameFadeRemoveFrame") end
     env.AZS_IsHudShown = function() return context.nativeShown end
     env.AZS_SetHudShown = function(_, shown)
         context.nativeShown = shown

@@ -22,7 +22,7 @@ function DFRL:NewMod(name, priority, initialize)
     table.insert(self.modules, { name = name, priority = priority, initialize = initialize })
 end
 
-local booted = false
+local booted, reminded = false, false
 local function Initialize()
     if booted then return end
     booted = true
@@ -38,6 +38,8 @@ local function Initialize()
     DFRL.modules = nil
     DFRL:UnregisterAllEvents()
     DFRL:RegisterEvent("PLAYER_ENTERING_WORLD")
+    DFRL:RegisterEvent("PLAYER_LEAVING_WORLD")
+    DFRL:RegisterEvent("CHAT_MSG_ADDON")
 end
 
 -- The port may load loose addons after stock FrameXML has already initialized.
@@ -47,11 +49,16 @@ DFRL:SetScript("OnEvent", function()
     if event == "PLAYER_LOGIN" or (event == "ADDON_LOADED" and arg1 == "SurvivorsDragonUi") then
         Initialize()
     elseif event == "PLAYER_ENTERING_WORLD" then
+        DFRL.tools.InvalidateAnimationPhase()
         local chat = DEFAULT_CHAT_FRAME or ChatFrame1
-        if chat and type(chat.AddMessage) == "function" then
+        if not reminded and chat and type(chat.AddMessage) == "function" then
+            reminded = true
             chat:AddMessage(DFRL.locale.Text("SurvivorsDragonUI: /sdui for settings"), 1, 0.82, 0)
-            -- One reminder per UI load; zone transitions must not repeat it.
-            DFRL:UnregisterEvent("PLAYER_ENTERING_WORLD")
         end
+    elseif
+        event == "PLAYER_LEAVING_WORLD"
+        or (event == "CHAT_MSG_ADDON" and (arg1 == "AZSRUN" or arg1 == "AZSZONE" or arg1 == "AZSEND"))
+    then
+        DFRL.tools.InvalidateAnimationPhase()
     end
 end)

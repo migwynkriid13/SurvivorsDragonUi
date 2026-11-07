@@ -335,6 +335,7 @@ function DFRL.tools.NewCombatTextApi()
         if not state.selected then return true end
         local count = table.getn(items)
         if count == 0 or not state.cursor then return true end
+        local animationNow = not forGrouping and T.AnimationTime(now)
         local ids, origins, sample, clock = state.ids, state.origins, nil, nil
         local size, failed = 0, false
         -- Hide old projections before any native call, including a thrown call.
@@ -395,7 +396,12 @@ function DFRL.tools.NewCombatTextApi()
         for index = 1, count do
             local item = items[index]
             local origin = forGrouping and item or item.origin
-            if origin and origin.native and not failed and (forGrouping or now - item.started < item.duration) then
+            if
+                origin
+                and origin.native
+                and not failed
+                and (forGrouping or animationNow - item.started < item.duration)
+            then
                 size = size + 1
                 ids[size], origins[size] = origin.anchorId, origin
                 if size == state.projectLimit then Flush() end

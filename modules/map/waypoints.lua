@@ -1105,13 +1105,13 @@ DFRL:NewMod("Waypoints", 3, function()
         return angle - math.floor((angle + math.pi) / turn) * turn
     end
 
-    local function Blend(presentation, key, target, stamp, elapsed, angular, playing)
+    local function Blend(presentation, key, target, stamp, elapsed, angular, playing, resumed)
         if not playing or not Number(target) or not Number(stamp) then
             presentation[key] = nil
             return target
         end
         local value = presentation[key]
-        if not value or stamp < value.stamp or stamp - value.stamp > 1 then
+        if not value or stamp < value.stamp or (stamp - value.stamp > 1 and not resumed) then
             value = { current = target, from = target, target = target, stamp = stamp, age = 0, duration = 0 }
             presentation[key] = value
         elseif target ~= value.target then
@@ -1182,15 +1182,23 @@ DFRL:NewMod("Waypoints", 3, function()
         if tracker.kind == "guardian" then BindGuardianIcon(tracker.marker) end
         elapsed = elapsed or 0
         local selected = tracker.selected
+        local phase = navigation.Phase()
+        local presentation = tracker.presentation
+        local sameGuide = presentation
+            and presentation.key == selected.key
+            and presentation.x == selected.x
+            and presentation.y == selected.y
+        if sameGuide and phase == "paused" then
+            presentation.paused = true
+            return
+        end
+        local resumed = sameGuide and presentation.paused
+        if resumed then elapsed = 0 end
         if tracker.kind == "party" then T.SetTextIfChanged(tracker.titleText, selected.name) end
         local east, north, distance, metric, stamp = navigation.GuideDelta(selected)
         local facing, headingStamp = navigation.Heading()
-        local presentation = tracker.presentation
         if
-            not presentation
-            or presentation.key ~= selected.key
-            or presentation.x ~= selected.x
-            or presentation.y ~= selected.y
+            not sameGuide
             or elapsed > 0.5
             or (
                 east
@@ -1202,7 +1210,7 @@ DFRL:NewMod("Waypoints", 3, function()
             tracker.presentation = presentation
         end
         presentation.east, presentation.north = east, north
-        local playing = navigation.Phase() == "playing"
+        local playing = phase == "playing"
         local moving = east and (east ~= 0 or north ~= 0)
         local bearing
         if moving and metric then
@@ -1214,9 +1222,10 @@ DFRL:NewMod("Waypoints", 3, function()
         end
         -- Only the paint values blend. Selection and minimap pins keep native data,
         -- and interpolation stops at each received sample without prediction.
-        distance = Blend(presentation, "distance", distance, stamp, elapsed, false, playing)
-        bearing = Blend(presentation, "bearing", bearing, stamp, elapsed, true, playing)
-        facing = Blend(presentation, "facing", facing, headingStamp, elapsed, true, playing)
+        distance = Blend(presentation, "distance", distance, stamp, elapsed, false, playing, resumed)
+        bearing = Blend(presentation, "bearing", bearing, stamp, elapsed, true, playing, resumed)
+        facing = Blend(presentation, "facing", facing, headingStamp, elapsed, true, playing, resumed)
+        presentation.paused = nil
         if moving and metric and facing then
             -- Native heading is counterclockwise, destination bearing clockwise.
             local angle = bearing + facing

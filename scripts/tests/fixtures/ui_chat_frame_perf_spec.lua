@@ -16,6 +16,7 @@ local env = setmetatable({
     activeStates = {},
     selected = selected,
     refresh = 0,
+    fadesHeld = false,
     GetTime = function()
         reads = reads + 1
         return now
@@ -32,6 +33,10 @@ local env = setmetatable({
     SLIDE = 0.35,
     FADE = 0.6,
 }, { __index = _G })
+env.T = {
+    AnimationHeld = function() return false end,
+    AnimationTime = function(sample) return sample or env.GetTime() end,
+}
 env.pairs = function(list)
     if list == env.states then panePasses = panePasses + 1 end
     return pairs(list)
@@ -253,6 +258,18 @@ for _, performance in ipairs({ false, true }) do
     )
     Tick(1.1)
     assert(discovered.ChatFrame3 == 3 and discovered.ChatFrame4 == 1, "chat did not settle after all panes attached")
+
+    local phase = "paused"
+    native.AZS_GetPhase = function() return phase end
+    native.T.InvalidateAnimationPhase()
+    Tick(0.01)
+    assert(pane.fading == false and other.fading == false, "native chat fades were not held during the pause")
+    phase = "playing"
+    native.T.InvalidateAnimationPhase()
+    Tick(0.01)
+    assert(pane.fading == false, "native fading advanced on the first resumed frame")
+    Tick(0.01)
+    assert(pane.fading == true and other.fading == true, "native chat fades did not resume")
 end
 print(
     "PASS real chat retains messages and input while periodic layout repair visits only the selected pane and visible input"

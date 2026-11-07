@@ -154,7 +154,9 @@ DFRL:NewMod("Chat", 1, function()
             if state.native.AtBottom then return Flag(state.native:AtBottom()) end
             return not state.scrolled
         end
-        local function FadeSettings(state, held)
+        local function FadeSettings(state, held, paused)
+            if paused == nil then paused = T.AnimationHeld() end
+            held = held or paused
             local duration = performanceMode and 0 or FADE
             if state.fadeConfigured and state.fadeDuration == duration and state.held == held then return end
             if not root:IsVisible() then return end
@@ -185,7 +187,7 @@ DFRL:NewMod("Chat", 1, function()
             end
         end
         local function Reveal(state)
-            local now = GetTime()
+            local now = T.AnimationTime()
             if state then
                 local lastVisible = math.max(state.lastActivity or 0, state.lastReveal or 0)
                 if not performanceMode and now - lastVisible >= HOLD + FADE then
@@ -295,9 +297,11 @@ DFRL:NewMod("Chat", 1, function()
             UpdateIndicator()
         end
         local function NoticeMessage(state)
-            local now = GetTime()
+            local now, paused = T.AnimationTime()
             state.lastActivity = now
-            state.slideStart = not performanceMode and state == selected and root:IsVisible() and now or nil
+            if not paused then
+                state.slideStart = not performanceMode and state == selected and root:IsVisible() and now or nil
+            end
             if state.slideStart then activeStates[state] = true end
             if state ~= selected or not AtBottom(state) then state.unread = true end
             if UpdateIndicator then UpdateIndicator() end
@@ -357,7 +361,7 @@ DFRL:NewMod("Chat", 1, function()
             native:SetParent(root)
             native:SetFrameStrata(STRATA)
             LockNativeMovement(native)
-            PositionNative(state, GetTime(), true)
+            PositionNative(state, T.AnimationTime(), true)
             FadeSettings(state, false)
             -- SetMaxLines clears the native ring; preserve existing history.
             if native.SetSpacing then native:SetSpacing(3) end
@@ -490,7 +494,7 @@ DFRL:NewMod("Chat", 1, function()
                     state.fadeConfigured, state.held = nil, nil
                     FadeSettings(state, state == selected and not AtBottom(state))
                     ReadDimensions()
-                    PositionNative(state, GetTime(), true)
+                    PositionNative(state, T.AnimationTime(), true)
                     PositionInput()
                     if RefreshFrames then RefreshFrames() end
                 end
@@ -543,7 +547,7 @@ DFRL:NewMod("Chat", 1, function()
                 _G.SELECTED_DOCK_FRAME = state.native
             end
             ReadDimensions()
-            local now = GetTime()
+            local now = T.AnimationTime()
             for _, other in pairs(states) do
                 other.native:SetAlpha(other == selected and 1 or 0)
                 other.native:EnableMouse(other == selected)
@@ -603,26 +607,35 @@ DFRL:NewMod("Chat", 1, function()
         RefreshFrames()
         SelectChat(states[1])
         HideControl(ChatFrameMenuButton)
-        local refresh = 0
+        local refresh, fadesHeld = 0, false
         local function UpdateChat()
             if not root:IsVisible() then return end
-            local now, elapsed = nil, arg1 or 0
+            local now, realNow, elapsed = nil, nil, arg1 or 0
+            local holdFades = T.AnimationHeld()
+            if fadesHeld ~= holdFades then
+                fadesHeld = holdFades
+                for _, state in pairs(states) do
+                    if state ~= selected then FadeSettings(state, false, holdFades) end
+                end
+            end
             -- Only wheel navigation uncovers retained history. Hover and input
             -- focus never rearm lines or hold their fading.
             local atBottom = not selected or AtBottom(selected)
             -- Settled panes have no animation or pending delivery to visit.
             -- Scroll/visibility repair below still follows the selected pane.
             for state in pairs(activeStates) do
-                if state.pendingLevel or state.revealStart or state.slideStart then now = now or GetTime() end
-                if state.pendingLevel and now >= state.pendingLevel.deadline then
+                if state.pendingLevel then realNow = realNow or GetTime() end
+                if state.pendingLevel and realNow >= state.pendingLevel.deadline then
                     state.FlushLevel()
                     if state == selected then atBottom = nil end
                 end
-                if state.revealStart then
+                if state.revealStart and not holdFades then
+                    now = now or T.AnimationTime(realNow)
                     state.visualAlpha = Clamp((now - state.revealStart) / FADE, 0, 1)
                     if state.visualAlpha == 1 then state.revealStart = nil end
                 end
-                if state.slideStart then
+                if state.slideStart and not holdFades then
+                    now = now or T.AnimationTime(realNow)
                     -- Other native panes keep their messages and unread state,
                     -- but only the selected pane needs animated geometry.
                     if state == selected then PositionNative(state, now) end
@@ -641,20 +654,19 @@ DFRL:NewMod("Chat", 1, function()
                 end
                 if atBottom == nil then atBottom = AtBottom(selected) end
                 if atBottom then selected.unread = false end
-                FadeSettings(selected, not atBottom)
+                FadeSettings(selected, not atBottom, holdFades)
             end
             UpdateIndicator(atBottom)
             refresh = refresh + elapsed
             if refresh >= 1 then
                 refresh = 0
-                now = now or GetTime()
                 ReadDimensions()
                 PositionInput()
                 RefreshFrames()
                 -- Only the selected pane can render. Inactive panes recover
                 -- immediately on selection/native events/Show instead of an
                 -- all-window font and geometry sweep every second.
-                if selected then PositionNative(selected, now, true) end
+                if selected then PositionNative(selected, now or T.AnimationTime(realNow), true) end
             end
         end
         root:SetScript("OnUpdate", UpdateChat)
@@ -685,7 +697,7 @@ DFRL:NewMod("Chat", 1, function()
             for _, state in pairs(states) do
                 state.visualAlpha = 1
                 state.native:SetAlpha(1)
-                PositionNative(state, GetTime(), true)
+                PositionNative(state, T.AnimationTime(), true)
                 FadeSettings(state, state == selected and not AtBottom(state))
             end
             UpdateIndicator()
@@ -702,7 +714,7 @@ DFRL:NewMod("Chat", 1, function()
             onResize = function(frame)
                 rootWidth, rootHeight = frame:GetWidth(), frame:GetHeight()
                 if not T.NearlyEqual(indicator:GetWidth(), rootWidth) then indicator:SetWidth(rootWidth) end
-                local now = GetTime()
+                local now = T.AnimationTime()
                 for _, state in pairs(states) do
                     PositionNative(state, now)
                 end

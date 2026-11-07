@@ -1,17 +1,30 @@
 DFRL:NewMod("RangeIndicator", 1, function()
     local TEX_PATH = DFRL:GetInfoOrCons("tex") .. "actionbars\\"
     local INDICATOR_ALPHA = 0.5
+    local FADE_DURATION = 0.2
     local UPDATE_INTERVAL = 0.1
+    local fades = {}
     local performanceMode = DFRL.display.Get("performanceMode")
     local customActionBar = DFRL.display.Get("customActionBar") ~= false
     local SyncUpdates
 
     local function ClearIndicator(button)
         local indicator = button.rangeIndicator
-        if not indicator or (not indicator.showing and not indicator:IsShown()) then return end
-        if type(UIFrameFadeRemoveFrame) == "function" then UIFrameFadeRemoveFrame(indicator) end
+        if not indicator then return end
+        fades[indicator] = nil
+        indicator.fadeFrom = nil
         indicator.showing = false
-        indicator:Hide()
+        if indicator:IsShown() then indicator:Hide() end
+    end
+    local function PaintFade(indicator, progress)
+        local target = indicator.showing and INDICATOR_ALPHA or 0
+        local alpha = indicator.fadeFrom + (target - indicator.fadeFrom) * progress
+        if indicator:GetAlpha() ~= alpha then indicator:SetAlpha(alpha) end
+        if alpha > 0 or indicator.showing then
+            if not indicator:IsShown() then indicator:Show() end
+        elseif indicator:IsShown() then
+            indicator:Hide()
+        end
     end
     local function UpdateButton(button, targetRead, canAttack)
         if not button:IsVisible() then
@@ -33,7 +46,7 @@ DFRL:NewMod("RangeIndicator", 1, function()
             canAttack = UnitExists("target") and UnitCanAttack("player", "target")
             targetRead = true
         end
-        local outOfRange = canAttack and IsActionInRange(ActionButton_GetPagedID(button)) == 0
+        local outOfRange = canAttack and IsActionInRange(ActionButton_GetPagedID(button)) == 0 or false
         if performanceMode then
             if outOfRange then
                 if indicator:GetAlpha() ~= INDICATOR_ALPHA then indicator:SetAlpha(INDICATOR_ALPHA) end
@@ -41,15 +54,19 @@ DFRL:NewMod("RangeIndicator", 1, function()
             elseif indicator:IsShown() then
                 indicator:Hide()
             end
-            indicator.showing = outOfRange and true or false
+            indicator.showing = outOfRange
             return targetRead, canAttack
         end
-        if outOfRange and not indicator.showing then
-            UIFrameFadeIn(indicator, 0.2, 0, INDICATOR_ALPHA)
-            indicator.showing = true
-        elseif not outOfRange and indicator.showing then
-            UIFrameFadeOut(indicator, 0.2, INDICATOR_ALPHA, 0)
-            indicator.showing = false
+        if outOfRange ~= (indicator.showing == true) then
+            local now, paused = T.AnimationTime()
+            if paused then
+                indicator.fadeFrom = indicator:IsShown() and indicator:GetAlpha() or 0
+            else
+                indicator.fadeFrom = outOfRange and 0 or INDICATOR_ALPHA
+            end
+            indicator.showing = outOfRange
+            fades[indicator] = now
+            if not paused then PaintFade(indicator, 0) end
         end
         return targetRead, canAttack
     end
@@ -93,6 +110,16 @@ DFRL:NewMod("RangeIndicator", 1, function()
         if elapsed >= UPDATE_INTERVAL then
             elapsed = 0
             UpdateIndicators()
+        end
+        if not next(fades) then return end
+        local now, paused = T.AnimationTime()
+        if paused then return end
+        for indicator, started in pairs(fades) do
+            local progress = math.min(1, (now - started) / FADE_DURATION)
+            PaintFade(indicator, progress)
+            if progress == 1 then
+                fades[indicator], indicator.fadeFrom = nil, nil
+            end
         end
     end
     local hooked

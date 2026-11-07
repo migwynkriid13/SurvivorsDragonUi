@@ -214,21 +214,41 @@ Test("world cleanup clears cooldown overlays and suspends reads", function()
     assert(context.reads.cooldown == 7, "world entry did not resume native reads")
 end)
 
-Test("range indicators reuse their texture and never restart an unchanged fade", function()
+Test("range fades hold and resume their exact opacity without restarting", function()
     local context = H.New()
     local env = context.env
     local bar = env.CreateFrame("Frame", nil, env.UIParent)
     local button = env.CreateFrame("Button", nil, bar)
     button.slot = 1
+    local phase = "playing"
+    env.AZS_GetPhase = function() return phase end
     env.DFRL.mainBar, env.DFRL.actionButtons = bar, { button }
     context:Load("modules/bars/range.lua", "RangeIndicator")
     local controller = context:Controller("PLAYER_TARGET_CHANGED")
     context:Event(controller, "PLAYER_TARGET_CHANGED")
     local texture, allocated = button.rangeIndicator, table.getn(context.objects)
+    local function Tick(elapsed)
+        context.now = context.now + elapsed
+        context:Call(controller, "OnUpdate", elapsed)
+    end
+    Tick(0.08)
+    local alpha = texture:GetAlpha()
+    assert(math.abs(alpha - 0.2) < 0.000001, "fade was not in flight")
     context:ResetCounts()
     context:Event(controller, "PLAYER_TARGET_CHANGED")
     context:NoPresentationWrites()
     assert(button.rangeIndicator == texture and table.getn(context.objects) == allocated, "range texture was replaced")
+    phase = "paused"
+    env.T.InvalidateAnimationPhase()
+    Tick(0.02)
+    Tick(4)
+    assert(texture:GetAlpha() == alpha, "paused time advanced the range fade")
+    phase = "playing"
+    env.T.InvalidateAnimationPhase()
+    Tick(0.02)
+    assert(texture:GetAlpha() == alpha, "resuming skipped the held opacity")
+    Tick(0.04)
+    assert(math.abs(texture:GetAlpha() - 0.3) < 0.000001, "resuming restarted or completed the range fade")
     bar:Hide()
     assert(controller:GetScript("OnUpdate") == nil, "hidden bar kept range polling")
     assert(not texture:IsShown() and not texture.showing, "hidden range effect was not cleared")
@@ -285,7 +305,7 @@ Test("range passes share fresh target reads and retain each visible button's ran
         context.reads.target == 1 and not context.reads.attack and not context.reads.range,
         "missing target was resampled"
     )
-    assert(context.writes.UIFrameFadeOut == 5, "target loss did not retire each active range fade")
+    assert(context.writes.SetAlpha == 5, "target loss did not start each indicator's fade-out")
     context:ResetCounts()
     context:Event(controller, "PLAYER_TARGET_CHANGED")
     context:NoPresentationWrites()
@@ -338,13 +358,11 @@ Test("performance mode replaces range fades with static warnings and restores no
     context:Load("modules/bars/range.lua", "RangeIndicator")
     local controller = context:Controller("PLAYER_TARGET_CHANGED")
     context:Event(controller, "PLAYER_TARGET_CHANGED")
-    assert(context.writes.UIFrameFadeIn == 1, "normal range warning did not start its fade")
+    local indicator = button.rangeIndicator
+    assert(indicator:IsShown() and indicator:GetAlpha() == 0, "normal range warning did not start its fade")
     context:ResetCounts()
     context:SetSetting("performanceMode", true)
-    local indicator = button.rangeIndicator
     assert(indicator:IsShown() and indicator:GetAlpha() == 0.5, "static mode lost the range warning")
-    assert(context.writes.UIFrameFadeRemoveFrame == 1, "active native fade was not removed")
-    assert(not context.writes.UIFrameFadeIn and not context.writes.UIFrameFadeOut, "static mode started a fade")
     assert(not context.writes.SetScript, "static mode rebound the unchanged range updater")
     local allocated = #context.objects
     context:ResetCounts()
@@ -352,12 +370,15 @@ Test("performance mode replaces range fades with static warnings and restores no
     context:NoPresentationWrites()
     context.inRange = true
     context:Event(controller, "PLAYER_TARGET_CHANGED")
-    assert(not indicator:IsShown() and not context.writes.UIFrameFadeOut, "static warning faded instead of hiding")
+    assert(not indicator:IsShown(), "static warning faded instead of hiding")
     context.inRange = false
     context:Event(controller, "PLAYER_TARGET_CHANGED")
     context:ResetCounts()
     context:SetSetting("performanceMode", false)
-    assert(context.writes.UIFrameFadeIn == 1 and #context.objects == allocated, "normal fade did not reuse the warning")
+    assert(
+        indicator:IsShown() and indicator:GetAlpha() == 0 and #context.objects == allocated,
+        "normal fade did not reuse the warning"
+    )
     assert(not context.writes.SetScript, "normal mode rebound the unchanged range updater")
     bar:Hide()
     context:ResetCounts()

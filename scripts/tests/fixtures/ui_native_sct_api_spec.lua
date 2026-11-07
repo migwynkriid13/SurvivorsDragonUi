@@ -215,6 +215,32 @@ Test("documented events and label positioning run only in the post-camera handle
     assert(Holder(label).anchor.x < 300, "native handler used the previous camera position")
 end)
 
+Test("native pause holds a visible label and keeps its intake cursor current", function()
+    local phase = "playing"
+    local context = Scene("enemy", false, function(_, env)
+        env.AZS_GetPhase = function() return phase end
+    end)
+    context:Prime()
+    context:NativeHit(123)
+    context:Tick(0.1)
+    context:Tick(0.2)
+    local holder = Holder(assert(context:Labels()[1]))
+    local x, y, alpha = holder.anchor.x, holder.anchor.y, holder:GetAlpha()
+    phase = "paused"
+    context.env.T.InvalidateAnimationPhase()
+    local reads = context.native.reads
+    context:Tick(0.01)
+    context:Tick(2)
+    assert(context.native.reads > reads, "pause stopped servicing the native cursor")
+    assert(holder.anchor.x == x and holder.anchor.y == y and holder:GetAlpha() == alpha and holder:IsShown())
+    phase = "playing"
+    context.env.T.InvalidateAnimationPhase()
+    context:Tick(0.01)
+    assert(holder.anchor.x == x and holder.anchor.y == y and holder:GetAlpha() == alpha, "resume jumped the hit")
+    context:Tick(0.05)
+    assert(holder.anchor.x ~= x and holder:IsShown(), "held hit did not finish its motion after resume")
+end)
+
 Test("native mode primes its own cursor, ignores duplicate chat and releases invisible plate tracking", function()
     local context = Scene("enemy", false)
     assert(not context.backing, "native anchors kept forced nameplate tracking")

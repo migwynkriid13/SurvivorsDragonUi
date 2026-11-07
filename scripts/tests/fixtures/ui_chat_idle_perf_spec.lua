@@ -3,6 +3,7 @@ assert(_VERSION == "Lua 5.1", "chat idle fixtures require CI Lua 5.1")
 local visible, reads, writes, failed, expectedFading = true, 0, 0, false, true
 local expectedHold, expectedDuration = 14, 0.6
 local env = {
+    T = { AnimationHeld = function() return false end },
     root = {
         IsVisible = function()
             reads = reads + 1

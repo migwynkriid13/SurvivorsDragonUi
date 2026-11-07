@@ -63,17 +63,17 @@ DFRL:NewMod("Cut-Out", 1, function()
     end
 
     local function Animate()
-        local now = GetTime()
+        local now, paused = T.AnimationTime()
         local i = 1
         while i <= table.getn(fading) do
             local cutout = fading[i]
             local elapsed = now - cutout.fadeStart
-            if elapsed >= 0.5 or not cutout.texture:IsVisible() then
+            if (not paused and elapsed >= 0.5) or not cutout.texture:IsVisible() then
                 cutout.texture:Hide()
                 cutout.fading = nil
                 table.remove(fading, i)
             else
-                cutout.texture:SetAlpha(1 - elapsed / 0.5)
+                if not paused then cutout.texture:SetAlpha(1 - elapsed / 0.5) end
                 i = i + 1
             end
         end
@@ -118,7 +118,7 @@ DFRL:NewMod("Cut-Out", 1, function()
         local texture = cutout.texture
         texture:SetAlpha(1)
         texture:Show()
-        cutout.fadeStart = GetTime()
+        cutout.fadeStart = T.AnimationTime()
         if not cutout.fading then
             cutout.fading = true
             table.insert(fading, cutout)

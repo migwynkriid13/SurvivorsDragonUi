@@ -2322,7 +2322,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         text.origin = origin
         text.x, text.y = x, y
-        text.started = GetTime()
+        local started, paused = T.AnimationTime()
+        text.started = started
         text.diablo = textStyle == "diablo"
         text.duration = text.diablo and DIABLO.duration or TEXT_DURATION
         text.critical, text.damageType = info.critical, info.damageType
@@ -2345,7 +2346,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         text.kind = info.kind
         text.displayValue, text.hitCount = value, hitCount
         text.normalPart, text.criticalPart = parts and parts.normalPart, parts and parts.criticalPart
-        ApplyTextFont(text, text.started)
+        ApplyTextFont(text, GetTime())
         text.label:SetText(displayText)
         text.label:Show()
         text.spell, text.iconTexture = info.spell, info.iconTexture
@@ -2368,7 +2369,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         -- New holders have no anchor; ReleaseText cleared pooled holders.
         PositionText(text, msbtStyle and "CENTER" or "BOTTOMLEFT", text.x, text.y + 12)
-        if origin and origin.native then
+        if paused or origin and origin.native then
             text.holder:Hide()
         else
             text.holder:Show()
@@ -2624,7 +2625,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
 
-    local function UpdateTexts(now, elapsed)
+    local function UpdateTexts(now, elapsed, realNow)
         local count = table.getn(activeTexts)
         if count == 0 then return end
         if msbtStyle then PrepareScrollPositions(now, elapsed) end
@@ -2641,7 +2642,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 if text.origin and text.origin.native and not text.origin.visible then
                     if text.holder:IsShown() then text.holder:Hide() end
                 else
-                    if text.fontRetryAt and now >= text.fontRetryAt then ApplyTextFont(text, now) end
+                    if text.fontRetryAt and realNow >= text.fontRetryAt then ApplyTextFont(text, realNow) end
                     -- Legacy plate origins keep their last usable screen point;
                     -- native origins received this frame's world projection above.
                     if text.origin then
@@ -2705,7 +2706,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                         text.alpha = alpha
                         text.holder:SetAlpha(alpha)
                     end
-                    if text.origin and text.origin.native and not text.holder:IsShown() then text.holder:Show() end
+                    if not text.holder:IsShown() then text.holder:Show() end
                 end
             end
         end
@@ -2949,10 +2950,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                 QueueCombatText(info, info.nativeTime)
             end
         end
-        local pendingReady = UpdatePending(now) ~= false
+        if UpdatePending(now) == false then
+            ResetDisplay(true)
+            return
+        end
+        local animationNow, paused, resumed = T.AnimationTime(now)
+        if paused or resumed then return end
         if
-            not pendingReady
-            or not nativeText.Project(
+            not nativeText.Project(
                 activeTexts,
                 now,
                 distanceScaling.enabled,
@@ -2964,7 +2969,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
         -- Enemy animations use their absolute age. No OnUpdate arg1 leaks into
         -- the post-camera callback; MSBT keeps its existing elapsed-time path.
-        UpdateTexts(now, 0)
+        UpdateTexts(animationNow, 0, now)
     end)
     frame:SetScript("OnUpdate", function()
         if cameraDrag.owned and not cameraDrag.starting and not cameraDrag.RightButtonHeld() then cameraDrag.Stop() end
@@ -2995,7 +3000,8 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         if table.getn(activeTexts) == 0 and table.getn(pending) == 0 and table.getn(pendingGroups) == 0 then return end
         local now = GetTime()
         UpdatePending(now)
-        UpdateTexts(now, arg1)
+        local animationNow, paused, resumed = T.AnimationTime(now)
+        if not paused and not resumed then UpdateTexts(animationNow, arg1, now) end
     end)
 
     hooksecurefunc("HideNameplates", function()

@@ -692,7 +692,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             row.lossValue, row.lossMaximum, row.lossKey, row.lossName = value, maximum, key, name
             if not previous or value >= previous then return end
-            local now = GetTime()
+            local now = T.AnimationTime()
             -- Continue from the currently visible edge, never an old peak.
             local edge = self.active[row] and math.max(previous, Edge(row, now)) or previous
             row.lossFrom, row.lossTo, row.lossStart = edge, value, now
@@ -709,17 +709,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 self:ClearAll()
                 return
             end
-            local now = GetTime()
+            local now, paused = T.AnimationTime()
             for row in pairs(self.active) do
                 if not row.bar:IsVisible() or now < row.lossStart then
                     self:Clear(row)
-                elseif now - row.lossStart >= duration then
+                elseif not paused and now - row.lossStart >= duration then
                     -- Keep the current accepted baseline after the trail ends.
                     if row.lossTexture and row.lossTexture:IsShown() then row.lossTexture:Hide() end
                     self.active[row] = nil
                     self.count = self.count - 1
                     row.lossFrom, row.lossTo, row.lossStart = nil, nil, nil
-                else
+                elseif not paused then
                     Paint(row, Edge(row, now))
                 end
             end
@@ -1201,11 +1201,12 @@ DFRL:NewMod("RunTimers", 5, function()
             end
             local width = bar.layoutWidth or BAR_WIDTH
             local sameBounds = effectWidth == width and effectMaximum == maximum and effectEndless == endless
-            local now = GetTime()
+            local now, paused, resumed = T.AnimationTime()
             -- A growing fill can keep its previous (narrower) decoration until
             -- the next cosmetic sample. Keep the progress-write frame clear,
             -- even when the sample is due. Shrinks and recovery clip immediately.
             if flowUpdatedAt and sameBounds and seconds >= effectSeconds and not geometryDirty then
+                if (paused or resumed) and seconds == effectSeconds then return end
                 if progressAdvanced then return end
                 if (seconds ~= maximum or seconds == effectSeconds) and now - flowUpdatedAt < FLOW_INTERVAL then
                     return
@@ -3981,7 +3982,8 @@ DFRL:NewMod("RunTimers", 5, function()
                 entry.StopGlow()
                 return
             end
-            local elapsed = math.max(0, math.min(tonumber(arg1) or 0, 0.1))
+            local elapsed = T.AnimationElapsed(math.max(0, math.min(tonumber(arg1) or 0, 0.1)))
+            if elapsed <= 0 then return end
             entry.glowAge = entry.glowAge + elapsed
             if entry.glowAge < 1 / 30 then return end
             entry.glowPhase = math.mod(entry.glowPhase + entry.glowAge * 2 * math.pi / 4.8, 2 * math.pi)
@@ -4907,9 +4909,9 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         if render.activeMarkerCount == 0 then return end
         -- Only the official schedule establishes active and defeated bosses.
-        -- UI time drives decoration only, including while the run is paused.
+        -- Cosmetic time holds the glow's phase during a native pause.
         -- The native run clock and schedule still own all gameplay timing/state.
-        local pulse = 0.5 - 0.5 * math.cos(GetTime() * 2 * math.pi / ACTIVE_GLOW_PERIOD)
+        local pulse = 0.5 - 0.5 * math.cos(T.AnimationTime() * 2 * math.pi / ACTIVE_GLOW_PERIOD)
         local glowAlpha = ACTIVE_GLOW_MIN_ALPHA + (ACTIVE_GLOW_MAX_ALPHA - ACTIVE_GLOW_MIN_ALPHA) * pulse
         for _, marker in ipairs(render.activeMarkers) do
             if marker.glowAlpha ~= glowAlpha then

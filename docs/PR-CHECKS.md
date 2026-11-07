@@ -1021,6 +1021,13 @@ The assertions cover:
   target sample serves each pass while visible buttons retain independent
   range reads; missing/friendly/hostile transitions and hidden allocation/cleanup
   use fresh native boundaries.
+- The pause cases hold an in-flight range fade and native combat text, keep the
+  combat cursor current, and verify the first resumed frame uses the held pose.
+  Chat cases cover the native fade hold and resume calls for selected and
+  inactive panes. Waypoint cases cover holding and resuming its display blend.
+  These are CI-only mocks. They do not exercise Escape in the packaged client,
+  the renderer's native chat fade timer, or a real native combat-text anchor
+  expiring during pause.
 - Loot service cadence cases retain queued notifications through the former
   200-ms interval and deliver at the 1.5-second boundary in both Performance Mode
   states. Failed native handoffs use that same interval; renderer backpressure,
