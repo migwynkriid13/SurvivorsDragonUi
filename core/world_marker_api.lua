@@ -695,20 +695,20 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             if not accepted then return end
         end
         local lightAlpha, animationNow, paused, resumed
-        if not state.choices.performanceMode then
+        if allyOnScreen or not state.choices.performanceMode then
             animationNow, paused, resumed = T.AnimationTime()
         end
         local held = paused or resumed
+        local wave = 0
         if allyOnScreen then
-            if animationNow and (not held or state.beaconWave == nil) then
-                state.beaconWave = math.sin(animationNow * 2.2)
-            end
+            if not held or state.beaconWave == nil then state.beaconWave = math.sin(animationNow * 2.2) end
+            wave = state.beaconWave
             local ready, failure = SampleReviveBeacons(total, sample, clock)
             if failure == "STREAM_CHANGED" then
                 ClearCatalog()
                 return true
             end
-            if ready then lightAlpha = animationNow and 0.85 + 0.15 * state.beaconWave or 0.85 end
+            if ready then lightAlpha = state.choices.performanceMode and 0.85 or 0.85 + 0.15 * wave end
         end
         if clock then state.clock = clock end
         state.drawPass = (state.drawPass or 0) + 1
