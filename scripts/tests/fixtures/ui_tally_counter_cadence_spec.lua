@@ -5,6 +5,7 @@ local context = H.New()
 local env = context.env
 env.activeRows, env.markers, env.runEffects = {}, {}, {}
 context.lossClears = 0
+context.rimHides = 0
 env.render = {
     bossLoss = {
         ClearAll = function(_, rows)
@@ -70,7 +71,10 @@ env.RetireEncounters = function() context.retired = true end
 env.run = env.CreateFrame("Frame", nil, env.UIParent)
 env.run:Hide()
 env.run.affixes = { Clear = function() context.affixesCleared = true end }
-env.run.heroicLevel = { Clear = function() context.numeralCleared = true end }
+env.run.heroicLevel = {
+    Clear = function() context.numeralCleared = true end,
+    HideRim = function() context.rimHides = context.rimHides + 1 end,
+}
 env.HideRunFlow, env.ShowMarkerGlow = function() end, function() end
 env.SetRunAppearance = function() error("hidden run timer must not repaint during mode transition") end
 env.runSequence, env.packetSequence = 0, 0
@@ -96,11 +100,16 @@ setfenv(transition, env)
 transition = transition()
 local function Mode(value)
     local previous, cleared = env.performanceMode, context.lossClears
+    local rimHides = context.rimHides
     context.settings.performanceMode = value
     transition()
     assert(
         context.lossClears == cleared + (previous ~= value and 1 or 0),
         "boss loss must clear only on actual Performance Mode transitions"
+    )
+    assert(
+        context.rimHides == rimHides + (not previous and value and 1 or 0),
+        "Heroic rim must hide only when entering Performance Mode"
     )
 end
 

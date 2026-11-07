@@ -27,6 +27,7 @@ local function Clock()
             context.numeral = { rank = rank, maximum = maximum, width = width }
             context.reads.numeral = (context.reads.numeral or 0) + 1
         end,
+        AnimateRim = function() end,
     }
     env.runBar = env.CreateFrame("StatusBar", nil, env.run)
     env.runBar.layoutWidth = 280

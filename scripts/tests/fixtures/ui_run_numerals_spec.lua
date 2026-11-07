@@ -20,8 +20,17 @@ function c:Object(...)
     end
     return object
 end
-local bar = env.CreateFrame("StatusBar", nil, env.UIParent)
-local border = env.CreateFrame("Frame", nil, env.UIParent)
+local pill = env.CreateFrame("Frame", nil, env.UIParent)
+local bar = env.CreateFrame("StatusBar", nil, pill)
+local border = env.CreateFrame("Frame", nil, pill)
+local rim = {}
+function pill:CreateTexture(name, layer)
+    local texture = c:Object("Texture", name, self)
+    texture.layer = layer
+    function texture:SetBlendMode(mode) self.blend = mode end
+    table.insert(rim, texture)
+    return texture
+end
 local chunk = assert(loadfile(assert(arg[1], "missing extracted numeral source")))
 setfenv(chunk, env)
 local new = chunk()
@@ -155,4 +164,69 @@ view:Update(2, 960, 280)
 view:Resize(560)
 aligned:Resize(560)
 c:NoPresentationWrites()
-print("PASS static Heroic numeral lifecycle, ranks, affix alignment, resize, retirement and binding retry")
+
+local paused, resumed
+env.T.AnimationTime = function()
+    c.reads.animation = (c.reads.animation or 0) + 1
+    return c.now, paused, resumed
+end
+view:Update(6, 960, 280)
+view:AnimateRim()
+assert(#rim == 0, "hidden timer allocated rim effects")
+border:Show()
+view:Update(6, 960, 280)
+view:AnimateRim()
+assert(#rim == 0 and texture:IsShown(), "Performance Mode allocated rim effects or hid the numeral")
+env.performanceMode = false
+view:Update(5, 960, 280)
+view:AnimateRim()
+assert(#rim == 0, "Heroic V allocated rim effects")
+
+local lastWidth, lastGreen = 0, 1
+for rank = 6, 10 do
+    view:Update(rank, 960, 280)
+    view:AnimateRim()
+    assert(#rim == rank - 2, "Heroic rim did not grow by one ember per rank")
+    assert(rim[1].width > lastWidth and rim[1].color[2] < lastGreen, "danger did not escalate by rank")
+    lastWidth, lastGreen = rim[1].width, rim[1].color[2]
+end
+assert(rim[1].point[3] == "LEFT" and rim[2].point[3] == "RIGHT", "rim glows missed the two pill caps")
+for _, effect in ipairs(rim) do
+    assert(effect.layer == "BACKGROUND" and effect.blend == "ADD" and effect:IsShown(), "invalid rim effect layer")
+end
+
+c:ResetCounts()
+view:AnimateRim()
+c:NoPresentationWrites()
+c.now = c.now + 0.1
+view:AnimateRim()
+assert(c.writes.SetAlpha == 8 and c.writes.SetPoint == 6, "timed paint rewrote the static glow anchors")
+c:ResetCounts()
+paused, c.now = true, c.now + 0.1
+view:AnimateRim()
+paused, resumed = false, true
+view:AnimateRim()
+c:NoPresentationWrites()
+resumed = false
+view:AnimateRim()
+assert(c.writes.SetAlpha == 8, "rim did not resume from the held cosmetic clock")
+
+view:Update(6, 960, 280)
+view:AnimateRim()
+for index, effect in ipairs(rim) do
+    assert(effect:IsShown() == (index <= 4), "lower rank retained surplus embers")
+end
+env.performanceMode = true
+view:HideRim()
+c:ResetCounts()
+view:AnimateRim()
+c:NoPresentationWrites()
+assert(not c.reads.animation and not rim[1]:IsShown() and texture:IsShown(), "static mode kept animating the rim")
+env.performanceMode = false
+view:AnimateRim()
+assert(#rim == 8 and rim[1]:IsShown(), "rim recovery failed to reuse its textures")
+view:Clear()
+for _, effect in ipairs(rim) do
+    assert(not effect:IsShown(), "retired timer retained a rim effect")
+end
+print("PASS Heroic numeral lifecycle, rank-scaled rim, pause, pooling and retirement")
