@@ -576,15 +576,7 @@ function DFRL.tools.NewWorldMarkerApi(navigation)
             distant.views[unit.id] = view
         end
         if view.drawPass == state.drawPass then return end
-        style.UpdateProjected(
-            view,
-            unit,
-            point.x,
-            point.plateY,
-            distant.namesOnly,
-            distant.fontSize,
-            state.choices.performanceMode
-        )
+        style.UpdateProjected(view, unit, point.x, point.plateY, distant.namesOnly, distant.fontSize)
         view.drawPass = state.drawPass
     end
     local function Project()

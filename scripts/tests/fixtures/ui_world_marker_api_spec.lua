@@ -1391,6 +1391,12 @@ do
             if frame.kind == kind and frame:IsVisible() and (not name or frame:GetText() == name) then return frame end
         end
     end
+    local function VisibleDragon()
+        local art = env.DFRL:GetInfoOrCons("tex") .. "nameplates\\DragonflightElite.blp"
+        for _, frame in ipairs(c.objects) do
+            if frame.kind == "Texture" and frame:IsVisible() and frame:GetTexture() == art then return frame end
+        end
+    end
     c:Service()
     assert(display.Get("nameplateDistance") == 20 and not requested and native.registers == 0)
     assert(display.Copy({ nameplateDistance = 500 }).nameplateDistance == 200)
@@ -1400,7 +1406,7 @@ do
     c:Service()
     c:Frame()
     assert(requested and native.lastKinds.elite and not native.lastKinds.finalBoss)
-    assert(Visible("FontString", "Elite") and Visible("StatusBar").value == 0.5)
+    assert(Visible("FontString", "Elite") and Visible("StatusBar").value == 0.5 and VisibleDragon())
     assert(not Visible("FontString", "Guardian"), "head height duplicated a native plate at 20 yards")
     assert(not Visible("FontString", "Final"), "Bosses off exposed a final boss")
     local discoveryReads = native.calls
@@ -1419,7 +1425,10 @@ do
     display.Set("nameplatesNamesOnly", true)
     display.Set("performanceMode", true)
     c:Frame()
-    assert(Visible("FontString", "Guardian") and not Visible("StatusBar"), "Names only retained a distant health bar")
+    assert(
+        Visible("FontString", "Guardian") and not Visible("StatusBar") and not VisibleDragon(),
+        "Names only retained distant bar artwork"
+    )
     local allocated = #c.objects
     v = false
     c:Frame()

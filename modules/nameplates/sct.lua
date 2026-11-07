@@ -313,6 +313,17 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         plateFilter.source, plateFilter.stamp, plateFilter.accepted = nil, nil, nil
         if barrier then plateFilter.barrier = barrier end
     end
+    function plateFilter.NeedsAliases()
+        return plateFilter.needsRoster
+            or (plateStyle and not nameplatesNamesOnly and enemyPlatesEnabled and next(shownPlates) ~= nil)
+    end
+    function plateFilter.RefreshTarget()
+        plateFilter.targetName = plateStyle
+                and type(_G.UnitName) == "function"
+                and UnitExists("target")
+                and UnitName("target")
+            or nil
+    end
     function plateFilter.Configure()
         local bosses = DFRL.display.Get("nameplatesShowBosses") ~= false
         local guardians = DFRL.display.Get("nameplatesShowGuardians") ~= false
@@ -337,7 +348,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         plateFilter.regular = regular
         plateFilter.enabled = not (bosses and guardians and elites and regular)
         plateFilter.needsRoster = plateFilter.enabled and (bosses or guardians or elites or regular)
-        if not plateFilter.needsRoster then
+        if not plateFilter.NeedsAliases() then
             if plateFilter.distant then
                 plateFilter.ClearNames()
             else
@@ -349,11 +360,12 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return true
     end
     plateFilter.Configure()
+    plateFilter.RefreshTarget()
     function sct.EnemyNameplatesVisible() return inWorld and enemyPlatesEnabled end
     function sct.RequestDistantNameplateRoster(wanted)
         if plateFilter.distant == wanted then return end
         plateFilter.distant = wanted
-        if not wanted and not plateFilter.needsRoster then
+        if not wanted and not plateFilter.NeedsAliases() then
             plateFilter.Clear()
             plateFilter.time = nil
         end
@@ -388,7 +400,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         end
     end
     function plateFilter.Update(elapsed)
-        if not plateFilter.needsRoster and not plateFilter.distant then return end
+        local needsAliases = plateFilter.NeedsAliases()
+        if not needsAliases and not plateFilter.distant then
+            if plateFilter.accepted or plateFilter.time then
+                plateFilter.Clear()
+                plateFilter.time, plateFilter.age = nil, 0.2
+            end
+            return
+        end
         plateFilter.age = plateFilter.age + (tonumber(elapsed) or 0)
         if plateFilter.age < 0.2 then return end
         plateFilter.age = 0
@@ -420,7 +439,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             plateFilter.source == entries
             and plateFilter.stamp == stamp
             and plateFilter.accepted == plateFilter.units
-            and (not plateFilter.needsRoster or plateFilter.aliasesReady)
+            and (not needsAliases or plateFilter.aliasesReady)
         then
             return
         end
@@ -443,7 +462,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
                     plateFilter.liveUnits[entry.id] = unit
                 end
                 unit.hp, unit.hpm = entry.hp, entry.hpm
-                if plateFilter.needsRoster then
+                if needsAliases then
                     local maxima = plateFilter.names[entry.name]
                     if not maxima then
                         maxima = {}
@@ -462,7 +481,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if not next(maxima) then plateFilter.names[name] = nil end
         end
         plateFilter.source, plateFilter.stamp, plateFilter.accepted = entries, stamp, plateFilter.units
-        plateFilter.aliasesReady = plateFilter.needsRoster
+        plateFilter.aliasesReady = needsAliases
     end
     local function PlateName(data, sample)
         if not sample then return data.nameRegion and data.nameRegion:GetText() end
@@ -496,6 +515,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         return sample.red, sample.green, sample.blue
     end
     function plateFilter.Matches(data, sample)
+        if sample then sample.kindRead = true end
         if not plateFilter.aliasesReady then return false end
         local name = PlateName(data, sample)
         if not name or name == "" then
@@ -515,12 +535,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         local signature = maxima[maximum]
         if signature then
             data.filterUnit = signature.id and signature or nil
+            if sample and maximum ~= 100 then sample.elite = true end
             return plateFilter.visible[signature.mask]
         end
         -- Native plates stay bound until hidden. The live roster and the bar
         -- can receive a maximum-health change in either order.
         local unit = data.filterUnit
         if maximum > 100 and unit and unit.name == name and plateFilter.liveUnits[unit.id] == unit then
+            if sample then sample.elite = true end
             return plateFilter.visible[unit.mask]
         end
         data.filterUnit = nil
@@ -833,6 +855,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         SuppressNativeLayers(plate, data)
         local sample = data.sample
         sample.nameRead, sample.rangeRead, sample.valueRead, sample.colorRead = false, false, false, false
+        sample.kindRead, sample.elite = false, nil
         UpdatePresentation(plate, data, forcePresentation, sample)
         -- Hidden tracking still samples native data, but its skin has no pixels
         -- to refresh. Unmasking updates the skin in this same callback.
@@ -842,8 +865,14 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             if not nameplatesNamesOnly then
                 PlateRange(data, sample)
                 PlateValue(data, sample)
+                if not sample.kindRead and IsEnemyPlate(data, sample) then plateFilter.Matches(data, sample) end
+                -- Wenilla keeps the selected plate at full alpha and dims others.
+                sample.selected = plateFilter.targetName ~= nil
+                    and sample.name == plateFilter.targetName
+                    and plate.GetAlpha
+                    and plate:GetAlpha() == 1
             end
-            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize, sample, grouping.performance)
+            plateStyle.Update(plate, data, nameplatesNamesOnly, nameplateFontSize, sample)
         end
         if not IsShownEnemy(plate, data, sample) then
             RetirePlate(plate)
@@ -2895,6 +2924,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             iconSourcesDirty.talents, iconSourcesDirty.debuffs = true, true
             iconSourcesDirty.target, iconSourcesDirty.mouseover = true, true
             enemyPlatesEnabled = _G.NAMEPLATES_ON and true or false
+            plateFilter.RefreshTarget()
             SyncGameSettings(true)
         elseif event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             cameraDrag.Stop(true)
@@ -2903,7 +2933,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             nativeText.Configure(false)
             SyncScrollRoot()
             plateFilter.Clear(plateFilter.sequence)
-            plateFilter.time, plateFilter.zone = nil, nil
+            plateFilter.time, plateFilter.zone, plateFilter.targetName = nil, nil, nil
             for _, data in pairs(plates) do
                 RestorePresentation(data, true)
             end
@@ -2917,6 +2947,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             iconSourcesDirty.talents = true
         elseif event == "PLAYER_TARGET_CHANGED" then
             iconSourcesDirty.target = true
+            plateFilter.RefreshTarget()
             ScanPlates(false)
         elseif event == "UPDATE_MOUSEOVER_UNIT" then
             iconSourcesDirty.mouseover = true

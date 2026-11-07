@@ -1,30 +1,12 @@
--- Appearance adapted from Kesava's Kui_Nameplates, Vanilla port by laytya.
--- https://github.com/laytya/Kui-Namaplates/releases/tag/beta0.16
--- Full original attribution and GPL-3.0 text follow this module.
--- Presentation only: DEFAULT font, native health bars and copied native names.
--- Native plate geometry/data and the existing SCT tracking remain independent.
+-- Dragonflight 10.0 nameplate artwork © Blizzard Entertainment, Inc.
+-- Source and crop: third_party/Nameplates-ARTWORK.md.
+-- Original renderer attribution and GPL-3.0 text follow this module.
 
 DFRL:NewMod("NameplateStyle", 5, function()
     local path = DFRL:GetInfoOrCons("tex") .. "nameplates\\"
-    local WIDTH, HEIGHT, FONT_SIZE = 100, 10, 9
-    local TEXT_OFFSET, GLOW_OFFSET = 2.5, 4
+    local WIDTH, HEIGHT, FONT_SIZE = 100, 7, 9
     local classHealth = DFRL.display.Get("classHealth")
     DFRL.display.Listen(function() classHealth = DFRL.display.Get("classHealth") end)
-
-    local function PlateColor(red, green, blue)
-        if red > 0.9 and green < 0.2 and blue < 0.2 then
-            return 0.7, 0.2, 0.1
-        elseif red > 0.9 and green > 0.9 and blue < 0.2 then
-            return 1, 0.8, 0
-        elseif red < 0.2 and green < 0.2 and blue > 0.9 then
-            return 0.2, 0.5, 0.9
-        elseif red < 0.2 and green > 0.9 and blue < 0.2 then
-            return 0.2, 0.6, 0.1
-        elseif red < 0.6 and math.abs(red - green) < 0.01 and math.abs(red - blue) < 0.01 then
-            return 0.5, 0.5, 0.5
-        end
-        return red, green, blue
-    end
 
     local function CreateLabel(parent, justify)
         local label = parent:CreateFontString(nil, "OVERLAY")
@@ -36,25 +18,17 @@ DFRL:NewMod("NameplateStyle", 5, function()
         return label
     end
 
-    local function EnsureShadow(style)
-        if style.shadow then return end
-        local visual = style.visual
-        local shadow = visual:CreateTexture(nil, "BACKGROUND")
-        shadow:SetTexture(path .. "kui_frame_glow.blp")
-        shadow:SetTexCoord(0, 0.469, 0, 0.625)
-        shadow:SetPoint("TOPLEFT", visual, "TOPLEFT", -GLOW_OFFSET, GLOW_OFFSET)
-        shadow:SetPoint("BOTTOMRIGHT", visual, "BOTTOMRIGHT", GLOW_OFFSET, -GLOW_OFFSET)
-        shadow:SetVertexColor(0, 0, 0, 0.85)
-        style.shadow = shadow
-    end
-
     local function EnsureHealth(style)
         if style.health then return end
         local visual, overlay = style.visual, style.overlay
+        local border = visual:CreateTexture(nil, "BACKGROUND")
+        border:SetTexture("Interface\\Buttons\\WHITE8X8")
+        border:SetAllPoints(visual)
+        border:SetVertexColor(0, 0, 0, 1)
         local background = visual:CreateTexture(nil, "ARTWORK")
         background:SetTexture("Interface\\Buttons\\WHITE8X8")
-        background:SetAllPoints(visual)
-        background:SetVertexColor(0, 0, 0, 0.8)
+        background:SetAllPoints(overlay)
+        background:SetVertexColor(0.2, 0.2, 0.2, 1)
 
         local health = CreateFrame("StatusBar", nil, visual)
         health:SetPoint("TOPLEFT", visual, "TOPLEFT", 1, -1)
@@ -63,7 +37,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
         health:EnableMouse(false)
         style.healthFill = T.NewClippedFill(health)
         style.healthFill.RefreshWidth(WIDTH - 2)
-        style.healthFill.SetTexture(path .. "kui_bar.blp")
+        style.healthFill.SetTexture(path .. "DragonflightBarFill.blp")
 
         if style.native then
             local raid = overlay:CreateTexture(nil, "OVERLAY")
@@ -73,7 +47,30 @@ DFRL:NewMod("NameplateStyle", 5, function()
             raid:Hide()
             style.raid = raid
         end
-        style.background, style.health = background, health
+        style.border, style.background, style.health, style.selected = border, background, health, false
+    end
+
+    local function UpdateBadge(style, wanted)
+        local badge = style.badge
+        if not wanted then
+            if badge and badge:IsShown() then badge:Hide() end
+            return
+        end
+        if not badge then
+            badge = style.overlay:CreateTexture(nil, "OVERLAY")
+            badge:SetPoint("CENTER", style.visual, "LEFT", 0, 0)
+            badge:SetWidth(14)
+            badge:SetHeight(13)
+            badge:Hide()
+            style.badge = badge
+        end
+        if not style.badgeReady then
+            local texture = path .. "DragonflightElite.blp"
+            local loaded = badge:SetTexture(texture)
+            style.badgeReady = T.TextureAssigned(loaded, badge:GetTexture(), texture)
+            if style.badgeReady then badge:SetTexCoord(0, 42 / 64, 0, 39 / 64) end
+        end
+        if style.badgeReady and not badge:IsShown() then badge:Show() end
     end
 
     local function CreateStyle(parent, nativeBar)
@@ -95,7 +92,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
         overlay:EnableMouse(false)
 
         local name = CreateLabel(overlay, "CENTER")
-        name:SetPoint("BOTTOM", overlay, "TOP", 0.5, -TEXT_OFFSET)
+        name:SetPoint("BOTTOM", visual, "TOP", 0, 2)
         name:SetWidth(WIDTH * 2)
 
         return {
@@ -169,10 +166,11 @@ DFRL:NewMod("NameplateStyle", 5, function()
         fill.SetFraction(fraction)
     end
 
-    local function Update(plate, data, namesOnly, fontSize, sample, performanceMode)
+    local function Update(plate, data, namesOnly, fontSize, sample)
         if not plate:IsShown() then return end
         local style = data.style
         if not style then return end
+        namesOnly = namesOnly == true
 
         if style.fontSize ~= fontSize then
             style.fontSize = nil
@@ -199,30 +197,23 @@ DFRL:NewMod("NameplateStyle", 5, function()
         local nativeTexture = data.bar and not data.nativeLayersSuppressed and data.bar:GetStatusBarTexture()
         if nativeTexture and nativeTexture.SetAlpha and nativeTexture:GetAlpha() ~= 0 then nativeTexture:SetAlpha(0) end
 
-        if style.namesOnly ~= namesOnly or style.performanceMode ~= performanceMode then
+        if style.namesOnly ~= namesOnly then
             ClearHealthSample(style)
             if namesOnly then
                 if style.health then
+                    if style.border:IsShown() then style.border:Hide() end
                     if style.background:IsShown() then style.background:Hide() end
                     if style.health:IsShown() then style.health:Hide() end
                     if style.raid and style.raid:IsShown() then style.raid:Hide() end
+                    UpdateBadge(style, false)
                 end
             else
                 EnsureHealth(style)
-                if not performanceMode then EnsureShadow(style) end
+                if not style.border:IsShown() then style.border:Show() end
                 if not style.background:IsShown() then style.background:Show() end
                 if not style.health:IsShown() then style.health:Show() end
             end
-            if style.shadow then
-                local show = not namesOnly and not performanceMode
-                if show and not style.shadow:IsShown() then
-                    style.shadow:Show()
-                elseif not show and style.shadow:IsShown() then
-                    style.shadow:Hide()
-                end
-            end
             style.namesOnly = namesOnly
-            style.performanceMode = performanceMode
         end
 
         local red, green, blue
@@ -250,17 +241,13 @@ DFRL:NewMod("NameplateStyle", 5, function()
         if classColor then
             red, green, blue = unpack(classColor)
         end
-        local nameRed, nameGreen, nameBlue = 1, 1, 1
-        if namesOnly then
-            nameRed, nameGreen, nameBlue = red, green, blue
-        end
         if
-            not T.NearlyEqual(style.nameRed, nameRed)
-            or not T.NearlyEqual(style.nameGreen, nameGreen)
-            or not T.NearlyEqual(style.nameBlue, nameBlue)
+            not T.NearlyEqual(style.nameRed, red)
+            or not T.NearlyEqual(style.nameGreen, green)
+            or not T.NearlyEqual(style.nameBlue, blue)
         then
-            style.name:SetTextColor(nameRed, nameGreen, nameBlue, 1)
-            style.nameRed, style.nameGreen, style.nameBlue = nameRed, nameGreen, nameBlue
+            style.name:SetTextColor(red, green, blue, 1)
+            style.nameRed, style.nameGreen, style.nameBlue = red, green, blue
         end
         T.SetTextIfChanged(style.name, name or "")
         -- The native bar remains live for SCT health-loss matching. Only its
@@ -274,10 +261,14 @@ DFRL:NewMod("NameplateStyle", 5, function()
             minimum, maximum = data.bar:GetMinMaxValues()
             value = data.bar:GetValue()
         end
-        if not classColor then
-            red, green, blue = PlateColor(red, green, blue)
+        local selected = sample ~= nil and sample.selected == true
+        if style.selected ~= selected then
+            local tint = selected and 1 or 0
+            style.border:SetVertexColor(tint, tint, tint, selected and 0.9 or 1)
+            style.selected = selected
         end
         UpdateHealth(style, minimum, maximum, value, red, green, blue)
+        UpdateBadge(style, sample and sample.elite)
         if style.raid then
             local regions = data.nativeRegions
             CopyNativeIcon(style.raid, regions and regions[6])
@@ -291,7 +282,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
         ClearHealthSample(style)
         if style.masked == masked then return end
         style.masked = masked
-        -- Hide only the complete custom visual child, including its shadow.
+        -- Hide the complete custom visual child, including its badge.
         -- The native plate stays live for the V-off SCT coordinate feed.
         if masked then
             style.visual:Hide()
@@ -306,7 +297,7 @@ DFRL:NewMod("NameplateStyle", 5, function()
             sample = { minimum = 0, maximum = 1, red = 1, green = 0, blue = 0 },
         }
     end
-    local function UpdateProjected(data, unit, x, y, namesOnly, fontSize, performanceMode)
+    local function UpdateProjected(data, unit, x, y, namesOnly, fontSize)
         local visual, sample = data.style.visual, data.sample
         if data.x ~= x or data.y ~= y then
             visual:ClearAllPoints()
@@ -315,8 +306,10 @@ DFRL:NewMod("NameplateStyle", 5, function()
             data.x, data.y = x, y
         end
         sample.name, sample.value = unit.name, unit.hp / unit.hpm
+        local kind = unit.kind
+        sample.elite = kind == "elite" or kind == "guardian" or kind == "boss" or kind == "final"
         if not visual:IsShown() then visual:Show() end
-        Update(visual, data, namesOnly, fontSize, sample, performanceMode)
+        Update(visual, data, namesOnly, fontSize, sample)
     end
 
     T.NameplateStyle = {
@@ -329,14 +322,14 @@ DFRL:NewMod("NameplateStyle", 5, function()
 end)
 
 --[[
-Nameplate appearance adapted from Kui_Nameplates, by Kesava at curse.com,
+Original nameplate renderer adapted from Kui_Nameplates, by Kesava at curse.com,
 ported to Vanilla by laytya: https://github.com/laytya/Kui-Namaplates
 Release: beta0.16, published 2025-06-11, tag commit a87e844.
 Release asset: Kui-Namaplates_beta0.16b.zip
 https://github.com/laytya/Kui-Namaplates/releases/download/beta0.16/Kui-Namaplates_beta0.16b.zip
 License: GPL-3.0, reproduced from the beta0.16 tag's repository LICENSE.
 
-Bundled unmodified textures, renamed for this addon:
+Formerly bundled textures, renamed for this addon:
   Kui_Media/t/bar.tga -> media/tex/nameplates/kui_bar.tga
   Kui_Nameplates/media/FrameGlow.tga -> media/tex/nameplates/kui_frame_glow.tga
 

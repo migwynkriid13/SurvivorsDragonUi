@@ -1,11 +1,11 @@
-Nameplate appearance adapted from Kui_Nameplates, by Kesava at curse.com,
+Original nameplate renderer adapted from Kui_Nameplates, by Kesava at curse.com,
 ported to Vanilla by laytya: https://github.com/laytya/Kui-Namaplates
 Release: beta0.16, published 2025-06-11, tag commit a87e844.
 Release asset: Kui-Namaplates_beta0.16b.zip
 https://github.com/laytya/Kui-Namaplates/releases/download/beta0.16/Kui-Namaplates_beta0.16b.zip
 License: GPL-3.0, reproduced from the beta0.16 tag's repository LICENSE.
 
-Bundled unmodified textures, renamed for this addon:
+Formerly bundled textures, renamed for this addon:
   Kui_Media/t/bar.tga -> media/tex/nameplates/kui_bar.tga
   Kui_Nameplates/media/FrameGlow.tga -> media/tex/nameplates/kui_frame_glow.tga
 

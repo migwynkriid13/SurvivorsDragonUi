@@ -307,7 +307,7 @@ assert(
 assert(boss.name:IsVisible(), "float-rounded boss maximum did not match")
 assert(not context.ordinary.fixture.style.name:IsVisible(), "ordinary enemy bypassed the filter")
 assert(
-    not guardian.health and not guardian.shadow and not guardian.background and not guardian.raid,
+    not guardian.health and not guardian.border and not guardian.background and not guardian.raid and not guardian.badge,
     "names-only allocated unused bar artwork"
 )
 assert(context.guardian.nativeBar.maximum == 4294967296, "filter/style rewrote the native health range")
@@ -346,7 +346,10 @@ assert(guardian.name:IsVisible(), "native wake conversion hid a guardian before 
 waking[1].hp, waking[1].state = 1200, 1
 context:Publish(waking)
 assert(guardian.name:IsVisible(), "awake guardian lost its rounded/ceiling health match")
-assert(not guardian.health and not guardian.shadow, "combat allocated unused names-only bar artwork")
+assert(
+    not guardian.health and not guardian.border and not guardian.badge,
+    "combat allocated unused names-only bar artwork"
+)
 context:ResetCounts()
 context:Tick(0.21)
 context:NoPresentationWrites()
@@ -397,7 +400,7 @@ print("PASS native health representations preserve ties and reject guessed perce
 context:SetSetting("nameplatesNamesOnly", false)
 context:Tick(0.21)
 assert(
-    guardian.health and guardian.health:IsVisible() and guardian.shadow:IsVisible(),
+    guardian.health and guardian.health:IsVisible() and guardian.border:IsVisible() and guardian.badge:IsVisible(),
     "normal bars did not allocate on demand"
 )
 local allocated = #context.objects
@@ -437,7 +440,8 @@ assert(
     guardian.name:IsVisible()
         and not guardian.health:IsVisible()
         and not artwork:IsVisible()
-        and not guardian.shadow:IsVisible()
+        and not guardian.border:IsVisible()
+        and not guardian.badge:IsVisible()
         and not guardian.background:IsVisible()
 )
 assert(
@@ -454,41 +458,52 @@ assert(
 print("PASS names-only transitions hide actual regions and reuse lazily allocated bars")
 
 do
-    local current = Plates(function(owner)
+    local current = Plates(function(owner, env)
         owner.settings.nameplatesNamesOnly = false
         owner.settings.nameplatesShowElites, owner.settings.nameplatesShowRegular = true, true
         owner.settings.performanceMode = true
+        owner.targetName = "Hogger"
+        env.UnitName = function(unit) return unit == "target" and owner.targetName or nil end
+        owner.elite = owner:MakePlate("Elite", 2000)
+        owner.final = owner:MakePlate("Final", 3000)
+        owner.sameName = owner:MakePlate("Hogger", 100)
+        owner.sameName:SetAlpha(0.7)
     end)
     current:Tick(0.21)
     local skin = current.guardian.fixture.style
-    assert(skin.health:IsVisible() and not skin.shadow, "Performance Mode prepared a decorative plate shadow")
-    current.guardian:Hide()
-    current:SetSetting("performanceMode", false)
-    current:Tick(0.21)
-    assert(not skin.shadow, "hidden plate allocated its deferred shadow")
-    current:SetSetting("performanceMode", true)
-    current.guardian:Show()
-    current:Tick(0.21)
-    assert(skin.health:IsVisible() and not skin.shadow, "Performance Mode Show prepared a plate shadow")
-    current:SetSetting("performanceMode", false)
-    current:Tick(0.21)
-    local shadow, prepared = skin.shadow, #current.objects
-    assert(shadow:IsVisible(), "normal presentation did not prepare its missing shadow")
-    current:SetSetting("performanceMode", true)
-    current:Tick(0.21)
-    assert(not shadow:IsShown() and skin.health:IsVisible() and skin.name:IsVisible())
+    assert(skin.health:IsVisible() and not skin.badge, "a missing encounter publication earned a dragon")
+    assert(skin.border.vertexColor[1] == 1 and skin.border.vertexColor[4] == 0.9, "selected plate lost its pale border")
+    assert(
+        current.sameName.fixture.style.border.vertexColor[1] == 0,
+        "selection also outlined a dimmed same-name plate"
+    )
+    local roster = Entries()
+    roster[3] = { id = 12, kind = "elite", name = "Elite", hp = 1800, hpm = 2000 }
+    roster[4] = { id = 13, kind = "final", name = "Final", hp = 2800, hpm = 3000 }
+    current:Publish(roster)
+    for _, plate in ipairs({ current.guardian, current.boss, current.elite, current.final }) do
+        assert(plate.fixture.style.badge:IsVisible(), "a confirmed special encounter lost its dragon")
+    end
+    assert(not current.ordinary.fixture.style.badge, "a regular enemy allocated a dragon")
+    assert(not current.sameName.fixture.style.badge, "a same-name percentage plate earned a dragon")
+    local badge, prepared = skin.badge, #current.objects
     current:ResetCounts()
     current:Tick(0.21)
     current:NoPresentationWrites()
     current:SetSetting("nameplatesNamesOnly", true)
     current:SetSetting("performanceMode", false)
     current:Tick(0.21)
-    assert(not shadow:IsShown() and not skin.health:IsShown() and skin.name:IsVisible())
+    assert(not badge:IsShown() and not skin.health:IsShown() and skin.name:IsVisible())
     current:SetSetting("nameplatesNamesOnly", false)
     current:Tick(0.21)
-    assert(skin.shadow == shadow and shadow:IsVisible() and #current.objects == prepared)
+    assert(skin.badge == badge and badge:IsVisible() and #current.objects == prepared)
+    current.targetName = nil
+    current:Event(current.controller, "PLAYER_TARGET_CHANGED")
+    assert(skin.border.vertexColor[1] == 0, "clearing the target retained its pale border")
+    current:Publish({})
+    assert(not badge:IsShown() and skin.health:IsVisible(), "a retired classification kept the old dragon")
 end
-print("PASS Performance Mode hides pooled plate shadows, defers their first allocation and retains names/health")
+print("PASS Dragonflight plate borders and badges follow native selection, classification and pooling in both modes")
 
 for _, performanceMode in ipairs({ false, true }) do
     local current = Plates(function(owner)
@@ -503,7 +518,7 @@ for _, performanceMode in ipairs({ false, true }) do
     local nativeFill = native:GetStatusBarTexture()
     local uvWrites = fill.calls.SetTexCoord or 0
     assert(
-        fill:GetTexture() == current.env.DFRL:GetInfoOrCons("tex") .. "nameplates\\kui_bar.blp"
+        fill:GetTexture() == current.env.DFRL:GetInfoOrCons("tex") .. "nameplates\\DragonflightBarFill.blp"
             and viewport:GetWidth() == 98
             and not health:GetStatusBarTexture(),
         "nameplate did not draw the original artwork through a full-width clip"
@@ -530,7 +545,7 @@ for _, performanceMode in ipairs({ false, true }) do
     assert(health.maximum ~= 1000 and health.value ~= 900 and viewport:GetWidth() == 98)
     reject = false
     current:Tick(0.21)
-    assert(health.maximum == 1000 and health.value == 900 and fill.vertexColor[2] == 0.6)
+    assert(health.maximum == 1000 and health.value == 900 and fill.vertexColor[2] == 1)
     assert(current.env.T.NearlyEqual(viewport:GetWidth(), 98 * 0.9), "health did not resize the fixed-UV clip")
     native.minimum, native.maximum = 100, 1100
     current:Tick(0.21)
@@ -550,7 +565,7 @@ for _, performanceMode in ipairs({ false, true }) do
     current:Tick(0.21)
     assert(not fill:IsVisible() and current.env.T.NearlyEqual(viewport:GetWidth(), 98 * 0.8))
     plate:Show()
-    assert(health.maximum == 1100 and health.value == 800 and fill.vertexColor[2] == 0.6)
+    assert(health.maximum == 1100 and health.value == 800 and fill.vertexColor[2] == 1)
     assert(current.env.T.NearlyEqual(viewport:GetWidth(), 98 * 0.7), "pooled fill retained the previous health")
     assert((fill.calls.SetTexCoord or 0) == uvWrites, "health changes submitted new artwork UVs")
     assert(native:GetStatusBarTexture() == nativeFill, "cosmetic clipping replaced the native SCT source")

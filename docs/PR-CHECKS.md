@@ -868,11 +868,11 @@ The assertions cover:
   calls while native visibility/opacity repair remains immediate. The full
   production owner covers level/stat coalescing, pending text on inactive panes,
   future slides, wheel reveal/hold/expiry, hidden delivery deferral and mode/Show
-  recovery without view allocation. Nameplate cases require Performance Mode to
-  skip first shadow allocation, actually hide retained shadows, preserve names
-  and health, defer hidden preparation and reuse shadows through names-only and
-  normal recovery. These authored cases remain CI-only and do not prove FPS or
-  packaged-client appearance.
+  recovery without view allocation. Nameplate cases cover Dragonflight artwork,
+  native target-border selection, elite/guardian/boss badges, unknown and
+  percentage-only plates, and badge reuse through Names only. Projected plates
+  use their accepted native kind. These authored cases remain CI-only and do
+  not establish FPS or packaged-client appearance.
 - Extracted production unit-border transitions actually hide inactive party and
   portrait variants, restore the retained artwork on option changes and skip
   unchanged writes. These assertions distinguish shown state from alpha; they
