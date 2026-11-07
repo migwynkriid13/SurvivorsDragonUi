@@ -5412,7 +5412,10 @@ DFRL:NewMod("RunTimers", 5, function()
                     render.bossLoss:Clear(row)
                     ClearDebuffs(row)
                 end
-                if row.frame:GetParent() ~= group then row.frame:SetParent(group) end
+                if row.frame:GetParent() ~= group then
+                    row.frame:SetParent(group)
+                    row.fill.BindViewport()
+                end
                 row.group, row.layoutX, row.layoutOffset = group, nil, nil
                 reflow = true
             end

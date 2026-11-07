@@ -157,9 +157,11 @@ presentation. The native nameplate data used by combat text stays separate.
 The XP gain spark uses a second, lazy viewport shared with its glow. It
 retains the vertical overhang and follows the XP bar when attached or
 detached. The existing border and caption sit above both viewports.
-XP rebinds both existing scroll children after an attachment change. Boss
-rows rebind their fill when they join the group. Moving an ancestor can
-clear native scroll membership even while the viewport retains its child.
+XP rebinds both existing scroll children after an attachment change. Encounter
+rows rebind their existing fill after each parent change, including when a
+detached row is reused in the boss group. Moving an ancestor can clear native
+scroll membership even while the viewport retains its child. Settled rows
+skip the rebind, which adds no frame or texture.
 XP gain timing, Revive smoothing and encounter health updates use their
 existing values and cadence in both Performance Mode states. Source UVs
 stay fixed, with the same clipped-edge sampling difference as the run
