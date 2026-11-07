@@ -1448,9 +1448,9 @@ Live acceptance shares the affix view's numeric-rank, publication-stamp,
 receipt and retirement gates while remaining independent of affix artwork or
 visibility. Hiding and run/world/zone/reload retirement clear the active rank
 and hide its existing texture; later valid use reuses its successful binding.
-Hidden overlays skip allocation, geometry and tint work. Performance Mode
-retains the exact static marker with no animation work in either mode. There
-is no added event, updater, setting or SavedVariable.
+Hidden overlays skip allocation, geometry and tint work. The numeral stays
+static in both display modes. There is no added event, updater, setting or
+SavedVariable.
 
 CI-only source-extracted mocks cover rank acceptance and retirement, I–X
 selection, hidden lazy allocation, unchanged-write suppression, attached-affix
@@ -1472,21 +1472,26 @@ never changes the palette or mode. `AZS_GetRunTime` and the native duration own
 regular two-second fill values. Endless holds full progress without altering
 native time, counters, schedule or gameplay tables.
 
-There is one timer and one lazy, reusable cosmetic pool. Performance Mode and
-empty regular progress allocate no decoration. First visible normal-mode
-progress prepares 44 regions: 27 flow textures, 16 foam pieces and one glow.
+The timer's fill pool allocates on visible progress in normal mode. Its first
+use prepares 44 regions: 27 flow textures, 16 foam pieces and one glow.
 Rank-dependent glints grow lazily to the highest count visited, up to 28. The
-upper bound is 72 cosmetic textures, plus one lazy numeral texture for a
-supported Heroic rank. Rank selection reuses the existing frames, assets and
-controller.
+fill pool holds at most 72 textures. Rank selection reuses the existing frames,
+assets and controller.
 
-| Heroic rank | Active streams | Active foam pieces | Active glints | Maximum active effects |
-| ----------- | -------------- | ------------------ | ------------- | ---------------------- |
-| VI          | 12             | 5                  | 9             | 26                     |
-| VII         | 12             | 5                  | 7             | 24                     |
-| VIII        | 9              | 4                  | 6             | 19                     |
-| IX          | 9              | 4                  | 5             | 18                     |
-| X           | 6              | 4                  | 4             | 14                     |
+| Heroic rank | Active streams | Active foam pieces | Active glints | Maximum active fill effects |
+| ----------- | -------------- | ------------------ | ------------- | --------------------------- |
+| VI          | 12             | 5                  | 9             | 26                          |
+| VII         | 12             | 5                  | 7             | 24                          |
+| VIII        | 9              | 4                  | 6             | 19                          |
+| IX          | 9              | 4                  | 5             | 18                          |
+| X           | 6              | 4                  | 4             | 14                          |
+
+Heroic VI–X also pulse two glows behind the gold caps and send embers out
+around them. Each rank broadens, reddens and speeds up the glow and adds an
+ember, from two at VI to six at X. The effect uses the existing tally glow and
+sparkle artwork and allocates at most eight textures, including at zero
+progress. It shares the visible reader, 20 Hz paint cap and pause-aware
+cosmetic clock. Performance Mode and timer retirement hide the full rim effect.
 
 VI–X use the same three lanes with fewer slots in each. The active slots are
 spaced on rank or width changes, and only those slots enter the animation pass.

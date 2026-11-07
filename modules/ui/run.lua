@@ -435,8 +435,10 @@ DFRL:NewMod("RunTimers", 5, function()
         frame:SetHeight(31)
         frame:SetFrameStrata("HIGH")
         frame:EnableMouse(false)
+        -- The run timer reserves BACKGROUND for effects behind the pill.
+        local backgroundLayer = clipped and "BACKGROUND" or "BORDER"
         local background =
-            Texture(frame, "BackgroundFixed", "BACKGROUND", BAR_WIDTH + 4, 18, (BAR_WIDTH + 4) / 512, 18 / 32)
+            Texture(frame, "BackgroundFixed", backgroundLayer, BAR_WIDTH + 4, 18, (BAR_WIDTH + 4) / 512, 18 / 32)
         background:SetPoint("LEFT", frame, "LEFT", 6, 0)
 
         local bar = CreateFrame("StatusBar", nil, frame)
@@ -534,7 +536,74 @@ DFRL:NewMod("RunTimers", 5, function()
         local view = {}
         -- Bildad I/V/X raster artwork; personal-use notice in timer/LICENSE.txt.
         local atlas = path .. "HeroicNumerals.blp"
+        local rim
+        local function NewRimTexture(asset)
+            local texture = border:GetParent():CreateTexture(nil, "BACKGROUND")
+            texture:SetTexture(DFRL:GetInfoOrCons("tex") .. "tally\\" .. asset .. ".blp")
+            texture:SetBlendMode("ADD")
+            return texture
+        end
+        function view:HideRim()
+            if not rim or not rim.rank then return end
+            for _, glow in ipairs(rim.glows) do
+                glow:Hide()
+            end
+            for index = 1, rim.rank - 4 do
+                rim.embers[index]:Hide()
+            end
+            rim.rank, rim.paintedAt = nil, nil
+        end
+        function view:AnimateRim()
+            local rank = self.rank
+            if performanceMode or not rank or rank < 6 or not border:IsVisible() then
+                self:HideRim()
+                return
+            end
+            local now, paused, resumed = T.AnimationTime()
+            local changing = not rim or rim.rank ~= rank
+            if not changing and (paused or resumed or now - rim.paintedAt < FLOW_INTERVAL) then return end
+            local intensity = (rank - 6) / 4
+            local emberCount = rank - 4
+            if changing then
+                self:HideRim()
+                if not rim then
+                    rim = { glows = { NewRimTexture("AffordableGlow"), NewRimTexture("AffordableGlow") }, embers = {} }
+                    rim.glows[1]:SetPoint("CENTER", bar, "LEFT", 5, 0)
+                    rim.glows[2]:SetPoint("CENTER", bar, "RIGHT", -5, 0)
+                end
+                for _, glow in ipairs(rim.glows) do
+                    glow:SetWidth(36 + 14 * intensity)
+                    glow:SetHeight(34 + 10 * intensity)
+                    glow:SetVertexColor(1, 0.43 - 0.34 * intensity, 0.07)
+                end
+                for index = 1, emberCount do
+                    local ember = rim.embers[index] or NewRimTexture("AffordableSparkle")
+                    rim.embers[index] = ember
+                    ember:SetWidth(5 + 2 * intensity)
+                    ember:SetHeight(5 + 2 * intensity)
+                    ember:SetVertexColor(1, 0.64 - 0.38 * intensity, 0.18)
+                end
+                rim.rank = rank
+            end
+            for index, glow in ipairs(rim.glows) do
+                local pulse = 0.5 + 0.5 * math.sin(now * (2.2 + 2.6 * intensity) + (index - 1) * math.pi)
+                glow:SetAlpha(0.22 + 0.29 * intensity + pulse * (0.15 + 0.15 * intensity))
+                if changing then glow:Show() end
+            end
+            for index = 1, emberCount do
+                local ember = rim.embers[index]
+                local left = math.mod(index, 2) == 1
+                local travel = math.mod(now * (0.42 + 0.51 * intensity) + index * 0.37, 1)
+                local drift = 4 - travel * (12 + 6 * intensity)
+                local rise = -12 + travel * (24 + 6 * intensity)
+                ember:SetPoint("CENTER", bar, left and "LEFT" or "RIGHT", left and drift or -drift, rise)
+                ember:SetAlpha(math.sin(travel * math.pi) * (0.45 + 0.4 * intensity))
+                if changing then ember:Show() end
+            end
+            rim.paintedAt = now
+        end
         function view:Clear()
+            self:HideRim()
             if self.texture and self.texture:IsShown() then self.texture:Hide() end
             self.rank, self.maximum = nil, nil
         end
@@ -5498,6 +5567,7 @@ DFRL:NewMod("RunTimers", 5, function()
             render.tallyCountersAt, render.tallyCounterWait = nil, nil
             HideRunFlow()
             if performance then
+                run.heroicLevel:HideRim()
                 SetGoldHighlight(false)
                 for _, marker in ipairs(markers) do
                     ShowMarkerGlow(marker, false)
@@ -5702,6 +5772,7 @@ DFRL:NewMod("RunTimers", 5, function()
                     render.markerEntries, render.markerMaximum, render.markerWidth = scheduled, maximum, markerWidth
                 end
                 SetRunAppearance(render.runHeroic, endless)
+                run.heroicLevel:AnimateRim()
                 UpdateRunFlow(value, maximum, progressAdvanced)
                 UpdateMarkerStates(atLimit)
                 render.clockHidden = nil
