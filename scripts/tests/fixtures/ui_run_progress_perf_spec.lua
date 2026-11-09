@@ -12,11 +12,13 @@ local function Clock()
     env.BAR_WIDTH = 280
     env.run = env.CreateFrame("Frame", nil, env.UIParent)
     env.run:SetWidth(296)
+    env.run.paintedWidth = 280
     env.run:Hide()
     function env.run:IsVisible() return self.shown and not context.hidden end
     env.run.RefreshWidth = function(width)
         context.reads.width = (context.reads.width or 0) + 1
         context.paintedWidth = width
+        env.run.paintedWidth = width - 16
     end
     env.run.affixes = {
         Update = function(_, accepted, force) context.affixes = { accepted = accepted, force = force } end,
@@ -31,6 +33,7 @@ local function Clock()
     }
     env.runBar = env.CreateFrame("StatusBar", nil, env.run)
     env.runBar.layoutWidth = 280
+    env.runBar:SetHeight(15)
     function env.runBar:SetMinMaxValues(low, high)
         context.writes.range = (context.writes.range or 0) + 1
         self.minimum, self.maximum = low, high
@@ -86,16 +89,28 @@ local function Clock()
         self.cleared = 0
     end
     context:ResetPerf()
+    env.path = "timer\\"
+    env.performanceMode = false
+    context.animationTime = 0
+    env.T.AnimationTime = function()
+        context.reads.animation = (context.reads.animation or 0) + 1
+        return context.animationTime
+    end
+    env.T.TextureAssigned = function(loaded, assigned, wanted) return loaded ~= false and assigned == wanted end
     local chunk = assert(loadfile(assert(arg[1], "missing extracted UpdateClock source")))
     setfenv(chunk, env)
-    local update = chunk()
+    local source = chunk()
+    local border = env.CreateFrame("Frame", nil, env.run)
+    border:SetFrameLevel(env.runBar:GetFrameLevel() + 1)
+    env.run.hyperReflection = source.Hyper(env.runBar, border)
+    env.run:SetScript("OnHide", env.run.hyperReflection.Clear)
     function context:Sample(seconds, phase, refresh, elapsed)
         self.seconds = seconds
         self.now = self.now + (elapsed or 0)
         env.render.clockNow = self.now
         -- The existing outer controller consumes row refreshes after UpdateClock.
         env.refreshRows = refresh and true or false
-        update(phase or "playing")
+        source.Clock(phase or "playing")
     end
     function context:PublishRun(time)
         env.AZS_RUN.t = time
@@ -103,6 +118,93 @@ local function Clock()
     end
     return context, env
 end
+
+do
+    local context, env = Clock()
+    local allocated = #context.objects
+    env.performanceMode = true
+    env.AZS_RUN.fin, env.AZS_RUN_UPDATED = 600, 1
+    context:Sample(10)
+    assert(#context.objects == allocated, "standard run allocated a Hyper overlay")
+    context.maximum = 600
+    env.render.clockScheduleAt = nil
+    env.zoneRunPending = 1
+    context:Sample(10)
+    assert(#context.objects == allocated, "pending AZSZONE used the old Hyper state")
+    env.zoneRunPending, env.render.hyperWorldBarrier = nil, env.runSequence
+    context:Sample(10)
+    assert(#context.objects == allocated, "world recovery reused a retired publication")
+    env.AZS_RUN.fin = 1200
+    context:PublishRun(10)
+    context:Sample(10)
+    assert(#context.objects == allocated, "conflicting deadlines showed Hyper")
+    env.AZS_RUN.fin = 600
+    context:PublishRun(10)
+    context:Sample(10)
+    local clip, reflection = context.objects[allocated + 1], context.objects[allocated + 3]
+    assert(#context.objects == allocated + 3 and clip.kind == "ScrollFrame" and clip:IsVisible())
+    assert(clip:GetFrameLevel() > env.runBar:GetFrameLevel(), "reflection sat below the fill")
+    assert(clip:GetWidth() == 280 and clip:GetHeight() == 15 and reflection:GetHeight() == 15)
+    assert(reflection:GetTexture() == "timer\\HyperReflection.blp" and reflection:GetAlpha() == 0.58)
+    assert(not context.reads.animation, "static Hyper sampled the animation clock")
+
+    context:ResetPerf()
+    context:Sample(10)
+    context:NoPresentationWrites()
+    assert(not context.reads.animation)
+    env.run:SetWidth(416)
+    env.run.widthDirty = true
+    context:Sample(10)
+    assert(clip:GetWidth() == 400 and reflection:GetWidth() == 128, "resize stretched the reflection")
+    env.performanceMode = false
+    context:Sample(10)
+    assert(not clip:IsShown(), "the animated sweep did not start outside the track")
+    context.animationTime = 0.9
+    context:Sample(10)
+    assert(clip:IsVisible() and reflection:GetAlpha() == 1)
+    context:ResetPerf()
+    context:Sample(10, "paused")
+    context:NoPresentationWrites()
+    context.animationTime = 2
+    context:Sample(10)
+    assert(not clip:IsShown(), "the completed sweep remained visible")
+    context.animationTime = 5.9
+    context:Sample(10)
+    assert(clip:IsVisible() and #context.objects == allocated + 3, "repeating sweep rebuilt its artwork")
+    env.performanceMode, context.mode = true, "Endless"
+    context:PublishRun(700)
+    context:Sample(700)
+    assert(clip:IsVisible() and env.runBar.value == 600 and context.appearance[#context.appearance] == true)
+    context:Sample(700, "dead")
+    assert(not clip:IsShown(), "run end retained the Hyper reflection")
+    context:Sample(700, "playing")
+    env.run:Hide()
+    assert(not clip:IsShown(), "hiding the timer retained the Hyper reflection")
+end
+print("PASS Hyper reflection uses matching current native deadlines, one fixed-UV pool and pause-aware playback")
+
+do
+    local context, env = Clock()
+    env.performanceMode = true
+    env.AZS_RUN.fin, env.AZS_RUN_UPDATED = 720, 1
+    context.maximum = 720
+    local allocated = #context.objects
+    context:Sample(10)
+    assert(#context.objects == allocated, "an unsupported short deadline was classified as Hyper")
+    env.AZS_RUN.fin, context.maximum = 480, 480
+    context.failTexture = "timer\\HyperReflection.blp"
+    context:PublishRun(10)
+    context:Sample(10)
+    local clip = context.objects[allocated + 1]
+    assert(clip and not clip:IsShown() and context.writes.SetTexture == 1)
+    context.failTexture = nil
+    context:ResetPerf()
+    context:Sample(10, "paused", nil, 0.5)
+    assert(not clip:IsShown() and not context.writes.SetTexture)
+    context:Sample(10, "paused", nil, 0.5)
+    assert(clip:IsVisible() and context.writes.SetTexture == 1 and not context.reads.animation)
+end
+print("PASS Hyper artwork retries on the existing UI clock during pause")
 
 do
     local context, env = Clock()

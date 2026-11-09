@@ -907,6 +907,107 @@ DFRL:NewMod("RunTimers", 5, function()
         end
     end
 
+    local function NewRunViewport(parent, bar)
+        local level = parent:GetFrameLevel()
+        local viewport = CreateFrame("ScrollFrame", nil, parent)
+        viewport:SetFrameLevel(level)
+        viewport:SetPoint("LEFT", bar, "LEFT", 0, 0)
+        viewport:EnableMouse(false)
+        viewport:Hide()
+        local canvas = CreateFrame("Frame", nil, viewport)
+        canvas:SetFrameLevel(level)
+        canvas:SetWidth(1)
+        canvas:SetHeight(1)
+        canvas:EnableMouse(false)
+        viewport:SetScrollChild(canvas)
+        return viewport, canvas
+    end
+
+    local function NewHyperReflection(bar, border)
+        local view = {}
+        local bandWidth, sweepSeconds, repeatSeconds = 128, 1.8, 5
+        local wanted = path .. "HyperReflection.blp"
+        local viewport, texture, bound, retryAt
+        local started, sampledAt, paintedWidth, paintedLeft, paintedStatic
+        local shown = false
+
+        local function Hide()
+            if not shown then return end
+            viewport:Hide()
+            shown = false
+        end
+
+        function view.Clear()
+            Hide()
+            started, sampledAt, retryAt = nil, nil, nil
+        end
+
+        function view.Update(enabled, width, static, uiNow)
+            if not enabled or not IsNumber(width) or width == 0 then
+                view.Clear()
+                return
+            end
+            if not viewport then
+                local canvas
+                viewport, canvas = NewRunViewport(border, bar)
+                local height = bar:GetHeight()
+                viewport:SetHeight(height)
+                -- Above the fill, beneath the bezel, numeral and boss markers.
+                texture = canvas:CreateTexture(nil, "BACKGROUND")
+                texture:SetWidth(bandWidth)
+                texture:SetHeight(height)
+            end
+            if not bound then
+                if retryAt and uiNow < retryAt then return end
+                local loaded = texture:SetTexture(wanted)
+                bound = T.TextureAssigned(loaded, texture:GetTexture(), wanted)
+                if not bound then
+                    retryAt = uiNow + 1
+                    return
+                end
+                retryAt = nil
+            end
+
+            local left
+            if static then
+                started, sampledAt = nil, nil
+                left = (width - bandWidth) / 2
+            else
+                local now = T.AnimationTime()
+                if sampledAt and paintedWidth == width and now - sampledAt < FLOW_INTERVAL then return end
+                started, sampledAt = started or now, now
+                local progress = math.mod(now - started, repeatSeconds) / sweepSeconds
+                if progress >= 1 then
+                    Hide()
+                    return
+                end
+                local eased = progress * progress * (3 - 2 * progress)
+                left = (width + bandWidth) * eased - bandWidth
+            end
+            if paintedWidth ~= width then
+                viewport:SetWidth(width)
+                paintedWidth = width
+            end
+            if left <= -bandWidth or left >= width then
+                Hide()
+                return
+            end
+            if paintedLeft ~= left then
+                texture:SetPoint("LEFT", bar, "LEFT", left, 0)
+                paintedLeft = left
+            end
+            if paintedStatic ~= static then
+                texture:SetAlpha(static and 0.58 or 1)
+                paintedStatic = static
+            end
+            if not shown then
+                viewport:Show()
+                shown = true
+            end
+        end
+        return view
+    end
+
     -- One reusable effect pool; only received rank and mode select its artwork.
     local function AnimatedRunFill(bar)
         local dynamicWidth, dynamicSpan = BAR_WIDTH, FLOW_SPAN
@@ -916,24 +1017,10 @@ DFRL:NewMod("RunTimers", 5, function()
         local sparkleCount, effectRight = 0, 0
         local configured, geometryDirty = false, true
         local effectWidth, effectSeconds, effectMaximum, effectEndless, filledWidth
-        local function NewViewport()
-            local viewport = CreateFrame("ScrollFrame", nil, bar)
-            viewport:SetFrameLevel(bar:GetFrameLevel())
-            viewport:SetPoint("LEFT", bar, "LEFT", 0, 0)
-            viewport:EnableMouse(false)
-            viewport:Hide()
-            local canvas = CreateFrame("Frame", nil, viewport)
-            canvas:SetFrameLevel(bar:GetFrameLevel())
-            canvas:SetWidth(1)
-            canvas:SetHeight(1)
-            canvas:EnableMouse(false)
-            viewport:SetScrollChild(canvas)
-            return viewport, canvas
-        end
         -- Native clipping keeps the source UVs fixed. Changing a texture crop
         -- in Lua creates a new clamp key in the client's material cache.
-        local fillClip, fillCanvas = NewViewport()
-        local foamClip, foamCanvas = NewViewport()
+        local fillClip, fillCanvas = NewRunViewport(bar, bar)
+        local foamClip, foamCanvas = NewRunViewport(bar, bar)
         local clipShown, clipWidth, foamWidth, clipHeight
         local runGlow = fillCanvas:CreateTexture(nil, "OVERLAY")
         runGlow:SetTexture(path .. "FillWhite.blp")
@@ -1356,6 +1443,7 @@ DFRL:NewMod("RunTimers", 5, function()
     HookScript(run, "OnSizeChanged", function() run.widthDirty = true end)
     run.affixes = CreateRunAffixes(run)
     run.heroicLevel = NewHeroicNumeral(runBar, overlay, run.affixes)
+    run.hyperReflection = NewHyperReflection(runBar, overlay)
     local bossText = overlay:CreateFontString(nil, "OVERLAY")
     T.SetFont(bossText, 14, "OUTLINE")
     bossText:SetTextColor(1, 1, 1)
@@ -2126,6 +2214,12 @@ DFRL:NewMod("RunTimers", 5, function()
                         "unitShortHealth",
                         "Shorten health numbers",
                         "Use K, M, B and T instead of full health numbers.",
+                    },
+                    {
+                        "playerCombineHealthAbsorb",
+                        "Combine health and absorb",
+                        "Turn off to show player health and blue shield numbers separately.",
+                        terms = { "shield", "ABSORB" },
                     },
                     { "classHealth", "Class-colored health", "Use vanilla class colors for player and party health." },
                     {
@@ -4356,6 +4450,7 @@ DFRL:NewMod("RunTimers", 5, function()
     HookScript(run, "OnHide", function()
         if render.runShown then render.clockHidden = true end
         run.heroicLevel:Clear()
+        run.hyperReflection.Clear()
         HideRunFlow()
         runEffects.empty = nil
     end)
@@ -4896,6 +4991,7 @@ DFRL:NewMod("RunTimers", 5, function()
         render.nativeValidation, render.replayValidation, render.sample = nil, nil, nil
         render.clockScheduleAt, render.clockNextAt = nil, nil
         scheduleBarrier = math.max(scheduleBarrier, sequence)
+        run.hyperReflection.Clear()
     end
 
     local function UpdateMarkers(maximum, entries)
@@ -5777,6 +5873,16 @@ DFRL:NewMod("RunTimers", 5, function()
                 SetRunAppearance(render.runHeroic, endless)
                 run.heroicLevel:AnimateRim()
                 UpdateRunFlow(value, maximum, progressAdvanced)
+                -- The 0.143.0 native writers halve the final deadline before
+                -- publishing it. Require the current AZSRUN to agree with the clock.
+                local hyper = (maximum == 480 or maximum == 540 or maximum == 600)
+                    and (phase == "playing" or phase == "choosing" or phase == "paused")
+                    and not zoneRunPending
+                    and runSequence > (render.hyperWorldBarrier or -1)
+                    and type(AZS_RUN) == "table"
+                    and AZS_RUN.fin == maximum
+                    and IsNumber(AZS_RUN_UPDATED)
+                run.hyperReflection.Update(hyper, run.paintedWidth, performanceMode, now)
                 UpdateMarkerStates(atLimit)
                 render.clockHidden = nil
             else
@@ -5850,6 +5956,7 @@ DFRL:NewMod("RunTimers", 5, function()
             render.bossLoss:ClearAll(activeRows)
             run.affixes:Clear(true)
             run.heroicLevel:Clear()
+            run.hyperReflection.Clear()
             return reloadUI()
         end
     end
@@ -5867,6 +5974,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 _G.SurvivorsDragonUiBossSchedule = nil
             end
             inWorld = false
+            render.hyperWorldBarrier = runSequence
             RetireEncounters(packetSequence)
             ReleaseHUD()
             return
@@ -5903,6 +6011,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 zoneSequence = packetSequence
                 run.affixes:ZoneChanged()
                 run.heroicLevel:Clear()
+                run.hyperReflection.Clear()
                 HideRunFlow()
                 render.runHeroic, render.runEndless = nil, nil
                 ClearClockCaptions()

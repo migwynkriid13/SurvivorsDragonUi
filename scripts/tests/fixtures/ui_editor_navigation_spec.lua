@@ -889,10 +889,7 @@ assert(
     "search reduced the full settings content viewport"
 )
 dialog.navigation.Search("shield")
-assert(
-    #dialog.navigation.results == 2 and not pages.units,
-    "shield search missed existing health controls or built their page"
-)
+assert(#dialog.navigation.results == 3 and not pages.units, "shield search missed health controls or built their page")
 assert(
     not context.editHandles and not env.SurvivorsDragonUiDisplay,
     "search changed settings or retained Layout overlays"
@@ -969,10 +966,15 @@ assert(
     "category built unrelated pages"
 )
 local healthChoice = env.displayControls.unitShortHealth
+local combineAbsorb = env.displayControls.playerCombineHealthAbsorb
 assert(healthChoice.editorChecked == true, "new category did not read current defaults")
+assert(combineAbsorb.editorChecked == true, "combine health and absorb did not default on")
 context:Call(healthChoice, "OnClick")
+context:Call(combineAbsorb, "OnClick")
 assert(
-    display.Get("unitShortHealth") == false and not env.SurvivorsDragonUiDisplay,
+    display.Get("unitShortHealth") == false
+        and display.Get("playerCombineHealthAbsorb") == false
+        and not env.SurvivorsDragonUiDisplay,
     "lazy option skipped preview/Confirm"
 )
 local unitObjects = #context.objects
@@ -1001,7 +1003,7 @@ assert(
 )
 dialog.navigation.Select("units")
 assert(
-    healthChoice.editorChecked == true and #context.objects == unitObjects,
+    healthChoice.editorChecked == true and combineAbsorb.editorChecked == true and #context.objects == unitObjects,
     "reopen did not discard/catch up without allocation"
 )
 

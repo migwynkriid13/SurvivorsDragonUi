@@ -518,6 +518,8 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead, showDeathStat
     local previousCurrent, previousMaximum, previousValueShown, previousPercentShown, previousShortHealth
     local previousStatus
     local absorbValue, absorbMaximum, previousAbsorb, previousAbsorbMaximum, absorbPending
+    local previousCombineAbsorb, separateAbsorbText
+    local absorbColor = "|cffA6D9FF"
     local valueText, percentText = "", ""
 
     function labels.Update()
@@ -541,6 +543,8 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead, showDeathStat
                 if type(current) ~= "number" or current < 0 or current - current ~= 0 then current = nil end
             end
         end
+        local hasAbsorb = absorbValue ~= nil and current ~= nil and current > 0
+        local combineAbsorb = hasAbsorb and DFRL.display.Get("playerCombineHealthAbsorb") ~= false
         if
             current ~= previousCurrent
             or maximum ~= previousMaximum
@@ -549,22 +553,35 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead, showDeathStat
             or shorten ~= previousShortHealth
             or absorbValue ~= previousAbsorb
             or absorbMaximum ~= previousAbsorbMaximum
+            or combineAbsorb ~= previousCombineAbsorb
             or status ~= previousStatus
         then
+            if valueShown and hasAbsorb and not combineAbsorb then
+                if not separateAbsorbText or absorbValue ~= previousAbsorb or shorten ~= previousShortHealth then
+                    separateAbsorbText = " + " .. absorbColor .. T.CompactHealth(absorbValue, shorten) .. "|r"
+                end
+            else
+                separateAbsorbText = nil
+            end
             previousCurrent, previousMaximum = current, maximum
             previousValueShown, previousPercentShown = valueShown, percentShown
             previousShortHealth = shorten
             previousAbsorb, previousAbsorbMaximum = absorbValue, absorbMaximum
+            previousCombineAbsorb = combineAbsorb
             previousStatus = status
             local combined
-            if current and current > 0 and absorbValue then
+            if combineAbsorb then
                 local total = current + absorbValue
                 if total - total == 0 then combined = total end
             end
             valueText = status or ""
             if current and valueShown then
                 valueText = T.CompactHealth(combined or current, shorten)
-                if combined then valueText = "|cffA6D9FF" .. valueText .. "|r" end
+                if combined then
+                    valueText = absorbColor .. valueText .. "|r"
+                elseif separateAbsorbText then
+                    valueText = valueText .. separateAbsorbText
+                end
             end
             percentText = ""
             if current and percentShown then
@@ -572,7 +589,7 @@ function DFRL.tools.BindUnitHealthText(bar, label, unit, hideDead, showDeathStat
                     -- Use the maximum HP that accompanied the absorb and allow overflow past 100%.
                     local percent = combined / absorbMaximum * 100
                     if percent - percent == 0 then
-                        percentText = "|cffA6D9FF" .. string.format("%.0f", math.floor(percent + 0.5)) .. "%|r"
+                        percentText = absorbColor .. string.format("%.0f", math.floor(percent + 0.5)) .. "%|r"
                     end
                 end
                 if percentText == "" and type(maximum) == "number" and maximum > 0 and maximum - maximum == 0 then

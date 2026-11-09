@@ -431,7 +431,7 @@ Test("health labels use decimal K M B T tiers without changing the counters", fu
     assert(context.env.T.EncounterHealthText(35e12, 70e12) == "35T / 70T")
 end)
 
-Test("boss and guardian health choices default on and share display transactions", function()
+Test("default-on health choices share display transactions", function()
     local context = H.New()
     context:Load("core/display.lua", "Display")
     local display = context.env.DFRL.display
@@ -441,6 +441,7 @@ Test("boss and guardian health choices default on and share display transactions
         "guardianShowCurrentHealth",
         "guardianShowMaximumHealth",
         "unitShortHealth",
+        "playerCombineHealthAbsorb",
         "bossShortHealth",
         "guardianShortHealth",
     }

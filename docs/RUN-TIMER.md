@@ -136,6 +136,22 @@ Performance Mode keeps the same tier fill and information while skipping all
 cosmetic animation. See [PERFORMANCE.md](PERFORMANCE.md#heroic-run-timer) for
 allocation, cadence and CI-only evidence limits.
 
+## Hyper Mode reflection
+
+A wide blue reflection sweeps from left to right across the full track in
+Hyper Mode. Its soft 45° band passes behind the boss markers and Heroic
+numeral. It works with Normal and Heroic palettes and carries into Endless.
+Performance Mode keeps a faint stationary reflection in the middle.
+
+The 0.143.0 executable publishes the already adjusted final-boss deadline.
+Its zone writer at `0x145f406a0` and run writer at `0x145f3f500` each apply
+the native half-time factor before formatting the deadline in seconds. The
+13 native zones produce exactly 480, 540 or 600 seconds in Hyper Mode.
+The effect requires a current `AZS_RUN.fin` with one of those values that
+agrees with the displayed native limit. After reload, the timer's existing
+`fin` fallback supplies the limit until a zone publication is available.
+The native run clock and published boss deadlines continue to drive the timer.
+
 ## Heroic affixes
 
 On the 0.125.0 API, the run timer shows the current run's Heroic affixes above

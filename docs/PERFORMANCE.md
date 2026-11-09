@@ -1529,8 +1529,8 @@ adds timed alpha writes: a bounded reused pool does not establish equal GPU/CPU
 cost or FPS.
 
 Performance Mode keeps the same static tier fill, numeral, captions and native
-marker information. It hides prepared effects immediately and skips all cosmetic
-painting and UI-time samples; unused pools remain unallocated. Mode exit, showing
+marker information. It hides the Heroic rim and fill effects and skips their
+cosmetic samples. Their unused pools remain unallocated. Mode exit, showing
 and accepted rank/Endless changes resume from current native state, without
 replaying old particles. Hidden views skip presentation; run/zone/world retirement,
 disabling and reload clear active information through the existing lifecycle.
@@ -1542,6 +1542,23 @@ rendering, glitter/foam opacity, throttle, cleanup/reuse and Performance Mode.
 In-game appearance, BLP decoding, live API delivery and FPS require live
 evidence. Local tests, standalone validation and addon/game execution were not
 run.
+
+## Hyper Mode reflection
+
+The first visible confirmed Hyper run prepares two passive clipping frames and
+one 256-by-32 BLP texture. The baked alpha and color ramp draws the blurred
+45° band over the full track, including the empty section. Its one visible
+quad uses fixed UVs, with at most one horizontal anchor write per 20 Hz
+cosmetic sample during a 1.8-second sweep every five cosmetic seconds. The
+native viewport clips it at both caps. Width changes update the clip,
+while the band keeps its authored angle and size.
+
+Performance Mode centers the same texture at reduced opacity and skips its
+animation clock. Standard, hidden and retired timers do no reflection
+binding or animation work. The shared timer reader handles both pause-aware
+playback and one-second artwork retries on its independent UI clock. The
+blend adds one visible alpha pass while the effect is on screen. Its native
+layering, appearance and frame cost remain unverified in game.
 
 ## Settings navigation — 2026-10-29
 
@@ -3315,14 +3332,14 @@ of **Class resources**. Phase/zone/world retirement blocks the retired
 table/stamp/receipt tuple. Hidden frames retain only phase retirement, clear
 their absorb fractions on Hide and perform no shield reads or presentation.
 
-The 2026-10-31 numeric display reuses the two health FontStrings with no added
-frame, region, asset, setting, event or updater. Amount and uncapped percentage
-use the accepted `AZS_RUN.sh` / `hpm` values; no buff scans, peak history or
-shield-capacity estimates are introduced. Shield fragments are cached by
-amount, maximum HP and text choices, independently of ordinary health changes;
-unchanged polls skip formatting and native writes. Failed text writes remain
-pending for retry. Zero/invalid data and hide/phase/zone/world retirement clear
-the retained scalars through the existing owner.
+The numeric display reuses the two health FontStrings. The default combined
+amount and uncapped percentage use the accepted `AZS_RUN.sh` / `hpm` values.
+The split amount uses inline color on the same FontString and caches its
+shield suffix by shield amount and number format across HP changes. The
+shared display listener handles the format toggle, and unchanged polls skip
+formatting and native writes. Failed text writes remain pending for retry.
+Zero/invalid data and hide/phase/zone/world retirement clear the retained
+scalars through the existing owner.
 
 Performance Mode keeps the selected static amount/percentage while hiding the
 overlay and clearing its geometry baseline. A fresh Performance Mode session

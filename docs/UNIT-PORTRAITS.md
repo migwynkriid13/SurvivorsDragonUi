@@ -178,19 +178,21 @@ unverified.
 
 The player health bar shows active absorbs automatically as a silver-white
 segment with a thin dark divider at its start. This separates the shield from
-class-coloured health, including mage cyan. There is no separate setting, and
-**Class resources** can stay off.
+class-coloured health, including mage cyan. **Class resources** can stay off.
 The segment starts after current health when there is room. When health plus
 the shield exceeds maximum health, it moves left inside the bar so the shield
 is still visible at full health. Its width represents shield / maximum health,
 capped at one full bar.
 
-With an active shield, the existing labels show current health plus absorb in
-pale blue. At full health with 1K maximum HP and a 7K shield, **Show health**
-shows `8K` and **Show health percentage** shows `800%`. Each control remains
-independent. **Shorten health numbers** applies after the sum, and the percentage
-uses the received maximum HP and can exceed 100%. Without a shield, the labels
-return to ordinary health text.
+**Combine health and absorb** in **Unit frames** is on by default. At full
+health with 1K maximum HP and a 7K shield, **Show health** shows a pale-blue
+`8K` and **Show health percentage** shows `800%`. The combined percentage
+uses the received maximum HP and can exceed 100%.
+
+Turn off **Combine health and absorb** to show `1K + 7K`, with only `7K`
+in pale blue. The optional percentage then shows HP alone. **Shorten health
+numbers** applies to each number separately in this mode. Without a shield,
+the labels show ordinary health text.
 Performance Mode retains these static numbers while hiding the segment and divider.
 The existing label anchors and font size remain unchanged; narrow bars with
 long full-number captions may need wider Layout geometry.
@@ -206,16 +208,14 @@ presentation until visible again.
 Run packets request a deferred read through the existing resource controller.
 
 The shared labels receive only validated shield/maximum-HP scalars from that
-reader, without consulting buffs or rereading native run tables. Combined
-captions are cached until their inputs change; failed text writes retry
-through the existing reader. No text region or display setting is added.
+reader. Captions are cached until their inputs change, and failed text writes
+retry through the existing reader. Both formats use the same text regions.
 
 The segment inherits the actual health rectangle, including width handles,
 portrait modes and the optional resource row's height. It lazily reuses the
 prepared health-fill image and one solid divider below the gold border and health text, leaving
-native StatusBar UVs, values and clicks unchanged. No setting, artwork,
-SavedVariable, event subscription or updater is added. Appearance and live
-shield changes remain unverified in-game.
+native StatusBar UVs, values and clicks unchanged. Appearance and live shield
+changes remain unverified in-game.
 
 ## Names, levels and editor layout
 
