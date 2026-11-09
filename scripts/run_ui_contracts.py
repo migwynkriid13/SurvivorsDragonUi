@@ -86,10 +86,13 @@ def main():
         run_static = extract_source("modules/ui/run.lua", [
             "IsNumber", "RUN_TIER_STYLES", "RunTier", "ApplyRunFill",
             "BAR_WIDTH", "FLOW_WIDTH", "FLOW_SPEED", "FLOW_INTERVAL", "FLOW_SPACING", "FLOW_COUNT", "FLOW_SPAN",
-            "RED_SPARKLE_OPACITY", "AnimatedRunFill", "runEffects", "SetRunAppearance", "HideRunFlow", "UpdateRunFlow",
+            "RED_SPARKLE_OPACITY", "NewRunViewport", "AnimatedRunFill", "runEffects", "SetRunAppearance", "HideRunFlow", "UpdateRunFlow",
         ])
         run_static = run_static.rsplit("\nreturn ", 1)[0] + "\nreturn { Appearance = SetRunAppearance, Hide = HideRunFlow, Update = UpdateRunFlow, effects = runEffects }\n"
-        run_progress = extract_source("modules/ui/run.lua", ["IsNumber", "UpdateClock"])
+        run_progress = extract_source("modules/ui/run.lua", [
+            "IsNumber", "FLOW_INTERVAL", "NewRunViewport", "NewHyperReflection", "UpdateClock",
+        ])
+        run_progress = run_progress.rsplit("\nreturn ", 1)[0] + "\nreturn { Clock = UpdateClock, Hyper = NewHyperReflection }\n"
         run_numerals = 'local path = "Interface\\\\AddOns\\\\SurvivorsDragonUi\\\\media\\\\tex\\\\timer\\\\"\n' + extract_source("modules/ui/run.lua", [
             "IsNumber", "FLOW_INTERVAL", "HEROIC_NUMERAL_COLORS", "NewHeroicNumeral",
         ])
