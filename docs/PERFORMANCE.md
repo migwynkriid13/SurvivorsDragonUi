@@ -3315,14 +3315,14 @@ of **Class resources**. Phase/zone/world retirement blocks the retired
 table/stamp/receipt tuple. Hidden frames retain only phase retirement, clear
 their absorb fractions on Hide and perform no shield reads or presentation.
 
-The 2026-10-31 numeric display reuses the two health FontStrings with no added
-frame, region, asset, setting, event or updater. Amount and uncapped percentage
-use the accepted `AZS_RUN.sh` / `hpm` values; no buff scans, peak history or
-shield-capacity estimates are introduced. Shield fragments are cached by
-amount, maximum HP and text choices, independently of ordinary health changes;
-unchanged polls skip formatting and native writes. Failed text writes remain
-pending for retry. Zero/invalid data and hide/phase/zone/world retirement clear
-the retained scalars through the existing owner.
+The numeric display reuses the two health FontStrings. The default combined
+amount and uncapped percentage use the accepted `AZS_RUN.sh` / `hpm` values.
+The split amount uses inline color on the same FontString and caches its
+shield suffix by shield amount and number format across HP changes. The
+shared display listener handles the format toggle, and unchanged polls skip
+formatting and native writes. Failed text writes remain pending for retry.
+Zero/invalid data and hide/phase/zone/world retirement clear the retained
+scalars through the existing owner.
 
 Performance Mode keeps the selected static amount/percentage while hiding the
 overlay and clearing its geometry baseline. A fresh Performance Mode session

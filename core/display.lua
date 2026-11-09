@@ -106,6 +106,7 @@ DFRL:NewMod("Display", 0, function()
         showHealthValue = true,
         showHealthPercentage = false,
         unitShortHealth = true,
+        playerCombineHealthAbsorb = true,
         roundPlayerPortrait = false,
         playerPortrait3D = false, -- Legacy key; controls player, target and target-of-target.
         flipBuffs = false,

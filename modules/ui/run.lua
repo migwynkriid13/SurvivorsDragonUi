@@ -2127,6 +2127,12 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Shorten health numbers",
                         "Use K, M, B and T instead of full health numbers.",
                     },
+                    {
+                        "playerCombineHealthAbsorb",
+                        "Combine health and absorb",
+                        "Turn off to show player health and blue shield numbers separately.",
+                        terms = { "shield", "ABSORB" },
+                    },
                     { "classHealth", "Class-colored health", "Use vanilla class colors for player and party health." },
                     {
                         "healthLossAnimation",

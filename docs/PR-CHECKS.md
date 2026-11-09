@@ -520,8 +520,9 @@ boss row pass also forwards its own choice without changing health-loss state.
 These cases remain CI-only and were not executed locally.
 
 Player-absorb cases exercise the production resource reader, player absorb
-owner and shared health labels. They cover pale-blue health plus absorb and its
-uncapped percentage of received maximum HP, independent text choices, rounding
+owner and shared health labels. They cover the default pale-blue total and its
+uncapped percentage of received maximum HP, split health and blue shield
+amounts with HP-only percentages in both Performance Mode states, independent text choices, rounding
 and shortening after addition, deferred run reads, Performance Mode text without
 overlay allocation, invalid data, silver fill and a dark bounded divider over mage/default health colours,
 sub-unit shields, resize and pool reuse, hidden work, phase/zone/world retirement,

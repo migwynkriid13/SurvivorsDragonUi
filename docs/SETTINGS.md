@@ -67,8 +67,8 @@ Each category remembers its scroll offset until the UI reloads.
 using both the active language and English source text. Multiple words must all
 match; punctuation is literal. Supported Latin and Cyrillic case pairs are
 folded without changing other UTF-8 text. `shield` and `absorb`, including the
-translated native ABSORB caption, find the player health amount/percentage
-controls. `SCT` also finds Combat text settings.
+translated native ABSORB caption, find the player health amount, percentage
+and **Combine health and absorb** controls. `SCT` also finds Combat text settings.
 
 Results show their category and subsection. Click one, or press Enter for the
 first result on the current page, to return to the original controls and scroll

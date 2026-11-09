@@ -257,6 +257,36 @@ Test("existing health choices independently preview combined amounts and percent
     assert(#context.objects == allocated, "health previews allocated more shield regions")
 end)
 
+Test("split captions color only the absorb amount in both performance modes", function()
+    for _, performance in ipairs({ false, true }) do
+        local context, _, _, label, labels, overlay = Player(performance)
+        context.current = 800
+        context:Publish(1700, 800)
+        local frame = overlay()
+        local allocated = #context.objects
+        assert(label:GetText() == Blue("2.5K") and labels.percentage:GetText() == Blue("250%"))
+
+        context:SetSetting("playerCombineHealthAbsorb", false)
+        assert(label:GetText() == "800 + " .. Blue("1.7K") and labels.percentage:GetText() == "80%")
+        context:SetSetting("unitShortHealth", false)
+        assert(label:GetText() == "800 + " .. Blue("1700"))
+        context:SetSetting("showHealthValue", false)
+        assert(label:GetText() == "" and labels.percentage:GetText() == "80%")
+        context:SetSetting("showHealthValue", true)
+        context:ResetCounts()
+        context:Tick()
+        context:NoPresentationWrites()
+        assert(not context.reads.formats and #context.objects == allocated)
+        assert(overlay() == frame and (performance or frame:IsShown()))
+
+        context:SetSetting("playerCombineHealthAbsorb", true)
+        assert(label:GetText() == Blue("2500") and labels.percentage:GetText() == Blue("250%"))
+        context:SetSetting("playerCombineHealthAbsorb", false)
+        context:Publish(0, 800)
+        assert(label:GetText() == "800" and labels.percentage:GetText() == "80%")
+    end
+end)
+
 Test("Performance Mode retains static shield numbers and hides only the optional overlay", function()
     local context, _, _, label, labels, overlay = Player(true)
     context:Publish(7000)
