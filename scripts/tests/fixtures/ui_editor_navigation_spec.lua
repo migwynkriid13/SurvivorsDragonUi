@@ -1875,7 +1875,10 @@ do
         "Tooltip controls lost visibility/default-on"
     )
     assert(enhanced:GetParent() == cursor:GetParent(), "Enhanced tooltips is outside the Tooltip section")
-    assert(enhanced.label:GetText() == "Enhanced tooltips", "enhanced-tooltip caption is missing")
+    assert(
+        enhanced.label:GetText() == locale.Text("Enhanced tooltips"),
+        "localized enhanced-tooltip caption is missing"
+    )
     context:Call(enhanced, "OnClick")
     assert(
         display.Get("enhancedTooltips") == false and not env.SurvivorsDragonUiDisplay,
