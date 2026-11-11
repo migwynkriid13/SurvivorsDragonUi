@@ -10,6 +10,8 @@ remains the required check in the repository's branch rules. Only the mocked
 UI tests execute selected production Lua against fake native boundaries. No
 game starts.
 
+Enhanced-tooltip cases use the production display and tooltip controllers over fake native CVars. They cover default-on and saved-off choices, preview/Confirm/Cancel, profile copy/load and older profiles, reset, world-exit draft discard, world-entry recovery, native CVar drift and synchronous notifications, unrelated events, unchanged writes, missing/throwing/malformed APIs and no idle preference polling. The editor fixture checks the searchable Tooltip-page checkbox and its shared preview/discard/reset lifecycle. These cases are authored for CI only; they do not establish packaged-client behavior or why native settings were reported to reset.
+
 The rarity odds fixture drives the production panel with mocked phase, run
 and stats feeds. It covers the shared quest header, the compact reward table,
 single-line caption fitting and resize recovery, known odds by reward type, level caps, zero

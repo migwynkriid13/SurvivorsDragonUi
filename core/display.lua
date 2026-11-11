@@ -110,6 +110,7 @@ DFRL:NewMod("Display", 0, function()
         roundPlayerPortrait = false,
         playerPortrait3D = false, -- Legacy key; controls player, target and target-of-target.
         flipBuffs = false,
+        enhancedTooltips = true,
         tooltipAtCursor = false,
         classResources = false,
         classHealth = false,

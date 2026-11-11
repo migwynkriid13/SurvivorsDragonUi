@@ -427,6 +427,16 @@ the existing live ownership search. Cursor projection, actual anchor/scale repai
 unit colors and foreign ownership keep their original cadence. No tooltip
 content, successful native geometry or failed operation is frozen by the cache.
 
+Enhanced tooltips uses the existing tooltip event frame to apply the selected
+native `UberTooltips` value on initialization, world entry, display changes and
+matching CVar notifications. Matching writes and synchronous notification
+recursion are skipped. Visible and hidden hover updates do no preference reads;
+missing or failed native APIs retry only on a later relevant event or display
+change. Both Performance Mode states share this path. The option adds one lazy
+editor Button with five texture regions and two FontStrings through the existing
+toggle factory, with no gameplay frame, region, asset or updater. Native detail
+builders and tooltip update cadence remain unchanged; coverage is CI-only.
+
 Guardian filtering retains snapshot positions in its existing reused list, so
 painting can consume the exact caption already prepared for that snapshot slot's
 width measurement. The shared health setter accepts this optional prepared text;

@@ -143,6 +143,18 @@ DFRL:NewMod("Tooltips", 2, function()
     local elapsed, inWorld = 0, true
     local editing = false
     local nativeScale = tooltip:GetScale()
+    local applyingEnhanced = false
+    local function ApplyEnhancedTooltips()
+        if not inWorld or applyingEnhanced then return end
+        if type(GetCVar) ~= "function" or type(SetCVar) ~= "function" then return end
+        local ok, value = pcall(GetCVar, "UberTooltips")
+        if not ok or (value ~= "0" and value ~= "1") then return end
+        local wanted = DFRL.display.Get("enhancedTooltips") and "1" or "0"
+        if value == wanted then return end
+        applyingEnhanced = true
+        pcall(SetCVar, "UberTooltips", wanted)
+        applyingEnhanced = false
+    end
     -- A stable, passive edit region exists even when no native hover is shown.
     -- Keep GameTooltip's parent and owner native; neither controls this handle.
     local root = CreateFrame("Frame", nil, UIParent)
@@ -278,6 +290,7 @@ DFRL:NewMod("Tooltips", 2, function()
         if tooltip:IsShown() then PlaceTooltip() end
     end)
     DFRL.display.Listen(function()
+        ApplyEnhancedTooltips()
         if tooltip:IsShown() then PlaceTooltip() end
     end)
     if tooltip.SetClampedToScreen then tooltip:SetClampedToScreen(true) end
@@ -404,9 +417,13 @@ DFRL:NewMod("Tooltips", 2, function()
     events:RegisterEvent("PLAYER_ENTERING_WORLD")
     events:RegisterEvent("PLAYER_LEAVING_WORLD")
     events:RegisterEvent("PLAYER_LOGOUT")
+    events:RegisterEvent("CVAR_UPDATE")
     events:SetScript("OnEvent", function()
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            ApplyEnhancedTooltips()
+        elseif event == "CVAR_UPDATE" then
+            if type(arg1) == "string" and string.lower(arg1) == "ubertooltips" then ApplyEnhancedTooltips() end
         elseif event == "UPDATE_MOUSEOVER_UNIT" then
             -- The native world-unit builder emits this after rebuilding its
             -- tooltip. Do not guess a unit from a spell/item hover or name text.
@@ -415,9 +432,14 @@ DFRL:NewMod("Tooltips", 2, function()
                 Refresh()
             end
         else
+            -- Discard previews before the client saves its native preference,
+            -- regardless of Layout's world-exit event-handler order.
+            DFRL.display.FinishEdit(false)
+            ApplyEnhancedTooltips()
             inWorld = false
             tooltip:Hide()
             Clear()
         end
     end)
+    ApplyEnhancedTooltips()
 end)
