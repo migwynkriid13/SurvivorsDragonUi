@@ -1861,3 +1861,43 @@ end
 print(
     "PASS real settings constructor laziness, active-language width cache, full category walk, preview/save/discard and popup reuse"
 )
+
+do
+    display.Reset()
+    display.BeginEdit()
+    dialog:Show()
+    dialog.navigation.Select("interface")
+    editor.Display()
+    local enhanced = assert(env.displayControls.enhancedTooltips, "Tooltip page is missing Enhanced tooltips")
+    local cursor = assert(env.displayControls.tooltipAtCursor)
+    assert(
+        enhanced:IsVisible() and enhanced.editorChecked and cursor:IsVisible(),
+        "Tooltip controls lost visibility/default-on"
+    )
+    assert(enhanced:GetParent() == cursor:GetParent(), "Enhanced tooltips is outside the Tooltip section")
+    assert(enhanced.label:GetText() == "Enhanced tooltips", "enhanced-tooltip caption is missing")
+    context:Call(enhanced, "OnClick")
+    assert(
+        display.Get("enhancedTooltips") == false and not env.SurvivorsDragonUiDisplay,
+        "enhanced-tooltip preview saved early"
+    )
+    display.FinishEdit(false)
+    editor.Display()
+    assert(enhanced.editorChecked, "enhanced-tooltip Cancel did not restore on")
+    dialog.navigation.Search("Enhanced tooltips")
+    local found
+    for _, result in ipairs(dialog.navigation.results) do
+        if result.target == "enhancedTooltips" then found = true end
+    end
+    assert(found, "Enhanced tooltips is absent from settings search")
+    dialog.navigation.ClearSearch()
+    display.BeginEdit()
+    display.Set("enhancedTooltips", false)
+    display.FinishEdit(true)
+    assert(env.SurvivorsDragonUiDisplay.enhancedTooltips == false, "enhanced-tooltip Confirm did not preserve off")
+    display.Reset()
+    editor.Display()
+    assert(enhanced.editorChecked and display.Get("enhancedTooltips"), "enhanced-tooltip reset did not restore on")
+    dialog:Hide()
+end
+print("PASS Tooltip page exposes default-on Enhanced tooltips with preview/save/discard/reset and search")

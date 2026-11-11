@@ -2473,6 +2473,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 key = "tooltip",
                 label = "Tooltip",
                 options = {
+                    { "enhancedTooltips", "Enhanced tooltips", "Show detailed ability tooltips." },
                     {
                         "tooltipAtCursor",
                         "Tooltip at cursor",

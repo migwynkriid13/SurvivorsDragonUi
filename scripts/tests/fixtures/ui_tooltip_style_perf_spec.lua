@@ -87,10 +87,12 @@ refresh()
 assert(not next(context.writes), "hidden tooltip refresh wrote native styling")
 print("PASS tooltip styling skips unchanged native colors while repairing resets and retrying failures")
 
-local function HoverFixture(performance)
+local function HoverFixture(performance, configure)
     local state = H.New()
     local native = state.env
     state.settings.performanceMode = performance
+    state.settings.enhancedTooltips = true
+    native.DFRL.display.FinishEdit = function() end
     local function Count(name) state.writes[name] = (state.writes[name] or 0) + 1 end
     local function Geometry(object)
         function object:GetScale() return self.scale or 1 end
@@ -167,7 +169,21 @@ local function HoverFixture(performance)
         self:Build("Native spellbook details")
     end
     function tip:FadeOut() state.fades = (state.fades or 0) + 1 end
-    native.SetCVar = function() error("SDUI changed a native tooltip preference") end
+    native.GetCVar = function(name)
+        assert(name == "UberTooltips", "tooltip read an unrelated native preference")
+        state.nativeReads = (state.nativeReads or 0) + 1
+        if state.failCVarRead then error("injected native preference read failure") end
+        if state.cvarValue ~= nil then return state.cvarValue end
+        return state.enhanced and "1" or "0"
+    end
+    native.SetCVar = function(name, value)
+        assert(name == "UberTooltips" and (value == "0" or value == "1"), "unexpected native preference write")
+        state.nativeWrites = (state.nativeWrites or 0) + 1
+        if state.failCVarWrite then error("injected native preference write failure") end
+        state.enhanced = value == "1"
+        -- Native setters can synchronously emit their own CVar notification.
+        state:Event(state:Controller("CVAR_UPDATE"), "CVAR_UPDATE", "UBERTOOLTIPS")
+    end
     native.GetCursorPosition = function() return 300, 200 end
     native.DFRL.layout.Register = function(key, root, anchor, options)
         assert(key == "tooltip")
@@ -182,6 +198,7 @@ local function HoverFixture(performance)
     native.DFRL.actionButtons = { state.action }
     native.DFRL.characterItemButtons = { state.equipment }
     state.enhanced = true
+    if configure then configure(state, native) end
     state:Load("core/tooltips.lua", "Tooltips")
     state.tooltip = tip
     function state:Hover(owner, text)
@@ -305,3 +322,134 @@ for _, performance in ipairs({ false, true }) do
     assert(#state.objects == count, "hover transitions allocated another frame or region")
 end
 print("PASS Tooltip hide/scale preserves native ability/item hovers and settings in both Performance Mode states")
+
+local function PreferenceFixture(performance, saved, enhanced, configure)
+    return HoverFixture(performance, function(state, native)
+        native.SurvivorsDragonUiDisplay = saved
+        state.enhanced = enhanced
+        state:Load("core/display.lua", "Display")
+        if configure then configure(state, native) end
+    end)
+end
+
+for _, performance in ipairs({ false, true }) do
+    for _, choice in ipairs({
+        { enabled = true },
+        { saved = {}, enabled = true },
+        { saved = { enhancedTooltips = "0" }, enabled = true },
+        { saved = { enhancedTooltips = 0 }, enabled = true },
+        { saved = { enhancedTooltips = true }, enabled = true },
+        { saved = { enhancedTooltips = false }, enabled = false },
+    }) do
+        if choice.saved then choice.saved.performanceMode = performance end
+        local state, native = PreferenceFixture(performance, choice.saved, not choice.enabled)
+        local display = native.DFRL.display
+        assert(display.Get("enhancedTooltips") == choice.enabled, "saved preference lost normalization/default-on")
+        assert(
+            state.enhanced == choice.enabled and state.nativeWrites == 1,
+            "initial native preference was not applied once"
+        )
+        assert(native.SurvivorsDragonUiDisplay == choice.saved, "initialization saved an unconfirmed display table")
+    end
+
+    local saved = { enhancedTooltips = true, performanceMode = performance }
+    local state, native, tip = PreferenceFixture(performance, saved, true)
+    local display = native.DFRL.display
+    local controller = state:Controller("CVAR_UPDATE")
+    local objects = #state.objects
+    assert(not state.nativeWrites, "matching initialization rewrote the native preference")
+    display.BeginEdit()
+    display.Set("enhancedTooltips", false)
+    assert(not state.enhanced and saved.enhancedTooltips, "preview did not stay separate from the confirmed choice")
+    display.FinishEdit(false)
+    assert(
+        state.enhanced and native.SurvivorsDragonUiDisplay == saved,
+        "Cancel did not restore the confirmed preference"
+    )
+    display.BeginEdit()
+    display.Set("enhancedTooltips", false)
+    local writes = state.nativeWrites
+    display.Set("tooltipAtCursor", true)
+    display.FinishEdit(true)
+    assert(not state.enhanced and native.SurvivorsDragonUiDisplay.enhancedTooltips == false, "Confirm lost saved off")
+    assert(state.nativeWrites == writes, "unchanged display notifications repeated native preference writes")
+    local profile = display.Snapshot()
+    assert(display.Copy(profile).enhancedTooltips == false, "profile copy lost the explicit off choice")
+    display.BeginEdit()
+    display.Load({ enhancedTooltips = true })
+    assert(state.enhanced and native.SurvivorsDragonUiDisplay.enhancedTooltips == false, "profile preview saved early")
+    display.FinishEdit(false)
+    assert(not state.enhanced, "profile Cancel did not restore off")
+    display.BeginEdit()
+    display.Load({})
+    assert(state.enhanced, "older profiles did not default enhanced tooltips on")
+    display.FinishEdit(true)
+    for _, exit in ipairs({ "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT" }) do
+        display.BeginEdit()
+        display.Set("enhancedTooltips", false)
+        state:Event(controller, exit)
+        assert(
+            state.enhanced and native.SurvivorsDragonUiDisplay.enhancedTooltips,
+            "world exit retained an unconfirmed native preference"
+        )
+        state.enhanced = false
+        writes = state.nativeWrites
+        state:Event(controller, "CVAR_UPDATE", "UberTooltips")
+        assert(state.nativeWrites == writes, "world-hidden CVar changes wrote the native preference")
+        state:Event(controller, "PLAYER_ENTERING_WORLD")
+        assert(state.enhanced and state.nativeWrites == writes + 1, "world entry did not restore the saved preference")
+    end
+    local reads = state.nativeReads
+    state:Event(controller, "CVAR_UPDATE", "CombatDamage")
+    state:Event(controller, "CVAR_UPDATE", false)
+    assert(state.nativeReads == reads, "unrelated native changes read the tooltip preference")
+    state.enhanced = false
+    writes = state.nativeWrites
+    state:Event(controller, "CVAR_UPDATE", "UBERTOOLTIPS")
+    assert(
+        state.enhanced and state.nativeWrites == writes + 1,
+        "native drift or synchronous notification lost the selected choice"
+    )
+    state:Hover(state.action)
+    tip:SetAction(12)
+    reads = state.nativeReads
+    for _ = 1, 10 do
+        state:Tick()
+    end
+    assert(state.nativeReads == reads, "visible hovers polled the enhanced tooltip preference")
+    display.BeginEdit()
+    display.Load(profile)
+    display.FinishEdit(true)
+    assert(not state.enhanced, "profile load did not preserve saved off")
+    state.enhanced = true
+    state:Event(controller, "CVAR_UPDATE", "ubertooltips")
+    assert(not state.enhanced, "native drift ignored the selected off choice")
+    display.Reset()
+    assert(state.enhanced and native.SurvivorsDragonUiDisplay == nil, "full display reset did not restore default-on")
+    assert(#state.objects == objects, "native preference changes allocated gameplay frames or regions")
+end
+print("PASS enhanced tooltip defaults, preview/Confirm/Cancel/profiles/reset and native CVar recovery in both modes")
+
+for _, fault in ipairs({ "missingRead", "missingWrite", "failedRead", "malformedRead", "failedWrite" }) do
+    local state, native = PreferenceFixture(false, nil, false, function(current, env)
+        if fault == "missingRead" then env.GetCVar = nil end
+        if fault == "missingWrite" then env.SetCVar = nil end
+        current.failCVarRead = fault == "failedRead"
+        current.cvarValue = fault == "malformedRead" and "unknown" or nil
+        current.failCVarWrite = fault == "failedWrite"
+    end)
+    assert(not state.enhanced, "unavailable or failed native APIs invented a successful preference change")
+    local reads, writes = state.nativeReads, state.nativeWrites
+    state:Tick()
+    state:Tick()
+    assert(
+        state.nativeReads == reads and state.nativeWrites == writes,
+        "hidden hovers retried native settings on idle updates"
+    )
+    if native.GetCVar and native.SetCVar then
+        state.failCVarRead, state.failCVarWrite, state.cvarValue = false, false, nil
+        state:Event(state:Controller("CVAR_UPDATE"), "CVAR_UPDATE", "UberTooltips")
+        assert(state.enhanced, "a failed native preference call prevented later event-driven recovery")
+    end
+end
+print("PASS enhanced tooltip native API failures stay contained without idle polling")

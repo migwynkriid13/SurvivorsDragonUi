@@ -100,7 +100,7 @@ Right-click the player, target or a party member's portrait or health bar to ope
 
 Use **Profiles** to save a named setup, load it later, overwrite it or delete it. Confirm to keep profile changes; Cancel undoes them. Resetting the addon keeps saved profiles.
 
-Move the **Tooltip** handle to place regular hover cards. Its Layout controls also change tooltip size and visibility. **Tooltip at cursor** makes regular hover cards follow your mouse; it starts off. Skill, equipment, counter and boss-marker tooltips stay above their icons, while aura tooltips appear below theirs.
+Move the **Tooltip** handle to place regular hover cards. Its Layout controls also change tooltip size and visibility. **Enhanced tooltips** starts on and keeps detailed ability tooltips enabled. **Tooltip at cursor** makes regular hover cards follow your mouse; it starts off. Skill, equipment, counter and boss-marker tooltips stay above their icons, while aura tooltips appear below theirs.
 
 ### Combat text and run display
 
