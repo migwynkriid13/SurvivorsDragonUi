@@ -1,5 +1,24 @@
 # Run timer and boss countdown
 
+In `/sdui` → **Encounters** → **Run timer**, **Text below the bar** flips both
+captions below the bar. Turn it off to keep them above. **Detach timer text**
+gives the run time and boss countdown their own **Run timer text (detached)**
+Layout handle, allowing both to move and scale together anywhere on screen.
+Both options default off and preview immediately; Confirm saves, Cancel
+restores, profiles retain the choices and full resets restore attached text above.
+
+Reattaching keeps the detached position for later use. The above/below control
+applies while attached and dims while detached. Detached text has independent
+Layout visibility and can remain visible with the timer bar hidden. It still
+requires a valid active native clock and the enabled custom timer. Retiring the
+native clock clears its captions rather than preserving old gameplay values.
+
+The reusable caption seat moves between the original bar overlay and a separate
+Layout owner. The existing clock/countdown reader, fonts, segment rendering and
+pause-aware native values are shared. Text bounds and the affix lane follow the
+selected placement. No new timer getter, event, updater, artwork or SavedVariable
+is added. Packaged-client input and appearance remain unverified.
+
 `/sdui` → **Run timer** starts with **Enable custom run timer**, on by default.
 Turn it off to use the game's original timer and next-boss line again. The
 matching game option is turned back on too. **Boss bars** has an independent
