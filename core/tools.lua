@@ -647,11 +647,9 @@ function DFRL.tools.MatchesClassColor(red, green, blue)
 end
 
 local runPlayer = {}
-local runClassPhases = { playing = true, choosing = true, paused = true, dead = true, victory = true }
 
 function DFRL.tools.RetireRunPlayer()
     runPlayer.retiredZone, runPlayer.retiredStamp = AZS_ZONE, AZS_ZONE_UPDATED
-    runPlayer.observedZone, runPlayer.observedStamp = nil, nil
     runPlayer.zone, runPlayer.color = nil, nil
 end
 
@@ -663,36 +661,28 @@ function DFRL.tools.GetRunPlayerColor(name)
         or stamp < 0
         or stamp - stamp ~= 0
         or (name ~= nil and (name == "" or name ~= zone.hero))
-        or type(AZS_GetPhase) ~= "function"
     then
         return
     end
-    local runStamp = AZS_RUN_UPDATED
-    if runPlayer.zone == zone and runPlayer.stamp == stamp and runPlayer.runStamp == runStamp then
-        return runPlayer.color
-    end
-    local ok, phase = pcall(AZS_GetPhase)
-    if not ok then return end
-    runPlayer.zone, runPlayer.stamp, runPlayer.runStamp = zone, stamp, runStamp
-    runPlayer.color = nil
-    if not runClassPhases[phase] then
-        if runPlayer.observedZone then
-            runPlayer.retiredZone, runPlayer.retiredStamp = runPlayer.observedZone, runPlayer.observedStamp
-            runPlayer.observedZone, runPlayer.observedStamp = nil, nil
-        end
-        return
-    end
     if zone == runPlayer.retiredZone and stamp == runPlayer.retiredStamp then return end
-    runPlayer.observedZone, runPlayer.observedStamp = zone, stamp
-    -- UnitClass can still describe the character-selection record after a switch.
+    if runPlayer.zone == zone and runPlayer.stamp == stamp and runPlayer.class == zone.class then
+        return runPlayer.color, true
+    end
+    -- Hero identity remains authoritative between runs too. World leave retires
+    -- the old publication until the next hero snapshot replaces it.
+    runPlayer.zone, runPlayer.stamp, runPlayer.class = zone, stamp, zone.class
     runPlayer.color = T.GetClassColor(zone.class)
-    return runPlayer.color
+    return runPlayer.color, true
 end
 
 function DFRL.tools.GetUnitClassColor(unit)
+    if unit ~= "player" and type(UnitIsUnit) == "function" and UnitExists(unit) and UnitExists("player") then
+        local same = UnitIsUnit(unit, "player")
+        if same == true or same == 1 then unit = "player" end
+    end
     if unit == "player" then
-        local color = T.GetRunPlayerColor()
-        if color then return color end
+        local color, published = T.GetRunPlayerColor()
+        if published then return color end
     end
     if type(UnitClass) ~= "function" then return end
     local _, class = UnitClass(unit)

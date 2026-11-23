@@ -600,9 +600,16 @@ DFRL:NewMod("Mini", 1, function()
     frame:RegisterEvent("UNIT_FACTION")
     frame:RegisterEvent("UNIT_FLAGS")
     frame:RegisterEvent("UNIT_CONNECTION")
+    frame:RegisterEvent("CHAT_MSG_ADDON")
     frame:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             Cancel()
+        elseif event == "CHAT_MSG_ADDON" then
+            if arg1 == "AZSZONE" and DFRL.display.Get("classHealth") then
+                for _, values in ipairs(units) do
+                    if values.updateHealthColor then Schedule(values) end
+                end
+            end
         elseif unitEvents[event] and type(arg1) == "string" and arg1 ~= "" then
             for _, values in ipairs(units) do
                 if values.unit == arg1 or UnitIsUnit(values.unit, arg1) then Schedule(values) end

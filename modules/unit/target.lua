@@ -26,6 +26,12 @@ DFRL:NewMod("Target", 1, function()
         local red, green, blue = 1, 0, 0
         if T.IsPlayerOrPartyUnit("target") then
             red, green = 0, 1
+            if DFRL.display.Get("classHealth") then
+                local color = T.GetUnitClassColor("target")
+                if color then
+                    red, green, blue = color[1], color[2], color[3]
+                end
+            end
         end
         local currentRed, currentGreen, currentBlue, currentAlpha = bar:GetStatusBarColor()
         if
@@ -172,6 +178,17 @@ DFRL:NewMod("Target", 1, function()
         healthLabels.Update()
         if not UnitExists("target") then return end
         TargetFrameHealthBar:SetStatusBarColor(1, 0, 0)
+        if TargetFrame.name then
+            local color = T.IsPlayerOrPartyUnit("target") and T.GetUnitClassColor("target")
+            local r, g, b = 1, 0.82, 0
+            if color then
+                r, g, b = color[1], color[2], color[3]
+            end
+            local oldR, oldG, oldB = TargetFrame.name:GetTextColor()
+            if not T.NearlyEqual(r, oldR) or not T.NearlyEqual(g, oldG) or not T.NearlyEqual(b, oldB) then
+                TargetFrame.name:SetTextColor(r, g, b)
+            end
+        end
         UpdateClassification(forceBorder)
     end
 
@@ -215,9 +232,13 @@ DFRL:NewMod("Target", 1, function()
     frame:RegisterEvent("UNIT_MAXHEALTH")
     frame:RegisterEvent("UNIT_FACTION")
     frame:RegisterEvent("UNIT_CLASSIFICATION_CHANGED")
+    frame:RegisterEvent("CHAT_MSG_ADDON")
+    DFRL.display.Listen(Schedule)
     frame:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             Cancel()
+        elseif event == "CHAT_MSG_ADDON" then
+            if arg1 == "AZSZONE" then Schedule() end
         elseif event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
             Paint(true)
         elseif event == "PARTY_MEMBERS_CHANGED" then
