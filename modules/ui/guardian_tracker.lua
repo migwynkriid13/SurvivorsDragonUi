@@ -16,18 +16,27 @@ DFRL:NewMod("GuardianTracker", 4, function()
     local path = DFRL:GetInfoOrCons("tex")
     local rows = {}
     local inWorld, dirty, age = true, true, 0
-    local showDead = DFRL.display.Get("guardianShowDead")
-    local showHealth = DFRL.display.Get("guardianShowHealthBars") ~= false
-    local showCurrent = DFRL.display.Get("guardianShowCurrentHealth")
-    local showMaximum = DFRL.display.Get("guardianShowMaximumHealth")
-    local showPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true
-    local shortenHealth = DFRL.display.Get("guardianShortHealth") ~= false
-    local guardianArt = DFRL.display.GuardianIcon()
+    -- Keep display choices behind one capture: the native Lua 5.0 compiler
+    -- allows at most 32 upvalues per function, including visible row refresh.
+    local options = {
+        showDead = DFRL.display.Get("guardianShowDead"),
+        showHealth = DFRL.display.Get("guardianShowHealthBars") ~= false,
+        showCurrent = DFRL.display.Get("guardianShowCurrentHealth"),
+        showMaximum = DFRL.display.Get("guardianShowMaximumHealth"),
+        showPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true,
+        shortenHealth = DFRL.display.Get("guardianShortHealth") ~= false,
+        titleSize = DFRL.display.Get("guardianTitleFontSize"),
+        nameSize = DFRL.display.Get("guardianNameFontSize"),
+        statusSize = DFRL.display.Get("guardianStatusFontSize"),
+        timerOnly = DFRL.display.Get("guardianTimerOnly"),
+        fontRevision = 0,
+        guardianArt = DFRL.display.GuardianIcon(),
+    }
     local style, DEFAULT_SCALE = T.RightHudStyle, 0.85
     local ROW_INSET, NAME_WIDTH, COLUMN_GAP = 12, 120, 16 * 0.9
     local HEALTH_RIGHT_OFFSET = 4
     local ICON_SIZE, TITLE_LEFT = 24, 40
-    local TITLE_SIZE, TITLE_HEIGHT = style.titleSize / DEFAULT_SCALE, 23
+    local TITLE_HEIGHT = 23
     local TITLE_PADDING = TITLE_LEFT + ROW_INSET
     local HEADER_HEIGHT, ROW_HEIGHT = style.questHeaderHeight / DEFAULT_SCALE, 26
     -- The health pill's right edge aligns with the default minimap edge.
@@ -68,13 +77,30 @@ DFRL:NewMod("GuardianTracker", 4, function()
         texture:SetTexCoord(0, right or 1, 0, bottom or 1)
         return texture
     end
+    local function SizeText(label, size, plain)
+        size = size or options.statusSize
+        if label.guardianFontSize == size and label.guardianFontRevision == options.fontRevision then return true end
+        local flags = plain and "" or "OUTLINE"
+        local loaded = T.SetFont(label, size, flags)
+        local face, appliedSize, appliedFlags = label:GetFont()
+        if
+            loaded == false
+            or not face
+            or not T.NearlyEqual(appliedSize, size)
+            or (appliedFlags or "") ~= T.GetFontFlags(flags)
+        then
+            return false
+        end
+        label.guardianFontSize, label.guardianFontRevision = size, options.fontRevision
+        return true
+    end
     local header = T.CreateQuestTrackerHeader(frame, width, HEADER_HEIGHT)
     local icon = Texture(frame, nil, "ARTWORK", ICON_SIZE, ICON_SIZE, 65 / 128, 65 / 128)
     icon:SetPoint("TOPLEFT", frame, "TOPLEFT", 9, -(HEADER_HEIGHT - ICON_SIZE) / 2)
-    local title = Label(frame, TITLE_SIZE, nil, true)
+    local title = Label(frame, options.titleSize, nil, true)
     title:SetPoint("TOPLEFT", frame, "TOPLEFT", TITLE_LEFT, -(HEADER_HEIGHT - TITLE_HEIGHT) / 2)
     title:SetHeight(TITLE_HEIGHT)
-    local measure = Label(frame, 12)
+    local measure = Label(frame, options.statusSize)
     measure:Hide()
 
     local function Number(value) return type(value) == "number" and value - value == 0 end
@@ -113,7 +139,8 @@ DFRL:NewMod("GuardianTracker", 4, function()
             or row.statusLanguage ~= language
             or row.statusText == nil
         then
-            local text = kind == "returning" and Format("Respawns in %s", Time(second))
+            local text = kind == "returning"
+                    and (options.timerOnly and Time(second) or Format("Respawns in %s", Time(second)))
                 or DFRL.locale.Text(captions[kind] or "Empty")
             row.statusIdentity, row.statusKind, row.statusSecond, row.statusLanguage = entry.key, kind, second, language
             row.statusText = text
@@ -168,10 +195,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
         local row = CreateFrame("Frame", nil, frame)
         row:SetHeight(ROW_HEIGHT)
         row:EnableMouse(false)
-        row.name = Label(row, 12)
+        row.name = Label(row, options.nameSize)
         row.name:SetPoint("LEFT", row, "LEFT", 0, 0)
         row.name:SetHeight(ROW_HEIGHT)
-        row.status = Label(row, 12, "RIGHT")
+        row.status = Label(row, options.statusSize, "RIGHT")
         row.status:SetPoint("RIGHT", row, "RIGHT", 0, 0)
         row.status:SetHeight(ROW_HEIGHT)
         local pill = CreateFrame("Frame", nil, row)
@@ -216,10 +243,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
     -- Measure the real game font across every caption translation, including
     -- populated format fields. Native guardian names remain bounded separately.
     local function CaptionWidth(source, first)
-        if presentation.measureSize ~= 12 then
-            T.SetFont(measure, 12, "OUTLINE")
-            presentation.measureSize = 12
-        end
+        if not SizeText(measure) then return 0 end
         local maximum = 0
         for _, catalog in pairs(DFRL.locale.data) do
             local text = catalog.ui[source] or source
@@ -239,15 +263,15 @@ DFRL:NewMod("GuardianTracker", 4, function()
             math.max(
                 42,
                 available * preferredStatusWidth / (NAME_WIDTH + preferredStatusWidth),
-                showPercentage and healthWidth or 0
+                options.showPercentage and healthWidth or 0
             ),
             available - 24
         )
     end
     local function Measure()
-        local respawnWidth = CaptionWidth("Respawns in %s", "99:59")
+        local respawnWidth = CaptionWidth(options.timerOnly and "%s" or "Respawns in %s", "99:59")
         if respawnWidth <= 0 then return false end
-        preferredStatusWidth = math.max(128, healthWidth, respawnWidth + 16)
+        preferredStatusWidth = math.max(options.timerOnly and 64 or 128, healthWidth, respawnWidth + 16)
         for _, source in pairs(captions) do
             preferredStatusWidth = math.max(preferredStatusWidth, CaptionWidth(source) + 16)
         end
@@ -255,12 +279,9 @@ DFRL:NewMod("GuardianTracker", 4, function()
         return true
     end
     local function MeasureHealthLabels(snapshot)
-        local showLabels = showHealth and (showCurrent or showMaximum or showPercentage)
-        if showLabels and presentation.measureSize ~= T.EncounterHealthStyle.fontSize then
-            T.SetFont(measure, T.EncounterHealthStyle.fontSize, "OUTLINE")
-            presentation.measureSize = T.EncounterHealthStyle.fontSize
-        end
-        if not showHealth or snapshot.counts.fighting == 0 then
+        local showLabels = options.showHealth and (options.showCurrent or options.showMaximum or options.showPercentage)
+        if showLabels and not SizeText(measure) then return false end
+        if not options.showHealth or snapshot.counts.fighting == 0 then
             presentation.healthLabels = nil
         elseif showLabels then
             local labels = presentation.healthLabels or {}
@@ -272,11 +293,11 @@ DFRL:NewMod("GuardianTracker", 4, function()
                     local text = T.EncounterHealthText(
                         entry.hp,
                         entry.maximum,
-                        showCurrent,
-                        showMaximum,
+                        options.showCurrent,
+                        options.showMaximum,
                         cache,
-                        shortenHealth,
-                        showPercentage
+                        options.shortenHealth,
+                        options.showPercentage
                     )
                     if cache.measuredText ~= text or not cache.measured then
                         T.SetTextIfChanged(measure, text)
@@ -303,14 +324,14 @@ DFRL:NewMod("GuardianTracker", 4, function()
 
     local function PaintRowStatus(row, entry, snapshotIndex, status)
         -- Only the native fighting state with valid current health gets a bar.
-        if showHealth and entry.state == "awake" and Number(entry.healthFraction) then
+        if options.showHealth and entry.state == "awake" and Number(entry.healthFraction) then
             ClearStatus(row)
             if row.value ~= entry.healthFraction then row.bar:SetValue(entry.healthFraction) end
             row.value = entry.healthFraction
             -- Reuse the caption measured for this exact snapshot row.
             local prepared = presentation.healthLabels and presentation.healthLabels[snapshotIndex]
             local text
-            if not (showCurrent or showMaximum or showPercentage) then
+            if not (options.showCurrent or options.showMaximum or options.showPercentage) then
                 text = ""
             elseif prepared then
                 text = prepared.encounterText
@@ -319,10 +340,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
                 row.health,
                 entry.hp,
                 entry.maximum,
-                showCurrent,
-                showMaximum,
-                shortenHealth,
-                showPercentage,
+                options.showCurrent,
+                options.showMaximum,
+                options.shortenHealth,
+                options.showPercentage,
                 text
             )
             if row.status:IsShown() then row.status:Hide() end
@@ -337,9 +358,32 @@ DFRL:NewMod("GuardianTracker", 4, function()
         end
     end
 
+    local function FitRowName(row)
+        local taken
+        if row.pill:IsShown() then
+            taken = statusWidth + 8 - HEALTH_RIGHT_OFFSET
+        else
+            local text = row.status:GetText()
+            if row.measuredStatus ~= text or row.measuredStatusRevision ~= options.fontRevision then
+                T.SetTextIfChanged(measure, text)
+                local measured = measure:GetStringWidth() or 0
+                if text == "" or measured > 0 then
+                    row.measuredStatus, row.measuredStatusRevision = text, options.fontRevision
+                    row.statusTaken = math.ceil(measured) + 1
+                end
+            end
+            taken = row.statusTaken or statusWidth
+        end
+        local nameWidth = math.max(20, width - 2 * ROW_INSET - COLUMN_GAP - taken)
+        if not T.NearlyEqual(row.nameWidth, nameWidth) then
+            row.name:SetWidth(nameWidth)
+            row.nameWidth = nameWidth
+        end
+    end
+
     local function Refresh()
         if not inWorld or DFRL.layout.IsHidden("guardianTracker") or not UIParent:IsVisible() then return end
-        local snapshot = roster.GetSnapshot(presentation.snapshot, showDead, showHealth)
+        local snapshot = roster.GetSnapshot(presentation.snapshot, options.showDead, options.showHealth)
         if not snapshot then
             Hide()
             return
@@ -353,8 +397,9 @@ DFRL:NewMod("GuardianTracker", 4, function()
             frame:Show()
         end
         if not frame:IsVisible() then return end
-        if icon.guardianArt ~= guardianArt and icon:SetTexture(guardianArt) ~= false then
-            icon.guardianArt = guardianArt
+        if not SizeText(title, options.titleSize, true) then return end
+        if icon.guardianArt ~= options.guardianArt and icon:SetTexture(options.guardianArt) ~= false then
+            icon.guardianArt = options.guardianArt
         end
         if not MeasureHealthLabels(snapshot) then
             Clear()
@@ -373,10 +418,10 @@ DFRL:NewMod("GuardianTracker", 4, function()
             or presentation.filterRevision ~= snapshot.revision
             or presentation.filterGeneration ~= snapshot.generation
             or presentation.filterRows ~= snapshot.rows
-            or presentation.filterShowDead ~= showDead
+            or presentation.filterShowDead ~= options.showDead
         then
             for index, entry in ipairs(snapshot.rows) do
-                if showDead or entry.state == "asleep" or entry.state == "awake" then
+                if options.showDead or entry.state == "asleep" or entry.state == "awake" then
                     count = count + 1
                     filtered[count] = index
                 end
@@ -387,7 +432,7 @@ DFRL:NewMod("GuardianTracker", 4, function()
             table.setn(filtered, count)
             presentation.filteredCount = count
             presentation.filterRevision, presentation.filterGeneration = snapshot.revision, snapshot.generation
-            presentation.filterRows, presentation.filterShowDead = snapshot.rows, showDead
+            presentation.filterRows, presentation.filterShowDead = snapshot.rows, options.showDead
         else
             count = presentation.filteredCount
         end
@@ -402,23 +447,26 @@ DFRL:NewMod("GuardianTracker", 4, function()
                 local row = rows[used] or MakeRow()
                 -- Keep partially painted rows eligible for cleanup.
                 if used > presentation.activeRows then presentation.activeRows = used end
+                SizeText(row.name, options.nameSize)
+                SizeText(row.status)
+                SizeText(row.health)
                 if row.layoutWidth ~= width or row.layoutIndex ~= used or row.statusWidth ~= statusWidth then
                     row:ClearAllPoints()
                     row:SetPoint("TOPLEFT", frame, "TOPLEFT", ROW_INSET, -(HEADER_HEIGHT + 6 + (used - 1) * ROW_HEIGHT))
                     row:SetWidth(width - 2 * ROW_INSET)
-                    row.name:SetWidth(width - statusWidth - 2 * ROW_INSET - COLUMN_GAP)
                     row.status:SetWidth(statusWidth)
                     row.pill:SetWidth(statusWidth + 8)
                     row.layoutWidth, row.layoutIndex, row.statusWidth = width, used, statusWidth
                 end
                 T.SetTextIfChanged(row.name, LairName(entry, row))
-                local status = not showHealth and entry.status == "fighting" and "combat" or entry.status
+                local status = not options.showHealth and entry.status == "fighting" and "combat" or entry.status
                 local color = colors[status] or colors.empty
                 if row.color ~= color then
                     row.status:SetTextColor(color[1], color[2], color[3])
                     row.color = color
                 end
                 PaintRowStatus(row, entry, snapshotIndex, status)
+                FitRowName(row)
                 if not row:IsShown() then row:Show() end
             end
         end
@@ -484,14 +532,20 @@ DFRL:NewMod("GuardianTracker", 4, function()
         controller:SetScript("OnUpdate", inWorld and not DFRL.layout.IsHidden("guardianTracker") and Tick or nil)
     end
     local uiFont = DFRL.display.Get("uiFont")
+    local uiCustomFont = DFRL.display.Get("uiCustomFont")
     local uiFontOutline = DFRL.display.Get("uiFontOutline")
     DFRL.display.Listen(function()
         local selectedIcon = DFRL.display.GuardianIcon()
-        if selectedIcon ~= guardianArt then
-            guardianArt, age = selectedIcon, 0.1
+        if selectedIcon ~= options.guardianArt then
+            options.guardianArt, age = selectedIcon, 0.1
         end
         local selectedFont = DFRL.display.Get("uiFont")
+        local selectedCustomFont = DFRL.display.Get("uiCustomFont")
         local selectedOutline = DFRL.display.Get("uiFontOutline")
+        local selectedTitleSize = DFRL.display.Get("guardianTitleFontSize")
+        local selectedNameSize = DFRL.display.Get("guardianNameFontSize")
+        local selectedStatusSize = DFRL.display.Get("guardianStatusFontSize")
+        local selectedTimerOnly = DFRL.display.Get("guardianTimerOnly")
         local selected = DFRL.display.Get("guardianRows")
         local selectedShowDead = DFRL.display.Get("guardianShowDead")
         local selectedHealth = DFRL.display.Get("guardianShowHealthBars") ~= false
@@ -499,27 +553,40 @@ DFRL:NewMod("GuardianTracker", 4, function()
         local selectedMaximum = DFRL.display.Get("guardianShowMaximumHealth")
         local selectedPercentage = DFRL.display.Get("guardianShowHealthPercentage") == true
         local selectedShortHealth = DFRL.display.Get("guardianShortHealth") ~= false
-        if
-            selectedFont ~= uiFont
+        local fontChanged = selectedFont ~= uiFont
+            or selectedCustomFont ~= uiCustomFont
             or selectedOutline ~= uiFontOutline
-            or selectedHealth ~= showHealth
-            or selectedCurrent ~= showCurrent
-            or selectedMaximum ~= showMaximum
-            or selectedShortHealth ~= shortenHealth
-            or selectedPercentage ~= showPercentage
+            or selectedTitleSize ~= options.titleSize
+            or selectedNameSize ~= options.nameSize
+            or selectedStatusSize ~= options.statusSize
+        if fontChanged then
+            options.titleSize, options.nameSize, options.statusSize =
+                selectedTitleSize, selectedNameSize, selectedStatusSize
+            options.fontRevision = options.fontRevision + 1
+        end
+        if
+            fontChanged
+            or selectedTimerOnly ~= options.timerOnly
+            or selectedHealth ~= options.showHealth
+            or selectedCurrent ~= options.showCurrent
+            or selectedMaximum ~= options.showMaximum
+            or selectedShortHealth ~= options.shortenHealth
+            or selectedPercentage ~= options.showPercentage
         then
             ClearStatuses()
             uiFont, uiFontOutline = selectedFont, selectedOutline
-            presentation.measureSize = nil
-            showHealth, showCurrent, showMaximum = selectedHealth, selectedCurrent, selectedMaximum
-            showPercentage = selectedPercentage
-            shortenHealth = selectedShortHealth
+            uiCustomFont = selectedCustomFont
+            options.showHealth, options.showCurrent, options.showMaximum =
+                selectedHealth, selectedCurrent, selectedMaximum
+            options.showPercentage = selectedPercentage
+            options.shortenHealth = selectedShortHealth
+            options.timerOnly = selectedTimerOnly
             presentation.healthLabels, healthWidth = nil, 0
             dirty, age = true, 0.1
         end
-        if selected ~= visibleRows or selectedShowDead ~= showDead then
+        if selected ~= visibleRows or selectedShowDead ~= options.showDead then
             ClearStatuses()
-            visibleRows, showDead, age, rowOffset = selected, selectedShowDead, 0.1, 0
+            visibleRows, options.showDead, age, rowOffset = selected, selectedShowDead, 0.1, 0
             local height = HEADER_HEIGHT
                 + 12
                 + (visibleRows > 0 and visibleRows or (presentation.filteredCount or 5)) * ROW_HEIGHT

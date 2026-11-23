@@ -476,6 +476,15 @@ Chat setup now permanently hides all eight controls through the existing control
 
 ## Lua 5.0 closure limit
 
+The later Guardian tracker screenshot reports the same compiler limit at its
+row refresh. Adding independent font controls and adaptive name widths made
+that function capture too many separate locals. Its display choices now live
+behind one local options table, and row-name fitting uses a separate helper.
+This reduces closure captures without changing the settings, measurements,
+roster reads or visible behavior. Existing CI source contracts enforce the
+32-upvalue limit, and Guardian lifecycle fixtures cover the real owner.
+Local compilation, tests and addon/game execution were not run.
+
 The subsequent supplied reload screenshot reports `modules/ui/run.lua:1761: too many upvalues (limit=32)`. This is a compiler rejection: the combined HUD update captured more locals than Lua 5.0 permits, so the whole `RunTimers` module was unavailable before any of its initialization ran. That independently explains the absent run clock, encounter bars and kills/gold/cache-cost tally. The earlier font errors also affected these paths where compilation succeeded.
 
 The update now calls separate boundary and clock helpers. Each helper captures only its own dependencies, and the small coordinator still checks native phase before reading retained tables, updates run boundaries before the clock, and refreshes the tally/encounters last. Native timing, schedule continuity, takeover/release and reload handoff behavior are preserved. No captured state becomes global or saved, and no native compiler limit is bypassed.
