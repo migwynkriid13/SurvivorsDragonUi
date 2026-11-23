@@ -54,6 +54,7 @@ local function Resources(performance, hidden)
     }
     env.DFRL.playerResources = {
         SetPrimary = function(value, maximum, power) context.primaryValues = { value, maximum, power } end,
+        SetAbsorb = function(value, health, maximum) context.absorbValues = { value, health, maximum } end,
     }
     env.AZS_RUN, env.AZS_RUN_UPDATED = { proc = "soul_fire", pv = 4, pm = 5 }, context.now
     local player = env.CreateFrame("Frame", "PlayerFrame", env.UIParent)

@@ -141,6 +141,7 @@ end
 Test("latest hero class tint survives ready phases and retires only on world leave", function()
     local context, _, bar = Player()
     local env, phase = context.env, "playing"
+    env.UnitExists = function(unit) return unit == "player" or unit == "party1" end
     env.AZS_GetPhase = function() return phase end
     env.UnitClass = function(unit)
         if unit == "player" then return "Warrior", "WARRIOR" end

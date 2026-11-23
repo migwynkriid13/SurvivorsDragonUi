@@ -870,20 +870,20 @@ assert(
     "search header overlaps Performance Mode"
 )
 local categoryKeys =
-    { "layout", "units", "combat", "meter", "action", "jewelry", "encounters", "map", "interface", "profiles" }
+    { "layout", "units", "combat", "meter", "action", "jewelry", "encounters", "map", "interface", "stats", "profiles" }
 local previousBottom = -performanceControl.point[5] + performanceControl:GetHeight()
 for index, key in ipairs(categoryKeys) do
     local button = dialog.navigation.buttons[key]
     local top = -button.point[5]
     assert(
-        button:GetParent() == dialogSidebar and top == 112 + (index - 1) * 46 and top >= previousBottom,
+        button:GetParent() == dialogSidebar and top == 112 + (index - 1) * 42 and top >= previousBottom,
         "category rows overlap search, Performance Mode or another category"
     )
     previousBottom = top + button:GetHeight()
 end
 assert(
-    previousBottom == 566 and previousBottom <= dialogSidebar:GetHeight(),
-    "the tenth sidebar category extends into the footer"
+    previousBottom == 568 and previousBottom <= dialogSidebar:GetHeight(),
+    "the eleventh sidebar category extends into the footer"
 )
 local dialogScroll = env.SurvivorsDragonUiSettingsScroll
 assert(
@@ -891,7 +891,22 @@ assert(
     "search reduced the full settings content viewport"
 )
 dialog.navigation.Search("shield")
-assert(#dialog.navigation.results == 3 and not pages.units, "shield search missed health controls or built their page")
+do
+    local targets = {}
+    for _, result in ipairs(dialog.navigation.results) do
+        targets[result.target] = true
+    end
+    assert(
+        #dialog.navigation.results == 4
+            and targets.showHealthValue
+            and targets.showHealthPercentage
+            and targets.playerCombineHealthAbsorb
+            and targets.statsShowShielded
+            and not pages.units
+            and not pages.stats,
+        "shield search missed health/Stats controls or built their pages"
+    )
+end
 assert(
     not context.editHandles and not env.SurvivorsDragonUiDisplay,
     "search changed settings or retained Layout overlays"
@@ -1477,12 +1492,18 @@ for _ in pairs(pages) do
     pageCount = pageCount + 1
 end
 assert(
-    pageCount == 25
+    pageCount == 31
         and pages.cacheIcons
         and pages.bossIcons
         and pages.eliteIcons
         and pages.guardianIcons
         and pages.rarityOdds
+        and pages.stats
+        and pages.statsOffenseList
+        and pages.statsSurvivalList
+        and pages.statsAreaDotsList
+        and pages.statsVersusList
+        and pages.statsRunList
         and layoutBuilds == 1,
     "full category walk lost or rebuilt sections"
 )
@@ -1496,7 +1517,7 @@ for _, key in ipairs(categoryKeys) do
         "an editor category replaced or hid the shared sidebar search"
     )
 end
-assert(#context.objects == allCategoryObjects, "revisiting all ten categories allocated another sidebar search")
+assert(#context.objects == allCategoryObjects, "revisiting all eleven categories allocated another sidebar search")
 assert(env.fontSampleClock and not env.fontMenu, "Encounters eagerly prepared the closed font popup")
 local affixes, shadow = env.displayControls.attachAffixes, env.shadowControl
 assert(

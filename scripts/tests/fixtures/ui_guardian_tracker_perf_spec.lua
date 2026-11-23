@@ -343,6 +343,11 @@ print("PASS guardian status captions retain native rounded boundaries and skip u
 do
     local context, row = Tracker()
     context.env.DFRL.locale.code = "fr"
+    local setText = row.status.SetText
+    function row.status:SetText(value)
+        context.writes.statusText = (context.writes.statusText or 0) + 1
+        return setText(self, value)
+    end
     context:NotifyLocale()
     assert(row.status:GetText() == "Retour dans 1:02", "language change retained the previous guardian caption")
     context:Tick()
@@ -360,10 +365,13 @@ do
     context:ResetCounts()
     context:Tick()
     assert(
-        row.status:GetText() == "Retour dans 1:00" and context.writes.SetText == 1,
+        row.status:GetText() == "Retour dans 1:00" and context.writes.statusText == 1,
         "failed native text did not retry"
     )
     assert(not context.reads.captionFormats, "a failed native setter discarded successful formatting")
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
 end
 print("PASS guardian caption caches preserve language changes, actual native repairs and failed setter retries")
 
