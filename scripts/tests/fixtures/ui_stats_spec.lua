@@ -4,7 +4,7 @@ assert(_VERSION == "Lua 5.1", "Stats fixtures require CI Lua 5.1")
 
 for _, performance in ipairs({ false, true }) do
     local context = H.New()
-    local env, phase, hidden = context.env, "playing", false
+    local env, phase, hidden = context.env, "choosing", false
     local object = context.Object
     function context:Object(kind, name, parent)
         local result = object(self, kind, name, parent)
@@ -12,6 +12,11 @@ for _, performance in ipairs({ false, true }) do
         function result:GetScale() return self.scale or 1 end
         function result:GetEffectiveScale()
             return self:GetScale() * (self.parent and self.parent:GetEffectiveScale() or 1)
+        end
+        local setStrata = result.SetFrameStrata
+        function result:SetFrameStrata(value)
+            setStrata(self, value)
+            self.strata = value
         end
         if kind == "Texture" then
             function result:SetBlendMode(value) self.blend = value end
@@ -99,6 +104,7 @@ for _, performance in ipairs({ false, true }) do
             "SetText",
             "SetTexture",
             "SetFont",
+            "SetFrameStrata",
             "SetPoint",
             "SetWidth",
             "SetHeight",
@@ -123,10 +129,15 @@ for _, performance in ipairs({ false, true }) do
     display.Set("statsWindow", true)
     Tick()
     assert(panel:IsShown() and not env.SurvivorsDragonUiDisplay, "Stats preview saved too early")
+    assert(panel.strata == "TOOLTIP", "initial upgrade Stats stayed behind the full-screen dimmer")
     assert(Has("Stats") and Has("Offense") and Has("+533%") and Has("95.7%") and Has("663%"))
     assert(Has("+50.4%") and Has("5.2") and Has("+0%"), "native formatting or zero values changed")
     assert(not Has("Gold") and not Has("Kills") and not Has("Cache"), "Stats restored a counter")
     assert(not reader:GetScript("OnUpdate"), "settled Stats retained an idle updater")
+    phase = "playing"
+    Packet("AZSRUN")
+    Tick()
+    assert(panel.strata == "MEDIUM", "normal play kept the upgrade-only layer")
     local allocated = #context.objects
     context:ResetCounts()
     Packet("AZSRUN")
@@ -187,6 +198,7 @@ for _, performance in ipairs({ false, true }) do
     Packet("AZSRUN")
     Tick()
     assert(panel:IsShown() and Has("900"), "Stats disappeared during native level-up/jewelry choices")
+    assert(panel.strata == "TOOLTIP", "upgrade Stats remained below the native full-screen overlay")
     local choicePool = #context.objects
     context:ResetCounts()
     Packet("AZSRUN")
@@ -201,13 +213,16 @@ for _, performance in ipairs({ false, true }) do
     display.Set("statsWindow", false)
     Tick()
     assert(not panel:IsShown() and not reader.events.CHAT_MSG_ADDON, "upgrades forced disabled Stats to stay active")
+    assert(panel.strata == "MEDIUM", "disabled upgrade Stats kept its elevated layer")
     display.Set("statsWindow", true)
     Tick()
     assert(panel:IsShown() and Has("1,000") and #context.objects == choicePool, "upgrade recovery replaced Stats rows")
+    assert(panel.strata == "TOOLTIP", "enabling Stats during upgrades lost its overlay layer")
     phase = "paused"
     Packet("AZSRUN")
     Tick()
     assert(panel:IsShown() and Has("1,000"), "paused native values failed to recover")
+    assert(panel.strata == "MEDIUM", "leaving upgrades did not restore normal HUD layering")
     phase = "ready"
     Packet("AZSRUN")
     Tick()

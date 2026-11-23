@@ -54,6 +54,16 @@ as `choosing`. Enabled Stats stays visible during those choices and consumes
 native stat changes through the same deferred publications. Its normal display
 and Layout visibility switches still apply; ended/inactive phases retire it.
 
+During `choosing`, the Stats root uses the native `TOOLTIP` stratum so its
+text and artwork draw above the upgrade screen's full-screen dimmer. It stays
+mouse-transparent. Playing/paused presentation and hiding, disabling or world
+cleanup restore `MEDIUM`. The layer setter runs only on transitions through
+the existing reader; no extra frame, event or updater is added. The native
+[frame-state bindings](https://github.com/samwhosung/benilla/blob/e2bad3c45c4c8062bf3347396036d25a5472fd11/crates/benilla-ui/src/script/object/frame_state.rs#L294)
+support these strata. The supplied screenshot establishes that the prior
+MEDIUM-layer Stats was visible underneath the dimmer; packaged-client rendering
+of the corrected layer still needs in-game confirmation.
+
 Damage, area, speed and experience use their supplied multipliers minus one;
 haste displays the supplied cooldown reduction. Fractional chances and critical
 multiplier values are displayed as percentages. Regeneration, heal per kill,

@@ -19,6 +19,10 @@ and jewelry choices keep its current native values visible. This reuses the
 existing publication reader, pooled regions and changed-only updates; it adds
 no event, updater, frame, artwork or saved state. Settled upgrades have no idle
 OnUpdate, and display/Layout hiding still detaches the reader.
+Choosing raises the existing mouse-transparent Stats root to `TOOLTIP` above
+full-screen dimming; phase exit and hiding restore `MEDIUM`. The layer choice
+is cached, so settled publications add no strata write. No native choice frame
+or dimmer is changed and no polling, frame or drawing region is added.
 
 Stats defaults off, with two lightweight frames and no prepared texture or
 FontString regions. Enabled visible publications and settings changes coalesce
@@ -1995,10 +1999,14 @@ cover the reported joins; compensating label/name anchors keep the original
 text column fixed. The background follows the same rectangle. Portraitless mode
 removes the portrait span and compensates the existing closed border.
 
-The clean party health-only crop set replaces the compact view's four strips
-with fifteen, adding eleven allocated/visible texture regions in portrait mode.
-They share the existing pet sheet, meet edge to edge and retain half-texel-safe
-one-row tips, without overlapping shaded border alpha. The pool is built once
+The compact view uses fifteen strips, eleven more than its original four-strip
+border. Its fixed-width rails combine the party crop set's separate straight
+spans and outer caps, freeing two regions for the portrait-side silver joins.
+These two one-row samples cover only seven source pixels of dark baked-in rail
+stubs with fully opaque silver from the same pet sheet. They do not stack
+translucent shadow or add an asset, region or recurring write. Party retains its
+existing width-aware pieces. The other strips meet edge to edge and retain
+half-texel-safe one-row tips. The pool is built once
 and reused; portraitless mode actually hides all fifteen strips and shows its
 unchanged eight-piece closed border. No frame, FontString, asset, event, updater,
 setting or SavedVariable is added. The unused shaded compact fill BLP is removed,

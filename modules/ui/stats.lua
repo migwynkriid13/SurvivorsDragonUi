@@ -77,12 +77,13 @@ DFRL:NewMod("Stats", 5, function()
     local receipt, retiredReceipt = 0, 0
     local lastStats, retiredStats, lastZone, lastClock, zonePending
     local pendingAt, retryAt, labels, Tick, Sync
+    local strata = "MEDIUM"
     local controller = CreateFrame("Frame", nil, UIParent)
     local panel = CreateFrame("Frame", "SurvivorsDragonUiStats", UIParent)
     panel:SetScale(SCALE)
     panel:SetWidth(WIDTH)
     panel:SetHeight(HEADER_HEIGHT + 14 * 17 + 4 * 23 + 8)
-    panel:SetFrameStrata("MEDIUM")
+    panel:SetFrameStrata(strata)
     panel:EnableMouse(false)
     panel:Hide()
 
@@ -93,9 +94,16 @@ DFRL:NewMod("Stats", 5, function()
             region:Hide()
         end
     end
+    local function Layer(choosing)
+        local wanted = choosing and "TOOLTIP" or "MEDIUM"
+        if strata == wanted then return end
+        panel:SetFrameStrata(wanted)
+        strata = wanted
+    end
     local function Hide()
         if shown then panel:Hide() end
         shown = false
+        Layer(false)
     end
     local function Retire(threshold)
         if lastStats then
@@ -279,10 +287,10 @@ DFRL:NewMod("Stats", 5, function()
         local stats = AZS_STATS
         if type(stats) ~= "table" or (stats == retiredStats and receipt <= retiredReceipt) then return end
         lastStats, lastZone, lastClock = stats, zone, run.t
-        return stats
+        return stats, phase
     end
     local function Update()
-        local stats = Read()
+        local stats, phase = Read()
         if not stats and not editing then
             Hide()
             return false
@@ -336,6 +344,7 @@ DFRL:NewMod("Stats", 5, function()
                 if not piece.sduiStripPath then ready = false end
             end
         end
+        Layer(phase == "choosing")
         if not shown then
             panel:Show()
             shown = true
