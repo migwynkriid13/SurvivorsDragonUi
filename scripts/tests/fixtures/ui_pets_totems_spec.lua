@@ -23,6 +23,11 @@ local function Pets()
         function object:GetEffectiveScale()
             return (self.scale or 1) * (self.parent and self.parent:GetEffectiveScale() or 1)
         end
+        local setPoint = object.SetPoint
+        function object:SetPoint(...)
+            setPoint(self, ...)
+            self.point = { ... }
+        end
         return object
     end
     function env.UIParent:GetEffectiveScale() return 1 end
@@ -47,8 +52,14 @@ local function Pets()
     env.DFRL.navigation = {
         IsRunPhase = function(phase) return phase == "playing" or phase == "paused" or phase == "choosing" end,
     }
-    context.settings =
-        { petRows = 6, petSpacing = 4, hidePetNames = false, hidePetCounts = false, hidePetTimers = true }
+    context.settings = {
+        petRows = 6,
+        petSpacing = 4,
+        petGrowUp = false,
+        hidePetNames = false,
+        hidePetCounts = false,
+        hidePetTimers = true,
+    }
     context.phase, context.runTime, context.learned = "playing", 10, {}
     env.DFRL.sct = {
         LearnSummonIcon = function(name, icon)
@@ -408,6 +419,69 @@ Test("shared pet settings reflow cached groups without extra getters or portrait
     c:Tick()
     name, _, count = c:Labels(2)
     assert(name == "Localized searing_totem" and count == "x2", "discarded display choices lost native data")
+end)
+
+Test("upward pet growth keeps a fixed base for mixed groups and a lone totem", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Pets()
+        c:SetSetting("performanceMode", performance)
+        c:Publish("AZSPETS", { Summon(1, "imp", "Imp", nil, true) })
+        c:Publish("AZSTOTEMS", { Totem("magma_totem", 1) })
+        c:Tick()
+        local rows = c:Rows()
+        assert(rows[1].point[1] == "TOPLEFT" and rows[2].point[5] == -50, "default pet growth changed")
+        local allocated = #c.objects
+        c:ResetCounts()
+        c:SetSetting("petGrowUp", true)
+        c:Tick()
+        assert(rows[1].point[1] == "BOTTOMLEFT" and rows[1].point[3] == "BOTTOMLEFT" and rows[1].point[5] == 0)
+        assert(rows[2].point[1] == "BOTTOMLEFT" and rows[2].point[5] == 50, "second group did not grow upward")
+        assert(
+            not c.reads.pets and not c.reads.totems and not c.reads.portrait and #c.objects == allocated,
+            "growth preview rebuilt native data, portraits or rows"
+        )
+        local height, base = c.layoutFrame:GetHeight(), c.layoutFrame.point[5] - c.layoutFrame:GetHeight()
+        assert(height == 296, "upward growth did not retain the configured six-row frame")
+        c:Publish("AZSPETS", {})
+        c:Tick()
+        local name = c:Labels(1)
+        assert(name == "Localized magma_totem" and rows[1].point[5] == 0 and not rows[2]:IsShown())
+        assert(
+            c.layoutFrame:GetHeight() == height and c.layoutFrame.point[5] - height == base,
+            "a lone shaman totem floated away from the frame base"
+        )
+        c:Publish("AZSTOTEMS", {
+            Totem("magma_totem", 1),
+            Totem("searing_totem", 1),
+            Totem("earth_totem", 1),
+            Totem("water_totem", 1),
+            Totem("air_totem", 1),
+        })
+        c:Tick()
+        rows = c:Rows()
+        assert(rows[5].point[5] == 200 and c.layoutFrame:GetHeight() == height, "new kinds moved the base")
+        c:SetSetting("petRows", 2)
+        c:Tick()
+        assert(c.layoutFrame:GetHeight() == 96 and rows[4].point[5] == 50, "column wrapping ignored upward growth")
+        assert(rows[1].point[4] == 0 and rows[2].point[4] == 178, "growth reversed column order")
+        c:SetSetting("petGrowUp", false)
+        c:Tick()
+        assert(rows[1].point[1] == "TOPLEFT" and rows[4].point[5] == -50, "downward preview recovery failed")
+        c:SetLayoutHidden(true)
+        c:ResetCounts()
+        c:SetSetting("petGrowUp", true)
+        c:Tick()
+        c:NoPresentationWrites()
+        assert(not c.reads.pets and not c.reads.totems, "hidden direction preview sampled a roster")
+        c:SetLayoutHidden(false)
+        c:Tick()
+        assert(rows[1].point[1] == "BOTTOMLEFT" and rows[4].point[5] == 50, "Show lost pending upward growth")
+        c:ResetCounts()
+        c:Tick()
+        c:NoPresentationWrites()
+        c:Event(c.controller, "PLAYER_LEAVING_WORLD")
+        assert(not c.layoutFrame:IsShown() and not c.controller:GetScript("OnUpdate"), "growth bypassed world cleanup")
+    end
 end)
 
 Test("retirement gates both feeds and a fresh same-table same-stamp receipt reopens only its feed", function()

@@ -16,6 +16,15 @@ anchor is eight units below the player portrait and ten units to its left,
 falling back to the player frame or UIParent when needed. Confirmed and draft
 geometry remains independent of these defaults.
 
+Enable **Grow upward** under `/sdui` → **Unit frames** → **Pet frames** to stack
+rows from the bottom of the frame upward. It defaults off. Enable it, then move
+the bottom edge of the Pet frames Layout handle where the list should start.
+The first pet or totem stays at that base as groups appear or disappear.
+Upward mode reserves the configured number of rows, so a lone Magma Totem
+does not jump to the top of the taller list used by another class. Extra columns
+and the order of groups stay the same. Downward mode retains its original sizing.
+The option previews live and follows Confirm, Cancel, profiles and both resets.
+
 ## Totems — 0.125.0
 
 Layout hiding detaches the steady updater. Native pet/totem receipts can wake
