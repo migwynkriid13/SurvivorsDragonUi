@@ -5,6 +5,26 @@ target and target-of-target to closed health bars without their portrait
 pictures or gold rings. Names, levels and health values keep their native
 updates. The separately selected class resources remain available.
 
+## Current hero class colors
+
+The latest valid stamped `AZS_ZONE.class` remains the player's class-color
+source while playing and between runs. Phase changes no longer restore the
+character-selection class. World leave retires the old publication; native
+`UnitClass` supplies the temporary fallback until another hero publication
+arrives. A changed class field invalidates the cache even when its table and
+stamp are reused. This identity-only exception does not relax encounter,
+navigation or gameplay snapshot gates. Unknown published classes stay unknown.
+
+Native `UnitIsUnit` resolves the local player's party and target aliases, so
+those views share the current hero color without matching names. Other party
+members keep their native class metadata. Player, party, nameplate and optional
+class-colored SCT consumers use the same palette and Shaman override.
+Targeting yourself or a party member gives the target name its class color.
+The target health fill also uses it while **Class-colored health** is enabled;
+off retains friendly green. Enemy targets retain red health and gold names.
+Existing deferred unit/zone callbacks repaint after native parsing, and hidden
+views keep their original deferral. No class or hero data is saved.
+
 ## Guardian and boss dragons
 
 Guardian targets use the silver winged dragon. Bosses and the final boss use
@@ -62,6 +82,21 @@ accepted target precedence. Local source review and pinned formatting do not
 establish native event order or in-game appearance.
 
 ## Raid target icons
+
+Assigned symbols now appear at the top of each party portrait. The four rows
+read their own native `party1`–`party4` marker indexes, using the same native
+icon image and crop metadata as the assignment menu. A cleared mark or absent
+unit clears only that row's symbol. The 16-square icon follows the party row's
+movement, scale and hiding without changing its health, resource or click areas.
+There is no additional display setting.
+
+The existing Mini controller refreshes marks on `RAID_TARGET_UPDATE`, party/raid
+roster changes, world entry and row Show. Health events do not query markers.
+Hidden rows perform no marker reads; Show reads the current assigned mark.
+World leave/logout clears shown symbols and blocks out-of-world reads.
+Missing native APIs or invalid icon metadata hides the symbol. Failed artwork
+bindings retry on the next native refresh. This is static in both Performance
+Mode states and adds no polling, runtime file or SavedVariable.
 
 The player, target and party frames share one cursor-anchored native dropdown.
 Right-click on the portrait or health bar opens the eight native marks and

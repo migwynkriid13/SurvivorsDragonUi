@@ -1,5 +1,23 @@
 # Languages
 
+Pet frames' Grow upward caption and its shared pet/totem hint have source TSV
+and runtime UI entries in all fourteen languages. Native summon names, feeds
+and existing catalog fingerprints are unchanged.
+
+The optional Stats category, section/row captions and controls have source TSV
+and runtime UI entries in all fourteen languages. Native stat fields and values
+are unchanged; range units reuse the existing native `common.yards` caption.
+
+The separate Guardian title/name/status sizes, timer-only option, timer-caption
+above/below and detach controls, and detached Layout label have source/runtime
+UI entries in all fourteen languages. The retired combined-size hint is removed;
+native catalog fingerprints and aliases are unchanged.
+
+Profile-sharing controls and feedback, plus the minimap spell-effects button's
+caption, state and instructions, have source TSV and runtime UI entries in all
+fourteen languages. These are addon captions only; native names, catalogs,
+fingerprints and aliases retain their existing sources.
+
 The Damage meter Bar colors selector, ability/proc captions and Default/Custom
 hints use all fourteen source/runtime UI catalogs. RGB hex values remain literal
 and the optional game's picker retains its own native localization.

@@ -1,5 +1,62 @@
 # PR checks
 
+Pet growth cases exercise production row anchors, mixed pet/totem ordering,
+stable upward bounds after a lone-totem shrink, multi-column rows, spacing,
+hidden preview/recovery, unchanged writes, pool reuse and world cleanup in both
+Performance Mode states. The real editor fixture covers the searchable toggle,
+default-down behavior, preview/Cancel, profile load/Confirm and reset. These
+cases are authored for CI only; local tests and game execution were not run.
+
+`ui_stats_spec.lua` loads the production Stats and display owners in both
+Performance Mode states. Authored cases cover default-off lazy artwork, finite
+native formatting, absent-field recovery, reused publication tables, deferred
+parser reads, no Gold/tally access, stable drawing and row reuse, width changes,
+Layout hiding, choice/pause transitions, retired publications, world cleanup,
+editing placeholders and the display preview/Confirm/Cancel/reset lifecycle.
+These cases are registered for GitHub Actions only and were not run locally.
+They do not establish native rendering or complete native replay behavior.
+
+Nameplate camera cases now cover the installed client's missing physical-button
+getter, native look-channel release without Lua mouse-up, right presses on
+native health-bar children, preserved left-click targeting and existing cleanup
+ownership in both Performance Mode states. Artwork cases pin the untouched
+meter background body, check continuous lower-rail RGB and preserved alpha,
+and compare the derived TGA/BLP pixels. These cases are CI-only; no local tests
+or game execution were performed.
+
+Timer-caption CI cases load the production detached-owner and bounds functions
+over explicit native/Layout boundaries. They cover above/below anchors, retained
+detached geometry, independent visibility, reattachment, Confirm/Cancel/reset,
+affix lanes and unchanged writes without an idle worker. The shared native-clock
+fixture covers detached-text startup with the bar hidden and no extra clock
+reads. Guardian cases cover all three font ranges, older single-size profiles,
+independent heading/name/status sizes, timer-only recovery, cached adaptive name
+widths and failed-font retry. Editor cases cover the real controls and search.
+These cases are authored for CI only and were not executed locally.
+
+Community integration cases are authored for CI only. The production profile
+codec is exercised for deterministic UTF-8/precision-preserving round trips,
+normalization, draft/Load/Confirm/Cancel behavior, name collisions and bounded
+malformed inputs without Lua evaluation. Explicit native boundaries cover the
+minimap effects button's click-only CVar writes and drag cleanup, plus hidden
+Combat Log selection, alpha masking, notices, subscription restoration and
+foreign unsubscriptions without polling. SCT fixtures cover Off/Game intake,
+periodic-only native-feed metadata, legacy/MSBT recovery and world cleanup.
+Hero/target fixtures cover between-run class updates, local-player aliases,
+retired publications, friendly target names and the class-health preference.
+These authored cases have not been executed locally and do not establish
+packaged-client rendering or behavior.
+
+The CI-only `ui_class_resources_spec.lua` fixture loads the production resource
+and display owners with explicit native power/proc boundaries. It covers shard
+preview/Cancel/Confirm, default and profile normalization, resets, changed power
+values, empty sockets, hidden-player recovery, unchanged writes and pool reuse
+in both Performance Mode states. Rogue points, Lightwell and numeric fallbacks
+remain covered independently. The settings-visibility fixture checks that Class
+resources dims the shard option while retaining its choice and defers hidden
+controls until Show. These cases are authored for CI; they were not run locally
+and do not establish native rendering or game behavior.
+
 Every PR push runs formatting, static Lua analysis, package and asset inventory,
 source contracts, checker regression fixtures, mocked UI lifecycle tests and the
 existing artwork checks. Formatting, Lua analysis and mocked UI, source
@@ -992,6 +1049,12 @@ The assertions cover:
   health recovery after hiding one group, and restoring fill clipping on
   detach, reattach, and reuse of a detached row for a boss. Settled rows skip
   rebinding in both Performance Mode states.
+- Party raid-marker cases extend the full Mini/party fixture with all eight
+  native symbols, exact native icon crops, independent clearing, roster-slot
+  reuse, lazy one-texture allocation, unchanged writes and mark-only events
+  without health reads or an idle updater. They cover hidden/Show and
+  world/logout recovery in both Performance Mode states. These are authored
+  CI-only cases; no local test or game execution was performed.
 - Full production guardian tracker mocks cover status-caption reuse, native
   rounding boundaries, static statuses, language changes, actual text resets,
   failed setters, hidden work, pooled-row reuse, options/world cleanup and
@@ -999,6 +1062,12 @@ The assertions cover:
   reuse, hidden formatting, identity/language/retirement, actual text repair,
   measurement readiness, native progress and shared animation-width reads.
   These are CI-only call/lifecycle assertions, without live rendering evidence.
+- Guardian font-size cases cover the 12-unit default, 8–18 integer bounds,
+  invalid values, preview/Confirm/Cancel, profile load and reset. Full tracker
+  mocks use size-aware glyph widths to check released name-column space,
+  health-column remeasurement, unchanged heading/geometry/native health,
+  settled measurement/font work, hidden recovery and failed-font retries in
+  both Performance Mode states. They are authored for CI and not run locally.
 - Guardian minimap timer mocks load the production roster and extracted pin
   functions to cover default-off drafts/profiles/reset, native pause-aware
   countdowns, unchanged/hidden/off work, lazy label pooling, font retry and retirement.
