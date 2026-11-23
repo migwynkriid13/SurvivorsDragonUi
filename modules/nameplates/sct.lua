@@ -235,8 +235,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         and type(_G.MouselookStart) == "function"
         and type(_G.MouselookStop) == "function"
         and type(_G.IsMouselooking) == "function"
-        and type(_G.IsMouseButtonDown) == "function"
-    function cameraDrag.RightButtonHeld()
+    local cameraButtonRead = type(_G.IsMouseButtonDown) == "function"
+    function cameraDrag.Looking()
+        local ok, value = pcall(_G.IsMouselooking)
+        if not ok then return end
+        return value ~= nil and value ~= false and value ~= 0
+    end
+    function cameraDrag.Held()
+        -- This client ends its native look channel on physical right release,
+        -- even when cursor capture bypasses both Lua mouse-up handlers.
+        if not cameraButtonRead then return cameraDrag.Looking() == true end
         local ok, held = pcall(_G.IsMouseButtonDown, "RightButton")
         return ok and (held == true or held == 1)
     end
@@ -249,16 +257,15 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             return
         end
         cameraDrag.owned, cameraDrag.stopPending = false, nil
-        local looking = _G.IsMouselooking()
-        if looking and looking ~= 0 then pcall(_G.MouselookStop) end
+        if cameraDrag.Looking() ~= false then pcall(_G.MouselookStop) end
     end
     function cameraDrag.Start()
         if not cameraDragSupported or not inWorld or cameraDrag.starting then return end
-        -- Some clients can swallow the physical mouse-up after camera entry.
-        -- Without an independent button read, leave this press to the client.
-        if not cameraDrag.RightButtonHeld() then return end
-        local looking = _G.IsMouselooking()
-        if looking and looking ~= 0 then return end
+        -- OnMouseDown supplies the press on older clients without a physical
+        -- button getter. Where available, retain the independent button guard.
+        if cameraButtonRead and not cameraDrag.Held() then return end
+        local looking = cameraDrag.Looking()
+        if looking == nil or looking then return end
         -- A native release can end look without visiting either Lua up hook.
         -- A fresh press must replace that stale ownership instead of sticking.
         cameraDrag.stopPending = nil
@@ -964,20 +971,26 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- covers every visual child without touching the SCT data sources.
         if plateStyle then plateStyle.Attach(plate, data) end
         if cameraDragSupported then
-            HookScript(plate, "OnMouseDown", function()
-                if
-                    arg1 == "RightButton"
-                    and plate:IsShown()
-                    and (not plate.IsVisible or plate:IsVisible())
-                    and not data.presentationMasked
-                    and IsEnemyPlate(data)
-                then
-                    cameraDrag.Start()
-                end
-            end)
-            HookScript(plate, "OnMouseUp", function()
-                if arg1 == "RightButton" then cameraDrag.Stop() end
-            end)
+            local function BindCameraInput(owner)
+                HookScript(owner, "OnMouseDown", function()
+                    if
+                        arg1 == "RightButton"
+                        and plate:IsShown()
+                        and (not plate.IsVisible or plate:IsVisible())
+                        and not data.presentationMasked
+                        and IsEnemyPlate(data)
+                    then
+                        cameraDrag.Start()
+                    end
+                end)
+                HookScript(owner, "OnMouseUp", function()
+                    if arg1 == "RightButton" then cameraDrag.Stop() end
+                end)
+            end
+            BindCameraInput(plate)
+            -- Skinned native health bars can be the mouse receiver. Mouse
+            -- scripts do not bubble from that child to its plate root.
+            if bar ~= plate then BindCameraInput(bar) end
         end
         HookScript(plate, "OnHide", function()
             shownPlates[plate] = nil
@@ -3024,7 +3037,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         UpdateTexts(animationNow, 0, now)
     end)
     frame:SetScript("OnUpdate", function()
-        if cameraDrag.owned and not cameraDrag.starting and not cameraDrag.RightButtonHeld() then cameraDrag.Stop() end
+        if cameraDrag.owned and not cameraDrag.starting and not cameraDrag.Held() then cameraDrag.Stop() end
         if not inWorld then
             -- A failed unregister can finish through this existing controller
             -- without reading combat data or running a retired world handler.
