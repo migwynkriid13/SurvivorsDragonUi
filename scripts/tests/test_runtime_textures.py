@@ -16,6 +16,23 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class RuntimeTextureTests(unittest.TestCase):
+    def test_meter_background_repairs_the_lower_rail_without_changing_body_or_alpha(self):
+        directory = ROOT / "media/tex/meter"
+        width, height, levels = blp_bgra_levels((directory / "Background.blp").read_bytes())
+        self.assertEqual((width, height, len(levels)), (256, 32, 1))
+        pixels = levels[0]
+        self.assertEqual(hashlib.sha256(pixels[:28 * width * 4]).hexdigest(),
+                         "538f4f6e2fa4d8f55df727c0981469aa21ccc688b6b633b8d5c98c270b85f795")
+        for y, alpha in ((28, 255), (29, 255), (30, 242), (31, 59)):
+            for x in range(100, 156):
+                offset = (y * width + x) * 4
+                self.assertEqual(pixels[offset + 3], alpha)
+                for channel in range(3):
+                    self.assertLessEqual(abs(pixels[offset + channel] - pixels[offset - 4 + channel]), 1,
+                                         "meter lower edge regained a dark compression block")
+        converted, _ = blp_from_tga((directory / "Background.tga").read_bytes())
+        self.assertEqual(blp_bgra_levels(converted), (width, height, levels))
+
     def test_static_resting_icon_keeps_original_pixels_without_the_animation_sheet(self):
         directory = ROOT / "media/tex/unitframes"
         runtime = (directory / "Resting.blp").read_bytes()

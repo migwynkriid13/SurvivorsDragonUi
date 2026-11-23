@@ -176,6 +176,12 @@ Each bar has a two-unit black outline to separate its rounded rail from busy
 backgrounds. It reuses the existing background image beneath the original
 artwork and follows the bar's width, icon gutter and Layout scale.
 
+The small dark mark near 44% of the lower rail was baked into the background
+artwork. Its affected four-row RGB span is repaired between intact neighbouring
+pixels, keeping the original alpha, corners and body texture. The fill, values,
+geometry and update cadence are unchanged; no extra drawing layer is added.
+Source and preparation details are in `third_party/DetailsTWW-ARTWORK.md`.
+
 The custom meter is **off by default**. Turn on **Enable damage meter** under
 `/sdui` → **Damage meter**, then Confirm. The switch previews live and follows
 the shared Cancel/discard/profile paths; both full resets turn it off. Turning

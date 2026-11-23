@@ -36,15 +36,16 @@ regenerated for those rings.
 
 Decode the first mip of each pinned source BLP with Pillow, convert to RGBA and
 save as an uncompressed TGA of the same canvas under `media/tex/meter/` with the
-runtime stem. Do not resize, crop, redraw, recolor or discard alpha. The checked-in
-TGAs are these full-resolution preparation inputs; they stay outside the runtime
-manifest. Decoded RGBA SHA-256 values:
+runtime stem. Keep the canvas and alpha. Header and fill retain every decoded
+source pixel. Background has the bounded lower-rail repair described below.
+The checked-in TGAs are full-resolution preparation inputs outside the runtime
+manifest. Current decoded RGBA SHA-256 values:
 
 | Input            | Decoded RGBA SHA-256                                               |
 | ---------------- | ------------------------------------------------------------------ |
 | `Header.tga`     | `4bb2ee17261c5c39fee756ee81564cdc5a8fcd1bcc1de0e36fc7efa9ec9d69ed` |
 | `Bar.tga`        | `ab642be42e60cae5bd0381d276628ead440c05d2c749db3c996642b88285db38` |
-| `Background.tga` | `b2a94f8fde2559cb2ede6c17d08b31b35dc671bf9712c8c7b7f08149d5dc87eb` |
+| `Background.tga` | `39505f1fac58c53dc947aeaad22bd9e407920b9fbe7eb9022db66b452fe77106` |
 
 Run `python3 scripts/prepare_client_textures.py` after regenerating the TGAs. The
 converter writes lossless BLP2 Raw1 when one exact RGB palette fits all pixels,
@@ -53,6 +54,29 @@ the required palette block. The bar now uses Raw1; header and background remain
 Raw3. Native and browser clients receive the same prepared files.
 Container conversion preserves every decoded pixel and the full original UVs;
 it does not undo compression already present in the author's source BLP.
+
+### Lower-rail repair
+
+The original background's decoded RGBA hash is
+`b2a94f8fde2559cb2ede6c17d08b31b35dc671bf9712c8c7b7f08149d5dc87eb`.
+Dark compression blocks in its lower border produce the reported dot near
+44% of each meter row. `scripts/prepare_meter_border.py` accepts only this pinned
+source and interpolates RGB at x100–155, y28–31 between intact x99/x156 samples.
+Every alpha value and all other pixels remain original. The rounded ends,
+header, bar fill and body grain are unchanged. No runtime crop or new region
+is used.
+
+From the original decoded source, run:
+
+```sh
+python scripts/prepare_meter_border.py --source original-background.tga
+```
+
+This writes the derived Background.tga and lossless Background.blp. Later normal
+texture preparation uses that derived TGA. The resulting runtime BLP SHA-256 is
+`44baabdeb6412faa8356653cd87e787046426d954196149082287edc473a0c77`.
+The original license and attribution above continue to apply. The correction
+was inspected as artwork data; live game rendering remains unverified.
 
 The runtime manifest adds only the three prepared images, their MIT notice and
 `modules/ui/meter.lua`. The module obtains all artwork through the addon's shared
