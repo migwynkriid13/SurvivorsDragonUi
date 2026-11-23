@@ -15,7 +15,28 @@ The explicit profiles request adds one SavedVariable, `SurvivorsDragonUiProfiles
 
 No run snapshots, boss-schedule handoff, inventory, subjects, timer values, summon data or native game preferences are included. Incoming/self combat text stays in the game's own settings; choosing a saved addon SCT mode reuses the same native outgoing-text preview and rollback as the existing mode buttons.
 
-The registry is not an active-profile pointer or an automatically updated binding. Saving captures that setup at that moment; later edits do not alter it unless the user chooses **Overwrite and close**. Copies pass through the owning layout, display, timer and SCT normalization paths, with no arbitrary recursive serialization or shared nested tables. Invalid stored profile records are ignored. Names are trimmed and kept case-sensitive; control characters, markup pipes and excessive byte lengths are rejected. The UI uses a single-line, 48-character native input and never slices UTF-8 names. Names remain literal even when they match a translated addon caption.
+The registry is not an active-profile pointer or an automatically updated binding. Saving captures that setup at that moment; later edits do not alter it unless the user chooses **Overwrite and close**. Copies pass through the owning layout, display, timer and SCT normalization paths without shared nested tables. Sharing encodes only those normalized copies using the bounded data format below. Invalid stored profile records are ignored. Names are trimmed and kept case-sensitive; control characters, markup pipes and excessive byte lengths are rejected. The UI uses a single-line, 48-character native input and never slices UTF-8 names. Names remain literal even when they match a translated addon caption.
+
+## Import and export
+
+Select a saved profile and click **Export profile** under **Share a profile**.
+The text box selects the generated `SDUI1:` string; press Ctrl+C to copy it.
+To import, enter a new profile name above, paste the string into the share box
+and click **Import profile**. Import adds a draft without replacing an existing
+name or changing the active setup. Use **Load profile** to preview it and
+**Confirm** to keep the changes; **Cancel** discards the imported draft.
+
+Sharing includes only the existing normalized layout, display, timer and SCT
+settings. It retains the soul-shard, separate Guardian fonts/short timers and
+timer-caption placement options, including detached text geometry. Older
+single-size Guardian profiles supply the new name/status sizes. Foreign settings
+are ignored by their existing normalizers; older profiles receive current
+defaults. Strings use bounded data tokens rather than executable Lua, with
+percent-encoded bytes, deterministic keys and full double precision. The reader
+limits input to 128 KiB, depth 16 and 20,000 table pairs, rejecting invalid
+escapes, duplicate keys, nonfinite numbers and trailing/incomplete data. The
+format accepts the supplied community package's `SDUI1:` exports. The text box
+clears when its page hides; no clipboard contents or share strings are saved.
 
 ## Editor integration
 
