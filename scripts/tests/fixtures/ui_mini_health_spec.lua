@@ -36,6 +36,10 @@ local function CompactContext()
             Write("SetTexCoord")
             self.uv = { ... }
         end
+        function object:SetGradientAlpha(...)
+            Write("SetGradientAlpha")
+            self.gradient = { ... }
+        end
         function object:SetStatusBarTexture(path)
             Write("SetStatusBarTexture")
             self.fill = self:CreateTexture(nil, "ARTWORK")

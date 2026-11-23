@@ -23,7 +23,7 @@ DFRL:NewMod("Mini", 1, function()
         { 112, 29, 16, 5 },
     }
     -- This fixed-width view can join its rail/cap pieces and reuse the two
-    -- released regions for opaque silver samples over the sheet's dark joins.
+    -- released regions to fade silver into the sheet's dark portrait-side joins.
     local targetHealthCrops = {
         { 0, 0, 44, 26 },
         { 0, 26, 43, 1 },
@@ -38,8 +38,8 @@ DFRL:NewMod("Mini", 1, function()
         { 112, 18, 16, 8 },
         { 112, 26, 16, 3, 22 },
         { 112, 29, 16, 5 },
-        { 42, 16, 2, 1, 16, 44.5 },
-        { 39, 35, 5, 1, 35, 44.5 },
+        { 42, 16, 2, 1, 16, 44.5, true },
+        { 39, 35, 5, 1, 35, 44.5, true },
     }
 
     -- Both compact health-only views omit the old divider's portrait/outer-end
@@ -48,14 +48,17 @@ DFRL:NewMod("Mini", 1, function()
         local scaleX, scaleY = width / 128, height / 64
         local strips, pieces = {}, elastic and {} or nil
         for _, crop in ipairs(crops) do
-            local x, y, w, h, sourceY, sourceX = unpack(crop)
+            local x, y, w, h, sourceY, sourceX, fade = unpack(crop)
             sourceY = sourceY or y
             sourceX = sourceX or x
             -- One-row portrait tips must not filter the neighboring divider.
             local tip = h == 1 and 0.5 or 0
+            -- A fading join ends in the exact silver pixel of the adjoining rail.
+            local sourceRight = fade and sourceX or sourceX + w - tip
             local strip = parent:CreateTexture(nil, layer)
             strip:SetTexture(tex .. "pet")
-            strip:SetTexCoord(sourceX / 128, (sourceX + w - tip) / 128, (sourceY + tip) / 64, (sourceY + h - tip) / 64)
+            strip:SetTexCoord(sourceX / 128, sourceRight / 128, (sourceY + tip) / 64, (sourceY + h - tip) / 64)
+            if fade then strip:SetGradientAlpha("HORIZONTAL", 1, 1, 1, 0, 1, 1, 1, 1) end
             strip:SetPoint("TOPLEFT", anchor, "TOPLEFT", x * scaleX, -y * scaleY)
             strip:SetWidth(w * scaleX)
             strip:SetHeight(h * scaleY)

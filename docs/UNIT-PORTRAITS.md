@@ -296,11 +296,13 @@ The compact border retains the party health-only contour, removing the obsolete
 divider stubs beside the ring and at the outer cap. Its fixed-width top and bottom
 rails each share one piece with their outer cap. This frees two existing regions
 for one-row silver samples over the source sheet's dark portrait-side joins:
-columns 42–43 at row 16 and columns 39–43 at row 35. Samples start at column 44's
-center and retain the row's fully opaque silver, meeting the gold rim without
-stacking translucent shadow. Party's width-aware crops stay unchanged. The
-original pet sheet and portrait dimensions remain unchanged, with fifteen compact
-border regions in total. The former shaded compact `HealthFill.blp`
+columns 42–43 at row 16 and columns 39–43 at row 35. Each samples column 44's
+center throughout, matching the adjoining rail's silver RGB exactly. A horizontal
+alpha gradient assigned only at construction fades each sample from transparent
+beside the gold rim to opaque at the straight rail. The original dark join stays
+beneath the fade instead of meeting an opaque silver edge. Party's width-aware
+crops stay unchanged. The original pet sheet and portrait dimensions remain
+unchanged, with fifteen compact border regions in total. The former shaded compact `HealthFill.blp`
 has no remaining consumer and is removed from the runtime payload and checkout;
 its original TGA and the separate native-pet `Health.blp` remain intact.
 

@@ -2002,12 +2002,14 @@ removes the portrait span and compensates the existing closed border.
 The compact view uses fifteen strips, eleven more than its original four-strip
 border. Its fixed-width rails combine the party crop set's separate straight
 spans and outer caps, freeing two regions for the portrait-side silver joins.
-These two one-row samples cover only seven source pixels of dark baked-in rail
-stubs with fully opaque silver from the same pet sheet. They do not stack
-translucent shadow or add an asset, region or recurring write. Party retains its
-existing width-aware pieces. The other strips meet edge to edge and retain
-half-texel-safe one-row tips. The pool is built once
-and reused; portraitless mode actually hides all fifteen strips and shows its
+These two one-row samples span only seven source pixels of dark baked-in rail
+stubs. Each samples the adjoining rail's silver pixel from the same pet sheet,
+with a horizontal alpha gradient from transparent at the ring to opaque at the
+straight rail, preserving the original shaded join beneath it. The two gradient
+assignments happen only at construction, with no asset, region, animation or
+recurring write added. Party retains its existing width-aware pieces. The other
+strips meet edge to edge and retain half-texel-safe one-row tips. The pool is built
+once and reused; portraitless mode actually hides all fifteen strips and shows its
 unchanged eight-piece closed border. No frame, FontString, asset, event, updater,
 setting or SavedVariable is added. The unused shaded compact fill BLP is removed,
 while its original TGA and native pet artwork are preserved.
