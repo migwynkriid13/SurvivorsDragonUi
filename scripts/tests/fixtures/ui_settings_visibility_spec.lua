@@ -248,4 +248,32 @@ assert(
     respawnControl.editorAvailable and respawnControl.inputEnabled and respawnControl:GetAlpha() == 1,
     "respawn option did not become available"
 )
+local units = Frame(env.fontEditor)
+local shards = Check(units)
+env.displayControls.hideSoulShards = shards
+values.hideSoulShards, values.classResources = true, false
+local enableShardMouse = shards.EnableMouse
+function shards:EnableMouse(value)
+    self.inputEnabled = value
+    enableShardMouse(self, value)
+end
+views.Display()
+assert(
+    shards.editorChecked and not shards.inputEnabled and shards:GetAlpha() == 0.45,
+    "disabled Class resources did not retain and dim the shard choice"
+)
+context:ResetCounts()
+views.Display()
+context:NoPresentationWrites()
+values.classResources = true
+views.Display()
+assert(shards.inputEnabled and shards:GetAlpha() == 1 and shards.editorChecked, "resource enable lost the shard choice")
+units:Hide()
+values.classResources = false
+context:ResetCounts()
+views.Display()
+context:NoPresentationWrites()
+units:Show()
+views.Display()
+assert(not shards.inputEnabled and shards.editorChecked, "shown shard option did not catch up")
 print("PASS closed/category-hidden settings, current-value catch-up, unchanged labels and deferred font work")

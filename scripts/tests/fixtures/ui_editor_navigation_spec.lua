@@ -64,6 +64,8 @@ env.CreateFrame = function(kind, name, parent, template)
         function frame:SetMaxLetters(value) self.maxLetters = value end
         function frame:SetTextInsets(...) self.insets = { ... } end
         function frame:ClearFocus() self.focused = false end
+        function frame:SetFocus() self.focused = true end
+        function frame:HighlightText() self.highlighted = true end
         function frame:EnableKeyboard(value) self.keyboard = value end
         local setText = frame.SetText
         function frame:SetText(value)
@@ -1541,7 +1543,9 @@ dialog.navigation.Select("profiles")
 display.Set("unitShortHealth", true)
 local profileInput
 for _, item in ipairs(context.objects) do
-    if item.kind == "EditBox" and item:GetParent() == pages.profiles then profileInput = item end
+    if item.kind == "EditBox" and item:GetParent() == pages.profiles and item.maxLetters == 48 then
+        profileInput = item
+    end
 end
 assert(profileInput, "profile name field was not prepared")
 profileInput:SetText("Unconfirmed profile")
@@ -1852,7 +1856,28 @@ local function ProfileSaveControls()
         end
     end
     assert(found and profileInput:GetText() == "Paged 5", "reopening lost the saved profile's selection or page")
+    local shareBox
+    for _, object in ipairs(context.objects) do
+        if object.kind == "EditBox" and object:GetParent() == pages.profiles and object.maxLetters == 131072 then
+            shareBox = object
+        end
+    end
+    assert(shareBox, "Profiles page is missing its bounded share field")
+    context:Call(Button("Export profile"), "OnClick")
+    assert(
+        shareBox.focused and shareBox.highlighted and string.sub(shareBox:GetText(), 1, 6) == "SDUI1:",
+        "export did not select a copyable profile string"
+    )
+    profileInput:SetText("Shared draft")
+    context:Call(Button("Import profile"), "OnClick")
+    assert(dialog:IsShown() and not env.SurvivorsDragonUiProfiles["Shared draft"], "UI import saved or closed early")
+    local imported
+    for _, name in ipairs(profiles.List()) do
+        if name == "Shared draft" then imported = true end
+    end
+    assert(imported and not shareBox.focused, "UI import lost its draft or retained input focus")
     env.DFRL.layout.CancelEdit()
+    assert(shareBox:GetText() == "", "hidden Profiles page retained the share text")
 end
 ProfileSaveControls()
 for _, item in ipairs(context.objects) do
@@ -1904,3 +1929,74 @@ do
     dialog:Hide()
 end
 print("PASS Tooltip page exposes default-on Enhanced tooltips with preview/save/discard/reset and search")
+
+do
+    display.Reset()
+    display.BeginEdit()
+    dialog:Show()
+    dialog.navigation.Select("encounters")
+    editor.Display()
+    for _, key in ipairs({ "guardianTitleFontSize", "guardianNameFontSize", "guardianStatusFontSize" }) do
+        local label = assert(env.displayNumbers[key], "missing separate Guardian font control")
+        assert(label:IsVisible() and label:GetText() == "12", "Guardian font control lost its initial value")
+    end
+    local short = assert(env.displayControls.guardianTimerOnly)
+    local below, detached = assert(env.displayControls.runTextBelow), assert(env.displayControls.detachRunText)
+    assert(short:IsVisible() and below:IsVisible() and detached:IsVisible(), "new encounter controls are hidden")
+    context:Call(short, "OnClick")
+    context:Call(below, "OnClick")
+    context:Call(detached, "OnClick")
+    editor.Display()
+    assert(display.Get("guardianTimerOnly") and display.Get("runTextBelow") and display.Get("detachRunText"))
+    assert(
+        below.editorAvailable == false and below.mouse == false,
+        "detached text retained an active above/below control"
+    )
+    dialog.navigation.Search("Detach timer text")
+    local found
+    for _, result in ipairs(dialog.navigation.results) do
+        if result.target == "detachRunText" then found = true end
+    end
+    assert(found, "detached timer text is missing from settings search")
+    dialog.navigation.ClearSearch()
+    display.FinishEdit(false)
+    editor.Display()
+    assert(
+        not display.Get("guardianTimerOnly") and not display.Get("detachRunText") and not display.Get("runTextBelow")
+    )
+    assert(below.editorAvailable == true, "Cancel did not restore the attached placement control")
+    dialog:Hide()
+end
+print(
+    "PASS encounter settings expose separate Guardian fonts, timer-only and searchable timer-caption placement with Cancel"
+)
+
+do
+    display.Reset()
+    display.BeginEdit()
+    dialog:Show()
+    dialog.navigation.Select("units")
+    editor.Display()
+    local growth = assert(env.displayControls.petGrowUp, "Pet frames is missing Grow upward")
+    assert(growth:IsVisible() and not growth.editorChecked, "pet growth lost its default-down state")
+    context:Call(growth, "OnClick")
+    assert(display.Get("petGrowUp") and not env.SurvivorsDragonUiDisplay, "pet growth preview saved early")
+    dialog.navigation.Search("Grow upward")
+    local found
+    for _, result in ipairs(dialog.navigation.results) do
+        if result.target == "petGrowUp" then found = true end
+    end
+    assert(found, "Grow upward is missing from settings search")
+    dialog.navigation.ClearSearch()
+    display.FinishEdit(false)
+    editor.Display()
+    assert(not display.Get("petGrowUp"), "Cancel retained upward pet growth")
+    display.BeginEdit()
+    display.Load({ petGrowUp = true })
+    display.FinishEdit(true)
+    assert(env.SurvivorsDragonUiDisplay.petGrowUp, "profile load/Confirm lost pet growth")
+    display.Reset()
+    assert(not display.Get("petGrowUp"), "reset retained upward pet growth")
+    dialog:Hide()
+end
+print("PASS Pet frames exposes searchable Grow upward with preview, Cancel, profile load, Confirm and reset")
