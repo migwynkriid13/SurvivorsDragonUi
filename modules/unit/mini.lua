@@ -1,6 +1,7 @@
 DFRL:NewMod("Mini", 1, function()
     local tex = DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     local units = {}
+    local inWorld = true
     local healthFill = T.LargeHealthFill
     -- The compact one-unit metal edge needs half the large frame's underlap.
     local healthUnderlap = healthFill.underlap / 2
@@ -85,6 +86,82 @@ DFRL:NewMod("Mini", 1, function()
             or (currentAlpha and not T.NearlyEqual(currentAlpha, 1))
         then
             bar:SetStatusBarColor(red, green, blue)
+        end
+    end
+
+    local function BindPartyRaidMark(values, parent, anchor, index)
+        local marker, boundIcon, left, right, top, bottom
+        local function Clear()
+            if marker and marker:IsShown() then marker:Hide() end
+        end
+        local function Coordinate(value) return type(value) == "number" and value >= 0 and value <= 1 end
+        local function Update()
+            if not inWorld or not values.frame:IsVisible() then return end
+            if type(GetRaidTargetIndex) ~= "function" or not UnitExists(values.unit) then
+                Clear()
+                return
+            end
+            local selected = GetRaidTargetIndex(values.unit)
+            if
+                type(selected) ~= "number"
+                or selected - selected ~= 0
+                or selected < 1
+                or selected > 8
+                or selected ~= math.floor(selected)
+            then
+                Clear()
+                return
+            end
+            local artwork = type(UnitPopupButtons) == "table" and UnitPopupButtons["RAID_TARGET_" .. selected]
+            if
+                type(artwork) ~= "table"
+                or type(artwork.icon) ~= "string"
+                or artwork.icon == ""
+                or not Coordinate(artwork.tCoordLeft)
+                or not Coordinate(artwork.tCoordRight)
+                or not Coordinate(artwork.tCoordTop)
+                or not Coordinate(artwork.tCoordBottom)
+                or artwork.tCoordLeft >= artwork.tCoordRight
+                or artwork.tCoordTop >= artwork.tCoordBottom
+            then
+                Clear()
+                return
+            end
+            if not marker then
+                marker = parent:CreateTexture("SurvivorsDragonUiPartyRaidTargetIcon" .. index, "OVERLAY")
+                marker:SetWidth(16)
+                marker:SetHeight(16)
+                marker:SetPoint("CENTER", anchor, "LEFT", 24, 24)
+                marker:Hide()
+            end
+            if boundIcon ~= artwork.icon then
+                local loaded = marker:SetTexture(artwork.icon)
+                if not T.TextureAssigned(loaded, marker:GetTexture(), artwork.icon) then
+                    Clear()
+                    return
+                end
+                boundIcon = artwork.icon
+            end
+            if
+                left ~= artwork.tCoordLeft
+                or right ~= artwork.tCoordRight
+                or top ~= artwork.tCoordTop
+                or bottom ~= artwork.tCoordBottom
+            then
+                marker:SetTexCoord(artwork.tCoordLeft, artwork.tCoordRight, artwork.tCoordTop, artwork.tCoordBottom)
+                left, right, top, bottom =
+                    artwork.tCoordLeft, artwork.tCoordRight, artwork.tCoordTop, artwork.tCoordBottom
+            end
+            if not marker:IsShown() then marker:Show() end
+        end
+        values.updateRaidMark, values.clearRaidMark = Update, Clear
+        HookScript(values.frame, "OnHide", Clear)
+    end
+
+    local function UpdateRaidMarks(clear)
+        for _, values in ipairs(units) do
+            local update = clear and values.clearRaidMark or values.updateRaidMark
+            if update then update() end
         end
     end
 
@@ -425,6 +502,7 @@ DFRL:NewMod("Mini", 1, function()
             border:SetPoint("CENTER", frame, "CENTER", 0, 0)
             border:SetWidth(128)
             border:SetHeight(64)
+            BindPartyRaidMark(values, borderFrame, border, i)
             if partyRegion then
                 if i == 1 then partyRegion:SetPoint("TOPLEFT", border, "TOPLEFT", 0, 0) end
                 partyRegion:SetPoint("BOTTOMRIGHT", border, "BOTTOMRIGHT", 0, 0)
@@ -568,7 +646,10 @@ DFRL:NewMod("Mini", 1, function()
     end
     for _, values in ipairs(units) do
         local record = values
-        HookScript(record.frame, "OnShow", function() UpdateValues(record) end)
+        HookScript(record.frame, "OnShow", function()
+            UpdateValues(record)
+            if record.updateRaidMark then record.updateRaidMark() end
+        end)
     end
     local unitEvents = {
         UNIT_HEALTH = true,
@@ -595,6 +676,10 @@ DFRL:NewMod("Mini", 1, function()
     frame:RegisterEvent("UNIT_FOCUS")
     frame:RegisterEvent("UNIT_PET")
     frame:RegisterEvent("PARTY_MEMBERS_CHANGED")
+    if partyRoot then
+        frame:RegisterEvent("RAID_TARGET_UPDATE")
+        frame:RegisterEvent("RAID_ROSTER_UPDATE")
+    end
     frame:RegisterEvent("PLAYER_TARGET_CHANGED")
     frame:RegisterEvent("UNIT_TARGET")
     frame:RegisterEvent("UNIT_FACTION")
@@ -603,21 +688,34 @@ DFRL:NewMod("Mini", 1, function()
     frame:RegisterEvent("CHAT_MSG_ADDON")
     frame:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
+            inWorld = false
             Cancel()
+            UpdateRaidMarks(true)
         elseif event == "CHAT_MSG_ADDON" then
             if arg1 == "AZSZONE" and DFRL.display.Get("classHealth") then
                 for _, values in ipairs(units) do
                     if values.updateHealthColor then Schedule(values) end
                 end
             end
+        elseif event == "RAID_TARGET_UPDATE" then
+            UpdateRaidMarks()
         elseif unitEvents[event] and type(arg1) == "string" and arg1 ~= "" then
             for _, values in ipairs(units) do
                 if values.unit == arg1 or UnitIsUnit(values.unit, arg1) then Schedule(values) end
             end
         else
             -- Ownership and target transitions can invalidate several aliases.
+            if event == "PLAYER_ENTERING_WORLD" then inWorld = true end
             UpdateAll()
+            if
+                event == "PLAYER_ENTERING_WORLD"
+                or event == "PARTY_MEMBERS_CHANGED"
+                or event == "RAID_ROSTER_UPDATE"
+            then
+                UpdateRaidMarks()
+            end
         end
     end)
     UpdateAll()
+    UpdateRaidMarks()
 end)
