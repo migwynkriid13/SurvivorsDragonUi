@@ -45,11 +45,14 @@ and `icon-candidates.json`. None of these study assets enters the runtime payloa
 ## Data and lifecycle
 
 `modules/ui/stats.lua` reads phase before retained tables. Ordinary display
-requires `playing` or `paused`, a published finite `AZS_RUN_UPDATED`, finite
+requires `playing`, `paused` or `choosing`, a published finite `AZS_RUN_UPDATED`, finite
 native run time and an available `AZS_STATS` table. The current native scalar
 values alone supply the rows; missing/nonfinite fields are omitted. Settings
 editing can show `--` placeholders, without invented stats or native writes.
-Choice screens temporarily hide the HUD; ended/inactive phases retire it.
+The official `AZS_GetPhase()` API identifies level-up and jewelry upgrade cards
+as `choosing`. Enabled Stats stays visible during those choices and consumes
+native stat changes through the same deferred publications. Its normal display
+and Layout visibility switches still apply; ended/inactive phases retire it.
 
 Damage, area, speed and experience use their supplied multipliers minus one;
 haste displays the supplied cooldown reduction. Fractional chances and critical

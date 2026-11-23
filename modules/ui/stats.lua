@@ -266,8 +266,8 @@ DFRL:NewMod("Stats", 5, function()
     local function Read()
         if type(AZS_GetPhase) ~= "function" then return end
         local ok, phase = pcall(AZS_GetPhase)
-        if not ok or (phase ~= "playing" and phase ~= "paused") then
-            if phase ~= "choosing" then Retire() end
+        if not ok or (phase ~= "playing" and phase ~= "paused" and phase ~= "choosing") then
+            Retire()
             return
         end
         local run, stamp, zone = AZS_RUN, AZS_RUN_UPDATED, AZS_ZONE_UPDATED

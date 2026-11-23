@@ -14,6 +14,12 @@ work gates are unchanged, with no new object, subscription or updater.
 
 ## Optional Stats HUD
 
+Stats accepts the documented playing, paused and choosing phases, so level-up
+and jewelry choices keep its current native values visible. This reuses the
+existing publication reader, pooled regions and changed-only updates; it adds
+no event, updater, frame, artwork or saved state. Settled upgrades have no idle
+OnUpdate, and display/Layout hiding still detaches the reader.
+
 Stats defaults off, with two lightweight frames and no prepared texture or
 FontString regions. Enabled visible publications and settings changes coalesce
 onto a deferred read; a settled reader detaches its OnUpdate. Disabled,

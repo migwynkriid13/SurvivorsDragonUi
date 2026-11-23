@@ -17,7 +17,8 @@ cases are authored for CI only; local tests and game execution were not run.
 Performance Mode states. Authored cases cover default-off lazy artwork, finite
 native formatting, absent-field recovery, reused publication tables, deferred
 parser reads, no Gold/tally access, stable drawing and row reuse, width changes,
-Layout hiding, choice/pause transitions, retired publications, world cleanup,
+Layout hiding, visible level-up/jewelry choices, live upgrade stat publications,
+disabled upgrade recovery, choice/pause transitions, retired publications, world cleanup,
 editing placeholders and the display preview/Confirm/Cancel/reset lifecycle.
 These cases are registered for GitHub Actions only and were not run locally.
 They do not establish native rendering or complete native replay behavior.

@@ -186,11 +186,28 @@ for _, performance in ipairs({ false, true }) do
     phase = "choosing"
     Packet("AZSRUN")
     Tick()
-    assert(not panel:IsShown(), "Stats covered the native choice screen")
+    assert(panel:IsShown() and Has("900"), "Stats disappeared during native level-up/jewelry choices")
+    local choicePool = #context.objects
+    context:ResetCounts()
+    Packet("AZSRUN")
+    Tick()
+    NoDrawing()
+    assert(not reader:GetScript("OnUpdate"), "settled upgrade Stats kept an idle updater")
+    values.hp = 1000
+    Packet()
+    assert(Has("900"), "an upgrade publication read stats before native parsing completed")
+    Tick()
+    assert(panel:IsShown() and Has("1,000"), "Stats did not update while upgrades were open")
+    display.Set("statsWindow", false)
+    Tick()
+    assert(not panel:IsShown() and not reader.events.CHAT_MSG_ADDON, "upgrades forced disabled Stats to stay active")
+    display.Set("statsWindow", true)
+    Tick()
+    assert(panel:IsShown() and Has("1,000") and #context.objects == choicePool, "upgrade recovery replaced Stats rows")
     phase = "paused"
     Packet("AZSRUN")
     Tick()
-    assert(panel:IsShown() and Has("900"), "paused native values failed to recover")
+    assert(panel:IsShown() and Has("1,000"), "paused native values failed to recover")
     phase = "ready"
     Packet("AZSRUN")
     Tick()
