@@ -1,5 +1,15 @@
 # Minimap buttons
 
+The fireball button beside the minimap toggles the game's **No Spell Effects**
+graphics preference. It changes spell visuals, not casts, damage, combat text
+or the action bar. A dimmed icon means spell effects are off. Click to toggle;
+drag around the minimap edge to move it for this session. Only a click writes
+`noSpellEffects`; startup, external preference changes and drawing only read it.
+Unsupported values hide the button, and hidden minimaps defer those reads.
+Its tooltip uses the current language. Editing, hiding and world cleanup stop
+dragging and clear only its owned tooltip. Both Performance Mode states use
+the same static presentation and existing artwork, with no addon SavedVariable.
+
 The gold Dragonflight glyph beside the minimap toggles the existing `/sdui` editor.
 It uses a cleaned version of the selected **05 Small square button** background.
 The compact dark plate keeps its gold edge, with the inner top and right lines
