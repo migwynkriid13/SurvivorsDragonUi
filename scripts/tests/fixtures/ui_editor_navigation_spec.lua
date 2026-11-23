@@ -1,6 +1,18 @@
 -- CI only: the production editor factory, with explicit input/scroll boundaries.
 local H = dofile("scripts/tests/fixtures/ui_helpers.lua")
 assert(_VERSION == "Lua 5.1", "editor fixtures require CI Lua 5.1")
+do
+    local boundary = H.New()
+    local label = boundary.env.UIParent:CreateFontString(nil, "OVERLAY")
+    label:SetText("Previous text")
+    label:SetText(nil)
+    assert(label:GetText() == "", "nil text did not clear the mock label")
+    boundary.failText = "Injected failure"
+    assert(not pcall(function() label:SetText("Injected failure") end), "explicit text failure was not injected")
+    assert(label:GetText() == "" and boundary.failText == nil, "text failure did not preserve the label or retire")
+    label:SetText("Injected failure")
+    assert(label:GetText() == "Injected failure", "one-shot text failure did not recover")
+end
 local context = H.New()
 local env = context.env
 env.DFRL.locale.code = "en"
