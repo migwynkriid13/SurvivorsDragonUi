@@ -171,7 +171,24 @@ DFRL:NewMod("Mini", 1, function()
         if values.resize then values.resize() end
         local unit = values.unit
         values.healthLabels.Update()
-        if not UnitExists(unit) or (unit == "targettarget" and (UnitIsDead(unit) or UnitIsGhost(unit))) then
+        local exists = UnitExists(unit)
+        local friendly = unit == "targettarget" and exists and T.IsPlayerOrPartyUnit(unit)
+        local classColor = friendly and T.GetUnitClassColor(unit)
+        if unit == "targettarget" and exists and values.frame.name then
+            local red, green, blue = 1, 0.82, 0
+            if classColor then
+                red, green, blue = classColor[1], classColor[2], classColor[3]
+            end
+            local oldRed, oldGreen, oldBlue = values.frame.name:GetTextColor()
+            if
+                not T.NearlyEqual(red, oldRed)
+                or not T.NearlyEqual(green, oldGreen)
+                or not T.NearlyEqual(blue, oldBlue)
+            then
+                values.frame.name:SetTextColor(red, green, blue)
+            end
+        end
+        if not exists or (unit == "targettarget" and (UnitIsDead(unit) or UnitIsGhost(unit))) then
             if values.mana then T.SetTextIfChanged(values.mana, "") end
             return
         end
@@ -188,8 +205,12 @@ DFRL:NewMod("Mini", 1, function()
                 return
             end
             local reaction = UnitReaction("player", unit)
-            if T.IsPlayerOrPartyUnit(unit) then
-                SetHealthColor(values.healthBar, 0, 1, 0)
+            if friendly then
+                if classColor and DFRL.display.Get("classHealth") then
+                    SetHealthColor(values.healthBar, classColor[1], classColor[2], classColor[3])
+                else
+                    SetHealthColor(values.healthBar, 0, 1, 0)
+                end
             elseif reaction and reaction <= 3 then
                 SetHealthColor(values.healthBar, 1, 0, 0)
             elseif reaction == 4 then
@@ -692,9 +713,12 @@ DFRL:NewMod("Mini", 1, function()
             Cancel()
             UpdateRaidMarks(true)
         elseif event == "CHAT_MSG_ADDON" then
-            if arg1 == "AZSZONE" and DFRL.display.Get("classHealth") then
+            if arg1 == "AZSZONE" then
+                local classHealth = DFRL.display.Get("classHealth")
                 for _, values in ipairs(units) do
-                    if values.updateHealthColor then Schedule(values) end
+                    if values.unit == "targettarget" or (classHealth and values.updateHealthColor) then
+                        Schedule(values)
+                    end
                 end
             end
         elseif event == "RAID_TARGET_UPDATE" then

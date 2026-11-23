@@ -570,3 +570,103 @@ for _, performance in ipairs({ false, true }) do
     assert(#marked.objects == allocated + 1, "marker lifecycle replaced the existing texture pool")
 end
 print("PASS party raid icons use exact native marks, event-only updates, hidden/world cleanup and reusable textures")
+
+for _, performance in ipairs({ false, true }) do
+    local colored = CompactContext()
+    local native = colored.env
+    colored.settings.performanceMode, colored.settings.classHealth = performance, true
+    colored.settings.hidePortraits = false
+    colored.settings.showHealthValue, colored.settings.showHealthPercentage = true, false
+    colored.alias, colored.player, colored.reaction = "player", true, 5
+    native.UnitExists = function(unit) return unit == "player" or unit == "party2" or unit == "targettarget" end
+    native.UnitIsUnit = function(unit, other)
+        return unit == other or (unit == "targettarget" and other == colored.alias)
+    end
+    native.UnitClass = function(unit)
+        if unit == "player" or colored.alias == "player" then return "Warrior", "WARRIOR" end
+        return "Priest", "PRIEST"
+    end
+    native.UnitIsPlayer = function() return colored.player end
+    native.UnitIsDead, native.UnitIsGhost = function() return false end, function() return false end
+    native.UnitIsTapped = function() return colored.tapped end
+    native.UnitIsTappedByPlayer = function() return false end
+    native.UnitReaction = function() return colored.reaction end
+    native.UnitName = function() return "Current hero" end
+    native.UnitHealth, native.UnitHealthMax = function() return 1000 end, function() return 1000 end
+    native.AZS_ZONE, native.AZS_ZONE_UPDATED = { class = "mage" }, 1
+    native.DFRL.locale.Preview = function(text, count) return string.sub(text, 1, count), string.len(text) > count end
+    native.TargetofTarget_Update = function()
+        if colored.nativeReset then native.TargetofTargetFrame.name:SetTextColor(1, 0.82, 0) end
+    end
+    local compact = native.CreateFrame("Frame", "TargetofTargetFrame", native.UIParent)
+    compact:SetWidth(93)
+    compact:SetHeight(45)
+    compact.name = compact:CreateFontString(nil, "OVERLAY")
+    local health = native.CreateFrame("StatusBar", "TargetofTargetHealthBar", compact)
+    colored:Load("core/widgets.lua")
+    colored:Load("modules/unit/mini.lua", "Mini")
+    Coalescer(colored)
+    local allocated = #colored.objects
+    local green, gold = { 0, 1, 0 }, { 1, 0.82, 0 }
+    local function Colors(name, fill)
+        local r, g, b = compact.name:GetTextColor()
+        assert(r == name[1] and g == name[2] and b == name[3], "target-of-target name has the wrong class color")
+        assert(
+            health.color[1] == fill[1] and health.color[2] == fill[2] and health.color[3] == fill[3],
+            "target-of-target health has the wrong class/reaction color"
+        )
+    end
+    local mage, rogue, warlock =
+        native.T.GetClassColor("mage"), native.T.GetClassColor("rogue"), native.T.GetClassColor("warlock")
+    Colors(mage, mage)
+    colored:ResetCounts()
+    native.TargetofTarget_Update()
+    colored:NoPresentationWrites()
+
+    native.AZS_ZONE.class = "rogue"
+    colored:Event(colored.controller, "CHAT_MSG_ADDON", "AZSZONE")
+    Colors(mage, mage)
+    Tick(colored)
+    Colors(rogue, rogue)
+    colored:SetSetting("classHealth", false)
+    Colors(rogue, green)
+    native.AZS_ZONE.class = "warlock"
+    Deliver(colored, "CHAT_MSG_ADDON", "AZSZONE")
+    Colors(warlock, green)
+    colored:SetSetting("classHealth", true)
+    Colors(warlock, warlock)
+
+    colored.alias = "party2"
+    Deliver(colored, "UNIT_TARGET", "target")
+    local priest = native.T.GetClassColor("priest")
+    Colors(priest, priest)
+    colored.alias, colored.player, colored.reaction = nil, false, 2
+    Deliver(colored, "UNIT_TARGET", "target")
+    Colors(gold, { 1, 0, 0 })
+    colored.reaction = 4
+    native.TargetofTarget_Update()
+    Colors(gold, { 1, 1, 0 })
+    colored.reaction = 5
+    native.TargetofTarget_Update()
+    Colors(gold, green)
+    colored.tapped = true
+    native.TargetofTarget_Update()
+    Colors(gold, { 0.5, 0.5, 0.5 })
+
+    colored.alias, colored.player, colored.tapped = "player", true, false
+    native.AZS_ZONE.class = "unknown"
+    Deliver(colored, "UNIT_TARGET", "target")
+    Colors(gold, green)
+    compact:Hide()
+    colored:ResetCounts()
+    native.AZS_ZONE.class = "mage"
+    Deliver(colored, "CHAT_MSG_ADDON", "AZSZONE")
+    colored:NoPresentationWrites()
+    compact:Show()
+    Colors(mage, mage)
+    colored.nativeReset = true
+    native.TargetofTarget_Update()
+    Colors(mage, mage)
+    assert(#colored.objects == allocated, "class color changes allocated compact-frame artwork")
+end
+print("PASS target-of-target class colors, deferred hero updates, friendly settings, enemy colors and hidden recovery")

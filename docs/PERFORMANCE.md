@@ -1,5 +1,11 @@
 # Rendering and update costs
 
+Target-of-target class colors reuse the existing compact-frame reader and shared
+hero/party identity helpers. Native updates, settings and deferred hero publications
+refresh the name and health fill; unchanged colors skip presentation writes and
+hidden frames defer the work until Show. No frame, region, event, updater, asset
+or saved preference is added. Both Performance Mode states use the same path.
+
 Pet-frame growth direction is cached with the existing dirty geometry. Upward
 mode reverses row anchors and reserves the configured row height, keeping a
 stable bottom base as counts change. Timer-only passes do not reread direction

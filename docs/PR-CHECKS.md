@@ -1,5 +1,11 @@
 # PR checks
 
+Compact-frame CI cases cover target-of-target self and party aliases, current hero
+class publications, the class-health preference, unknown-class fallback, native
+enemy reaction/tapped colors, deferred publication reads, hidden recovery and
+unchanged color writes in both Performance Mode states. These cases are authored
+for CI only and were not run locally.
+
 Pet growth cases exercise production row anchors, mixed pet/totem ordering,
 stable upward bounds after a lone-totem shrink, multi-column rows, spacing,
 hidden preview/recovery, unchanged writes, pool reuse and world cleanup in both

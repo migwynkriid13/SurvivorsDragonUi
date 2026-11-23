@@ -15,13 +15,16 @@ arrives. A changed class field invalidates the cache even when its table and
 stamp are reused. This identity-only exception does not relax encounter,
 navigation or gameplay snapshot gates. Unknown published classes stay unknown.
 
-Native `UnitIsUnit` resolves the local player's party and target aliases, so
+Native `UnitIsUnit` resolves the local player's party, target and target-of-target aliases, so
 those views share the current hero color without matching names. Other party
 members keep their native class metadata. Player, party, nameplate and optional
 class-colored SCT consumers use the same palette and Shaman override.
 Targeting yourself or a party member gives the target name its class color.
-The target health fill also uses it while **Class-colored health** is enabled;
-off retains friendly green. Enemy targets retain red health and gold names.
+The same rule applies when a target's target is you or a party member.
+Both health fills also use it while **Class-colored health** is enabled;
+off retains friendly green while names keep their class color. Unknown classes
+fall back to gold names and green friendly health. Enemy target-of-target
+health keeps its native reaction/tapped colors and gold name.
 Existing deferred unit/zone callbacks repaint after native parsing, and hidden
 views keep their original deferral. No class or hero data is saved.
 
