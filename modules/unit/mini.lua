@@ -472,7 +472,14 @@ DFRL:NewMod("Mini", 1, function()
             end
         end
         target.resize = UpdatePortraitVisibility
-        DFRL.display.Listen(UpdatePortraitVisibility)
+        local classHealth = DFRL.display.Get("classHealth")
+        DFRL.display.Listen(function()
+            UpdatePortraitVisibility()
+            local enabled = DFRL.display.Get("classHealth")
+            if enabled == classHealth then return end
+            classHealth = enabled
+            if inWorld then UpdateValues(target) end
+        end)
         UpdatePortraitVisibility()
         local function UpdateTarget()
             if not TargetofTargetFrame:IsVisible() then return end

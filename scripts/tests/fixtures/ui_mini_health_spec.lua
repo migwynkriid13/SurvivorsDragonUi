@@ -630,6 +630,10 @@ for _, performance in ipairs({ false, true }) do
     Colors(rogue, rogue)
     colored:SetSetting("classHealth", false)
     Colors(rogue, green)
+    colored:ResetCounts()
+    colored:SetSetting("classHealth", false)
+    colored:NoPresentationWrites()
+    assert(not next(colored.reads), "unchanged class-health choice read native target state")
     native.AZS_ZONE.class = "warlock"
     Deliver(colored, "CHAT_MSG_ADDON", "AZSZONE")
     Colors(warlock, green)
@@ -659,10 +663,13 @@ for _, performance in ipairs({ false, true }) do
     Colors(gold, green)
     compact:Hide()
     colored:ResetCounts()
+    colored:SetSetting("classHealth", false)
     native.AZS_ZONE.class = "mage"
     Deliver(colored, "CHAT_MSG_ADDON", "AZSZONE")
     colored:NoPresentationWrites()
     compact:Show()
+    Colors(mage, green)
+    colored:SetSetting("classHealth", true)
     Colors(mage, mage)
     colored.nativeReset = true
     native.TargetofTarget_Update()
