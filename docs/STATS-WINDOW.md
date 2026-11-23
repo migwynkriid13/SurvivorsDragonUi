@@ -54,15 +54,24 @@ as `choosing`. Enabled Stats stays visible during those choices and consumes
 native stat changes through the same deferred publications. Its normal display
 and Layout visibility switches still apply; ended/inactive phases retire it.
 
-During `choosing`, the Stats root uses the native `TOOLTIP` stratum so its
-text and artwork draw above the upgrade screen's full-screen dimmer. It stays
-mouse-transparent. Playing/paused presentation and hiding, disabling or world
-cleanup restore `MEDIUM`. The layer setter runs only on transitions through
-the existing reader; no extra frame, event or updater is added. The native
-[frame-state bindings](https://github.com/samwhosung/benilla/blob/e2bad3c45c4c8062bf3347396036d25a5472fd11/crates/benilla-ui/src/script/object/frame_state.rs#L294)
-support these strata. The supplied screenshot establishes that the prior
-MEDIUM-layer Stats was visible underneath the dimmer; packaged-client rendering
-of the corrected layer still needs in-game confirmation.
+The upgrade cards use the game's separate screen presentation. Ordinary Lua
+frame strata do not opt a window into drawing over those cards; the attempted
+TOOLTIP-stratum workaround left Stats dimmed in the supplied game capture.
+Stats instead uses the documented
+[`AZS_SetOnTopOfScreens(frame, on)` API](AzerothSurvivors-Addon-API.md#azs_setontopofscreensframe-on--azs_isontopofscreensframe).
+During `choosing`, it registers only its globally named
+`SurvivorsDragonUiStats` root and confirms registration through
+`AZS_IsOnTopOfScreens` when available. It remains mouse-transparent and keeps
+its normal MEDIUM stratum. Phase exit, hiding, disabling and world cleanup
+release only its own screen registration. No GameTooltip, UIParent, choice
+frame or dimmer is promoted or modified.
+
+Successful registration is cached. Failed calls or a temporarily unavailable
+setter retry through the existing visible half-second presentation reader;
+hidden/disabled Stats adds no polling worker. New interface instances create
+and register their own named root. No new frame, event or updater is added.
+The API documents drawing above the level-up and jewelry cards; the corrected
+packaged-client appearance still needs in-game confirmation.
 
 Damage, area, speed and experience use their supplied multipliers minus one;
 haste displays the supplied cooldown reduction. Fractional chances and critical

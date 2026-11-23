@@ -20,9 +20,12 @@ parser reads, no Gold/tally access, stable drawing and row reuse, width changes,
 Layout hiding, visible level-up/jewelry choices, live upgrade stat publications,
 disabled upgrade recovery, choice/pause transitions, retired publications, world cleanup,
 editing placeholders and the display preview/Confirm/Cancel/reset lifecycle.
-Layer cases start with an initial choosing-phase snapshot, require upgrade-only
-`TOOLTIP` presentation, and cover normal-layer restoration, disabled/re-enabled
-upgrades and unchanged strata writes in both Performance Mode states.
+Screen-presentation cases start with an initial choosing-phase snapshot and
+require `AZS_SetOnTopOfScreens` on the named Stats root. They cover the matching
+getter, phase-exit/disable/world cleanup, failed and missing-setter recovery,
+disabled/re-enabled upgrades and unchanged screen-API/strata work in both
+Performance Mode states. Ordinary MEDIUM strata is retained; the native screen
+API, rather than a mocked strata change, supplies the over-cards behavior.
 These cases are registered for GitHub Actions only and were not run locally.
 They do not establish native rendering or complete native replay behavior.
 

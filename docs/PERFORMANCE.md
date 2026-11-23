@@ -19,10 +19,13 @@ and jewelry choices keep its current native values visible. This reuses the
 existing publication reader, pooled regions and changed-only updates; it adds
 no event, updater, frame, artwork or saved state. Settled upgrades have no idle
 OnUpdate, and display/Layout hiding still detaches the reader.
-Choosing raises the existing mouse-transparent Stats root to `TOOLTIP` above
-full-screen dimming; phase exit and hiding restore `MEDIUM`. The layer choice
-is cached, so settled publications add no strata write. No native choice frame
-or dimmer is changed and no polling, frame or drawing region is added.
+Choosing registers only the existing mouse-transparent Stats root with
+`AZS_SetOnTopOfScreens`, retaining MEDIUM strata. The optional matching getter
+confirms changed registrations; successful state is cached, so settled
+publications perform neither screen-API reads/writes nor strata writes.
+Phase exit and hiding release the registration. Failed visible registration
+uses the existing half-second retry; hidden/disabled states add no polling.
+No native choice frame or dimmer, extra frame or drawing region is changed.
 
 Stats defaults off, with two lightweight frames and no prepared texture or
 FontString regions. Enabled visible publications and settings changes coalesce

@@ -53,6 +53,19 @@ for _, performance in ipairs({ false, true }) do
         context.reads.phase = (context.reads.phase or 0) + 1
         return phase
     end
+    context.nativeOnTop = false
+    env.AZS_SetOnTopOfScreens = function(frame, on)
+        assert(frame == env.SurvivorsDragonUiStats and frame:GetName(), "Stats promoted a different or unnamed root")
+        assert(type(on) == "boolean", "screen registration requires a boolean")
+        context.writes.screenTop = (context.writes.screenTop or 0) + 1
+        if context.rejectScreen then return false end
+        context.nativeOnTop = on
+    end
+    env.AZS_IsOnTopOfScreens = function(frame)
+        assert(frame == env.SurvivorsDragonUiStats, "Stats queried a different root's screen registration")
+        context.reads.screenTop = (context.reads.screenTop or 0) + 1
+        return context.nativeOnTop
+    end
     env.AZS_RUN = setmetatable({ t = 10 }, {
         __index = function(_, key)
             assert(key ~= "gold" and key ~= "kills" and key ~= "chest", "Stats read a tally field")
@@ -105,6 +118,7 @@ for _, performance in ipairs({ false, true }) do
             "SetTexture",
             "SetFont",
             "SetFrameStrata",
+            "screenTop",
             "SetPoint",
             "SetWidth",
             "SetHeight",
@@ -117,6 +131,7 @@ for _, performance in ipairs({ false, true }) do
 
     Tick()
     assert(not context.reads.phase and not context.reads.stats and not panel:IsShown(), "default-off Stats did work")
+    assert(not context.nativeOnTop and not context.writes.screenTop, "default-off Stats registered over native screens")
     for _, region in ipairs(context.objects) do
         assert(region.kind ~= "Texture" and region.kind ~= "FontString", "off Stats prepared artwork")
     end
@@ -129,7 +144,7 @@ for _, performance in ipairs({ false, true }) do
     display.Set("statsWindow", true)
     Tick()
     assert(panel:IsShown() and not env.SurvivorsDragonUiDisplay, "Stats preview saved too early")
-    assert(panel.strata == "TOOLTIP", "initial upgrade Stats stayed behind the full-screen dimmer")
+    assert(context.nativeOnTop and panel.strata == "MEDIUM", "initial upgrades did not register Stats over screens")
     assert(Has("Stats") and Has("Offense") and Has("+533%") and Has("95.7%") and Has("663%"))
     assert(Has("+50.4%") and Has("5.2") and Has("+0%"), "native formatting or zero values changed")
     assert(not Has("Gold") and not Has("Kills") and not Has("Cache"), "Stats restored a counter")
@@ -137,7 +152,7 @@ for _, performance in ipairs({ false, true }) do
     phase = "playing"
     Packet("AZSRUN")
     Tick()
-    assert(panel.strata == "MEDIUM", "normal play kept the upgrade-only layer")
+    assert(not context.nativeOnTop and panel.strata == "MEDIUM", "normal play retained upgrade screen registration")
     local allocated = #context.objects
     context:ResetCounts()
     Packet("AZSRUN")
@@ -194,16 +209,22 @@ for _, performance in ipairs({ false, true }) do
     visibility(true)
     Tick()
     assert(Has("900"), "unhiding replayed a hidden-time value")
+    context.rejectScreen = true
     phase = "choosing"
     Packet("AZSRUN")
     Tick()
     assert(panel:IsShown() and Has("900"), "Stats disappeared during native level-up/jewelry choices")
-    assert(panel.strata == "TOOLTIP", "upgrade Stats remained below the native full-screen overlay")
+    assert(not context.nativeOnTop and reader:GetScript("OnUpdate"), "failed screen registration was cached")
+    context.rejectScreen = false
+    context.now = context.now + 0.5
+    Tick()
+    assert(context.nativeOnTop and panel.strata == "MEDIUM", "native screen registration did not recover")
     local choicePool = #context.objects
     context:ResetCounts()
     Packet("AZSRUN")
     Tick()
     NoDrawing()
+    assert(not context.reads.screenTop, "settled upgrade Stats kept querying screen registration")
     assert(not reader:GetScript("OnUpdate"), "settled upgrade Stats kept an idle updater")
     values.hp = 1000
     Packet()
@@ -213,16 +234,25 @@ for _, performance in ipairs({ false, true }) do
     display.Set("statsWindow", false)
     Tick()
     assert(not panel:IsShown() and not reader.events.CHAT_MSG_ADDON, "upgrades forced disabled Stats to stay active")
-    assert(panel.strata == "MEDIUM", "disabled upgrade Stats kept its elevated layer")
+    assert(not context.nativeOnTop, "disabled Stats retained native screen registration")
+    local setScreenLayer = env.AZS_SetOnTopOfScreens
+    env.AZS_SetOnTopOfScreens = nil
     display.Set("statsWindow", true)
     Tick()
+    assert(
+        panel:IsShown() and not context.nativeOnTop and reader:GetScript("OnUpdate"),
+        "missing screen API lost retry"
+    )
+    env.AZS_SetOnTopOfScreens = setScreenLayer
+    context.now = context.now + 0.5
+    Tick()
     assert(panel:IsShown() and Has("1,000") and #context.objects == choicePool, "upgrade recovery replaced Stats rows")
-    assert(panel.strata == "TOOLTIP", "enabling Stats during upgrades lost its overlay layer")
+    assert(context.nativeOnTop and panel.strata == "MEDIUM", "Stats did not use the restored native screen API")
     phase = "paused"
     Packet("AZSRUN")
     Tick()
     assert(panel:IsShown() and Has("1,000"), "paused native values failed to recover")
-    assert(panel.strata == "MEDIUM", "leaving upgrades did not restore normal HUD layering")
+    assert(not context.nativeOnTop and panel.strata == "MEDIUM", "leaving upgrades retained screen registration")
     phase = "ready"
     Packet("AZSRUN")
     Tick()
@@ -243,6 +273,7 @@ for _, performance in ipairs({ false, true }) do
     assert(panel:IsShown() and env.SurvivorsDragonUiDisplay.statsWindow, "Confirm lost the Stats choice")
     context:Event(reader, "PLAYER_LEAVING_WORLD")
     assert(not panel:IsShown() and not reader.events.CHAT_MSG_ADDON and not reader:GetScript("OnUpdate"))
+    assert(not context.nativeOnTop, "world cleanup retained Stats over native screens")
     context:Event(reader, "PLAYER_ENTERING_WORLD")
     Tick()
     assert(not panel:IsShown(), "world entry reused a retired stats publication")
