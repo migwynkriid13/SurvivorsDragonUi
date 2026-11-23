@@ -22,6 +22,25 @@ DFRL:NewMod("Mini", 1, function()
         { 112, 26, 16, 3, 22 },
         { 112, 29, 16, 5 },
     }
+    -- This fixed-width view can join its rail/cap pieces and reuse the two
+    -- released regions for opaque silver samples over the sheet's dark joins.
+    local targetHealthCrops = {
+        { 0, 0, 44, 26 },
+        { 0, 26, 43, 1 },
+        { 0, 27, 44, 1 },
+        { 0, 28, 43, 1 },
+        { 0, 29, 42, 3 },
+        { 0, 32, 41, 2 },
+        { 0, 34, 40, 1 },
+        { 0, 35, 44, 29 },
+        { 44, 0, 84, 18 },
+        { 44, 34, 84, 30 },
+        { 112, 18, 16, 8 },
+        { 112, 26, 16, 3, 22 },
+        { 112, 29, 16, 5 },
+        { 42, 16, 2, 1, 16, 44.5 },
+        { 39, 35, 5, 1, 35, 44.5 },
+    }
 
     -- Both compact health-only views omit the old divider's portrait/outer-end
     -- stubs while retaining the complete ring and rounded outer contour.
@@ -29,13 +48,14 @@ DFRL:NewMod("Mini", 1, function()
         local scaleX, scaleY = width / 128, height / 64
         local strips, pieces = {}, elastic and {} or nil
         for _, crop in ipairs(crops) do
-            local x, y, w, h, sourceY = unpack(crop)
+            local x, y, w, h, sourceY, sourceX = unpack(crop)
             sourceY = sourceY or y
+            sourceX = sourceX or x
             -- One-row portrait tips must not filter the neighboring divider.
             local tip = h == 1 and 0.5 or 0
             local strip = parent:CreateTexture(nil, layer)
             strip:SetTexture(tex .. "pet")
-            strip:SetTexCoord(x / 128, (x + w - tip) / 128, (sourceY + tip) / 64, (sourceY + h - tip) / 64)
+            strip:SetTexCoord(sourceX / 128, (sourceX + w - tip) / 128, (sourceY + tip) / 64, (sourceY + h - tip) / 64)
             strip:SetPoint("TOPLEFT", anchor, "TOPLEFT", x * scaleX, -y * scaleY)
             strip:SetWidth(w * scaleX)
             strip:SetHeight(h * scaleY)
@@ -357,14 +377,14 @@ DFRL:NewMod("Mini", 1, function()
             TargetofTargetTexture:Hide()
             TargetofTargetTexture.Show = TargetofTargetTexture.Hide
         end
-        -- Reuse the party view's clean health-only crops at the existing size.
+        -- Preserve the party contour and close both dark portrait-side rail joins.
         local borderStrips = HealthOnlyBorder(
             border,
             border,
             TargetofTargetFrame:GetWidth() + 20,
             TargetofTargetFrame:GetHeight() + 15,
             "OVERLAY",
-            healthOnlyCrops
+            targetHealthCrops
         )
         if TargetFrame then
             TargetofTargetFrame:ClearAllPoints()
