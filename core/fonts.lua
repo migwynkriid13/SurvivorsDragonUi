@@ -38,7 +38,8 @@ local function FontFlags(flags)
 end
 local function ApplyShadow(object, style)
     local enabled = not style or selectedShadow ~= false
-    local alpha, x, y = enabled and 1 or 0, enabled and 1 or 0, enabled and -1 or 0
+    local offset = enabled and (style and style.shadowScale or 1) or 0
+    local alpha, x, y = enabled and 1 or 0, offset, -offset
     if object.SetShadowColor then
         local r, g, b, a
         if object.GetShadowColor then
@@ -59,10 +60,10 @@ local function ApplyShadow(object, style)
         local unchanged = object.GetShadowOffset
             and DFRL.tools.NearlyEqual(currentX, x)
             and DFRL.tools.NearlyEqual(currentY, y)
-        if not unchanged and not (not object.GetShadowOffset and style and style.shadowOffset == enabled) then
+        if not unchanged and not (not object.GetShadowOffset and style and style.shadowOffset == offset) then
             local ok, applied = pcall(object.SetShadowOffset, object, x, y)
             if not ok or applied == false then return false end
-            if style then style.shadowOffset = enabled end
+            if style then style.shadowOffset = offset end
         end
     end
     return true
@@ -191,7 +192,12 @@ function DFRL.tools.SetFont(object, size, flags, base)
     return Apply(object, style)
 end
 
-function DFRL.tools.SetChatFont(frame) DFRL.tools.SetFont(frame, 12, "OUTLINE") end
+function DFRL.tools.SetChatFont(frame, scale)
+    local style = managed[frame] or {}
+    managed[frame] = style
+    style.shadowScale = 1 / (scale or 1)
+    DFRL.tools.SetFont(frame, 12 * style.shadowScale, "OUTLINE")
+end
 
 function DFRL.tools.SetChatShadow(frame)
     local style = managed[frame]

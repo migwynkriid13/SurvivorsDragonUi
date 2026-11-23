@@ -56,6 +56,24 @@ refresh snapped it back. The shared chat container retains its normal editor
 movement, dimension controls, Confirm, Cancel, profiles and discard behavior.
 Native mouse input, hyperlinks, wheel scrolling and text input remain active.
 
+The shared native input uses a two-unit caret instead of the
+[native renderer's four-unit block](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/ui_script/extract/text.rs).
+Its half scale is compensated with doubled local dimensions, anchor
+offsets, padding, header/text font size and shadow offsets, keeping the visible
+text at twelve units and the input at its existing bounds. The 24-unit local
+font stays below the native 32-unit font cap. Global font, outline and shadow
+previews retain that compensation. Native typing, selection, history, commands,
+focus and blink remain in the original EditBox.
+
+This reuses the input, header and existing visible-input refresh in both
+Performance Mode states. It adds no frame, region, artwork, setting, event or
+updater; unchanged scale/geometry/font/shadow writes are skipped and hidden
+input styling waits for Show. The default-chat startup path remains native.
+CI-only chat/font cases cover visible bounds, channel-header changes, native
+resets, hidden/Show recovery, font/style previews and unchanged writes. They
+were authored without local tests or game execution; packaged-client rendering
+and input remain unverified.
+
 Movement ownership is set during attachment and compared against actual native
 state at the existing presentation refresh points: native chat-window events,
 selection, Show and the selected pane's one-second fallback. An unexpected restored drag region

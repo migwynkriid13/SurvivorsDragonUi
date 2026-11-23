@@ -80,6 +80,37 @@ tools.SetFont(independent, 18, "OUTLINE", true)
 independent:SetFont("INDEPENDENT_TEST", 18, "OUTLINE")
 tools.SetChatShadow(independent)
 
+-- The half-scale native chat input keeps twelve-unit glyphs and one-unit
+-- shadows through font/style previews, without changing other chat labels.
+local input, header, ordinaryChat =
+    env.CreateFrame("EditBox", nil, root), root:CreateFontString(), root:CreateFontString()
+tools.SetChatFont(input, 0.5)
+tools.SetChatFont(header, 0.5)
+tools.SetChatFont(ordinaryChat)
+local function AssertChatFonts(expectedFace, expectedFlags, shadow)
+    for _, object in ipairs({ input, header }) do
+        local actualFace, actualSize, actualFlags = object:GetFont()
+        local x, y = object:GetShadowOffset()
+        assert(actualFace == expectedFace and actualSize * 0.5 == 12 and actualFlags == expectedFlags)
+        assert(x * 0.5 == (shadow and 1 or 0) and y * 0.5 == (shadow and -1 or 0))
+    end
+    local _, ordinarySize = ordinaryChat:GetFont()
+    assert(ordinarySize == 12, "cursor compensation changed ordinary chat text")
+end
+AssertChatFonts("NATIVE_TEST", "OUTLINE", true)
+display.BeginEdit()
+display.Set("uiFont", "arial")
+display.Set("uiFontOutline", "THICKOUTLINE")
+display.Set("uiFontShadow", false)
+AssertChatFonts("Fonts\\ARIALN.TTF", "THICKOUTLINE", false)
+display.FinishEdit(false)
+AssertChatFonts("NATIVE_TEST", "OUTLINE", true)
+context:ResetCounts()
+tools.SetChatFont(input, 0.5)
+tools.SetChatShadow(input)
+tools.SetChatFont(header, 0.5)
+context:NoPresentationWrites()
+
 for _, value in ipairs({ true, 1, "unknown", "friz", "Fonts\\ARIALN.TTF" }) do
     assert(display.Copy({ uiFont = value }).uiFont == "default", "invalid saved face was accepted")
 end
