@@ -194,6 +194,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
     local function ActiveMode() return settingsDraft and settingsDraft.mode or sctMode end
     local customEnabled, changingSettings = false, false
+    local SyncCombatSubscriptions
     local damageIcons = DFRL.display.Get("damageIcons")
     local nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
     local nameplateFontSize = DFRL.display.Get("nameplateFontSize")
@@ -2216,6 +2217,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             textStyle = style
             msbtStyle = style == "msbt"
             nativeText.Configure(inWorld and customEnabled and not msbtStyle)
+            if SyncCombatSubscriptions then SyncCombatSubscriptions() end
             -- Do not move old hits between unrelated coordinate systems, or
             -- replay a queued enemy hit in the fixed screen stream.
             ResetDisplay()
@@ -2854,6 +2856,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         _G.SurvivorsDragonUiSctMode = sctMode
         customEnabled = enabled
         nativeText.Configure(inWorld and enabled and not msbtStyle)
+        if SyncCombatSubscriptions then SyncCombatSubscriptions() end
         ResetDisplay()
         SyncScrollRoot()
         ApplyPlateTracking(true)
@@ -2902,9 +2905,24 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local frame = CreateFrame("Frame", "DFRL_NameplateCombatText")
-    for eventName in pairs(T.NameplateCombatEventHandlers) do
-        frame:RegisterEvent(eventName)
+    local combatSubscriptions, combatSubscriptionMode = {}, nil
+    SyncCombatSubscriptions = function()
+        local mode = inWorld and customEnabled and (nativeText.Selected() and "periodic" or "legacy") or "off"
+        if combatSubscriptionMode == mode then return end
+        combatSubscriptionMode = mode
+        for eventName in pairs(T.NameplateCombatEventHandlers) do
+            local wanted = mode == "legacy"
+                or (mode == "periodic" and string.find(eventName, "^CHAT_MSG_SPELL_PERIODIC_") ~= nil)
+            if wanted and not combatSubscriptions[eventName] then
+                frame:RegisterEvent(eventName)
+                combatSubscriptions[eventName] = true
+            elseif not wanted and combatSubscriptions[eventName] then
+                frame:UnregisterEvent(eventName)
+                combatSubscriptions[eventName] = nil
+            end
+        end
     end
+    SyncCombatSubscriptions()
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
     frame:RegisterEvent("PLAYER_LEAVING_WORLD")
     frame:RegisterEvent("PLAYER_LOGOUT")
@@ -2916,7 +2934,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     frame:RegisterEvent("CHAT_MSG_ADDON")
     frame:RegisterEvent("CVAR_UPDATE")
     frame:SetScript("OnEvent", function()
-        local eventTime = T.NameplateCombatEventHandlers[event] and GetTime() or nil
+        local combatEvent = T.NameplateCombatEventHandlers[event]
+        if combatEvent and not combatSubscriptions[event] then return end
+        local eventTime = combatEvent and GetTime() or nil
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             DirtySpellTextures()
@@ -2931,6 +2951,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             sct.FinishEdit(false)
             inWorld = false
             nativeText.Configure(false)
+            SyncCombatSubscriptions()
             SyncScrollRoot()
             plateFilter.Clear(plateFilter.sequence)
             plateFilter.time, plateFilter.zone, plateFilter.targetName = nil, nil, nil
@@ -3017,6 +3038,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ResetDisplay()
             ApplyPlateTracking(true)
         end
+        SyncCombatSubscriptions()
         plateFilter.Update(arg1)
         ScanPlates(false)
         -- Native plate allocation follows this update. The first accepted hit
@@ -3055,6 +3077,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             sct.FinishEdit(false)
             inWorld = false
             nativeText.Configure(false)
+            SyncCombatSubscriptions()
             ResetDisplay()
             for _, data in pairs(plates) do
                 RestorePresentation(data, true)

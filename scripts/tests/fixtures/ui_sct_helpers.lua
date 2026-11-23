@@ -131,8 +131,10 @@ local function SCT(scrolling, setup)
     context:Load("core/combat_text_api.lua")
     context:Load("modules/nameplates/spell_data.lua")
     context:Load("modules/nameplates/sct.lua", "NameplateCombatText")
-    context.controller = context:Controller("TEST_COMBAT")
-    function context:Hit(amount) self:Event(self.controller, "TEST_COMBAT", tostring(amount)) end
+    context.controller = assert(env.DFRL_NameplateCombatText)
+    function context:Hit(amount)
+        if self.controller.events.TEST_COMBAT then self:Event(self.controller, "TEST_COMBAT", tostring(amount)) end
+    end
     function context:Tick(elapsed)
         self.now = self.now + elapsed
         self:Call(self.controller, "OnUpdate", elapsed)

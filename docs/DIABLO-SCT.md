@@ -15,6 +15,14 @@ All three styles draw above the world but below ordinary windows, including the
 character screen opened with **C**. Combat text continues normally behind those
 panels; opening or closing one does not clear hits or restart their lifetime.
 
+Combat-line subscriptions follow the effective SCT mode. **Off** and **Game
+settings** receive no combat lines, including during live editor previews. The
+native world-feed path receives only periodic combat lines needed for aura
+metadata; direct hits already come from the native feed. Legacy nameplates and
+MSBT keep the complete parser subscription set. Mode, style, world and delayed
+native-feed handoffs reconcile that set through the existing controller, without
+adding another updater or changing hits, filters, amounts or animation.
+
 ## Reference study
 
 The requested reference is Vaereth's

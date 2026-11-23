@@ -181,6 +181,7 @@
     "modules/cast/cast.lua",
     "modules/chat/capture.lua",
     "modules/chat/chat.lua",
+    "modules/chat/combat_log_pause.lua",
     "modules/chat/copy.lua",
     "modules/chat/prettify.lua",
     "modules/map/map.lua",

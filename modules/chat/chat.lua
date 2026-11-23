@@ -49,6 +49,7 @@ DFRL:NewMod("Chat", 1, function()
         root:SetAlpha(1)
         root:Show()
         chat.frame = root
+        chat.IsFrameActive = function(native) return root:IsVisible() and selected and selected.native == native end
         -- Include the native input and passive indicator below the message pane.
         local moveRegion = CreateFrame("Frame", nil, root)
         moveRegion:SetPoint("TOPLEFT", root, "TOPLEFT", -1, 0)
@@ -561,6 +562,7 @@ DFRL:NewMod("Chat", 1, function()
             PositionInput()
             RefreshFrames()
             UpdateIndicator()
+            if chat.RefreshHiddenCombatLog then chat.RefreshHiddenCombatLog() end
         end
 
         if input then
@@ -690,6 +692,7 @@ DFRL:NewMod("Chat", 1, function()
                 state.slideStart, state.revealStart = nil, nil
                 activeStates[state] = state.pendingLevel and true or nil
             end
+            if chat.RefreshHiddenCombatLog then chat.RefreshHiddenCombatLog() end
         end)
         HookScript(root, "OnShow", function()
             ReadDimensions()
@@ -701,6 +704,7 @@ DFRL:NewMod("Chat", 1, function()
                 FadeSettings(state, state == selected and not AtBottom(state))
             end
             UpdateIndicator()
+            if chat.RefreshHiddenCombatLog then chat.RefreshHiddenCombatLog() end
         end)
         DFRL.layout.Register("chat", root, AnchorDefault, {
             region = moveRegion,

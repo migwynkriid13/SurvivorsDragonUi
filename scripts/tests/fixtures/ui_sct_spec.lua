@@ -1788,4 +1788,30 @@ Test("unknown icon retry remains one second and final cache evicts old identitie
     assert(context.catalogReads.Source1 == 2, "resolved identity cache grew without eviction")
 end)
 
+Test("Off and Game settings have no combat-line subscriptions, with live preview recovery", function()
+    for _, mode in ipairs({ "off", "default" }) do
+        local context = SCT(true, function(c, env)
+            env.SurvivorsDragonUiSctMode = mode
+            local parse = env.T.ParseNameplateCombatEvent
+            env.T.ParseNameplateCombatEvent = function(...)
+                c.combatParses = (c.combatParses or 0) + 1
+                return parse(...)
+            end
+        end)
+        local sct = context.env.DFRL.sct
+        assert(not context.controller.events.TEST_COMBAT, "disabled SCT kept combat intake")
+        context:Hit(11)
+        assert(not context.combatParses, "disabled SCT parsed a discarded line")
+        sct.BeginEdit()
+        sct.SetMode("on")
+        assert(context.controller.events.TEST_COMBAT, "Custom preview did not restore legacy intake")
+        context:Hit(11)
+        assert(context.combatParses == 1, "enabled legacy SCT lost its parser")
+        sct.FinishEdit(false)
+        assert(not context.controller.events.TEST_COMBAT, "Cancel retained a preview's subscriptions")
+        context:Hit(12)
+        assert(context.combatParses == 1 and context.controller.events.CVAR_UPDATE, "mode cleanup lost native control")
+    end
+end)
+
 print("PASS " .. passed .. " SCT lifecycle contracts")

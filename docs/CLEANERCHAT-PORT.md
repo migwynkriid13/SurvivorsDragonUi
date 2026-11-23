@@ -35,6 +35,17 @@ without requiring chat diagnostics. No Performance Mode behavior changes.
 
 ## Presentation and incoming text
 
+While custom chat owns the panes, hidden or unselected native Combat Log
+window 2 stops receiving its combat events. This includes native panes masked
+with alpha while their frame remains shown. Native message groups, channels and
+regular notices stay configured; the window resumes its still-requested events
+if selected or shown, when default chat is previewed, or during world cleanup.
+There is no polling worker or combat-message filter added to that window.
+Previously retained history stays available, but combat lines arriving while
+the log is suspended are not added to its native history. Opted-in Copy capture
+has its own subscriptions and remains independent. Default-chat startup skips
+the suspension module along with the other custom chat owners.
+
 The following custom presentation applies while **Use default chat** is off.
 
 Chat moves and resizes only through the shared `/sdui` or `/sdui lock` handles.
