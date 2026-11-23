@@ -1,10 +1,20 @@
 # Class resources
 
-The **Class resources** checkbox in the `/sdui` **HUD** tab defaults off. The player frame normally has one uninterrupted health bar. Enabling the option integrates the current native active resource below health inside the original frame opening, with supported secondary class-proc meters attached below the frame when available. Warrior rage appears only inside the player frame. Target and target-of-target frames remain health-only.
+The **Class resources** checkbox in `/sdui` → **Unit frames** defaults off. The player frame normally has one uninterrupted health bar. Enabling the option integrates the current native active resource below health inside the original frame opening, with supported secondary class-proc meters attached below the frame when available. Warrior rage appears only inside the player frame. Target and target-of-target frames remain health-only.
 
 Rogue points and Warlock soul shards use the existing socket artwork. Lightwell uses a compact gold fill with current / maximum text. These secondary displays use the official proc values; none are inferred from active power, spell casts or combat messages. The `bloodrage` proc does not create another meter below the frame, avoiding a second rage display.
 
 ## Current native values
+
+**Hide soul shard icons**, beside Class resources, hides the Warlock's filled
+and empty soul-shard sockets while keeping the blue primary-power bar and its
+numbers. It defaults off. Rogue points, Lightwell and numeric secondary-meter
+fallbacks keep their existing presentation; buff positions do not change.
+The option dims while Class resources is off and retains its selected value.
+It uses the existing display preview, Confirm, Cancel, profile and discard
+paths; both full resets restore off. Both Performance Mode states use the
+same static visibility gate, existing reader and pooled artwork, without
+another event or updater.
 
 The primary bar reads `UnitPowerType("player")`, `UnitMana("player")` and `UnitManaMax("player")` independently of AZS phase and retained run snapshots. It requires an existing player, finite nonnegative current power and power type, and a finite positive native maximum. The primary bar uses that maximum directly, without inventing a pool or maximum for a class. Missing proc data does not hide valid primary power; missing primary power does not hide a valid proc meter.
 
@@ -51,9 +61,15 @@ This establishes the native encoding in the identified executable. It does not e
 
 ## Display preference
 
-The **Class resources** checkbox appears in the `/sdui` **HUD** tab alongside boss debuffs and independent Cache/Guardian guidance. It defaults **off**. Turning it off hides player and party power bars, hides attached player point artwork and restores full-height health without changing confirmed geometry or the selected SCT mode. Changes preview live; **Confirm** alone saves the choice. World leave, logout and `/reload` discard unconfirmed changes and restore the last confirmed value.
+The **Class resources** checkbox appears in `/sdui` → **Unit frames**, beside **Hide soul shard icons**. It defaults **off**. Turning it off hides player and party power bars, hides attached player point artwork and restores full-height health without changing confirmed geometry or the selected SCT mode. Changes preview live; **Confirm** alone saves the choice. World leave, logout and `/reload` discard unconfirmed changes and restore the last confirmed value.
 
 The choice remains the normalized `classResources` boolean in `SurvivorsDragonUiDisplay`. Missing or invalid values use `false`; confirmed existing choices remain in use. Both `/sdui reset` and **Addon defaults** restore class resources off through the shared full reset. The confirmed SCT mode and native incoming/self text choice remain unchanged after their editing drafts are discarded.
+
+`hideSoulShards` is a separate normalized boolean in that same table. Missing
+or invalid values use `false`; explicit saved and profile choices survive.
+It affects only `soul_fire` ranges that normally select socket artwork (a
+whole-number maximum from one to five), so larger or continuous numeric
+fallbacks retain their values and labels.
 
 ## Layout
 

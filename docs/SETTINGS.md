@@ -1,10 +1,17 @@
 # Settings editor
 
+**Stats** has its own category. **Show stats** defaults off and previews the
+open HUD immediately; Confirm saves it and Cancel restores the prior choice.
+Choose sections and individual stats, hide its title/headings, or adjust font
+size and row spacing. Move, scale, resize or hide the **Stats** group in Layout.
+Gold, kills and cache cost remain outside this window. Profiles include these
+choices and both full resets restore Stats to off.
+
 Layout stores one custom `.ttf` filename in the existing display settings. The Layout and Run timer font menus select it independently. The filename refers to a file directly inside `media/fonts`. The editor checks the file before previewing it, and a saved choice whose file is unavailable uses the game font. Profiles and Confirm/Cancel use the existing display draft.
 
 `/sdui` uses Blizzard’s Dragonflight plain metal settings frame, gold accents,
 compact category rows, checkbox artwork and
-Confirm/Cancel footer. The wider content column and nine categories replace
+Confirm/Cancel footer. The wider content column and eleven categories replace
 the old twenty-entry sidebar. The editor uses 80% of its viewport-fitted scale,
 making the window, controls and inherited text 20% smaller. It still fits smaller
 screens through the existing viewport calculation.
@@ -31,6 +38,18 @@ icon switches and distance cutoffs. **Boss icon** and **Guardian icon** offer
 The guardian style also applies to the tracker, minimap and waypoint guidance.
 Elites use a gold star overhead. Changes preview immediately and save with
 **Confirm**.
+
+Under **Encounters** → **Run timer**, **Text below the bar** flips both attached
+captions beneath the bar. **Detach timer text** gives them a separate
+**Run timer text (detached)** Layout handle, so they can move and scale together
+anywhere. Attached captions default above the bar; detached geometry is retained
+when reattaching.
+
+Under **Encounters** → **Guardian tracker**, separate **Title font size**,
+**Name font size** and **Status font size** controls use 8–20, default 12.
+Status size also controls health text. **Timer only** removes the Respawns in
+prefix. Names use the space left by each row's status or health pill. All these
+choices preview live and follow Confirm, Cancel, profiles and full resets.
 
 | Category         | Sections                                            |
 | ---------------- | --------------------------------------------------- |
@@ -62,6 +81,12 @@ input below its caption. Category pages use the full content viewport.
 Each category remembers its scroll offset until the UI reloads.
 
 ## Finding a setting
+
+In **Unit frames**, enable **Class resources** to keep the power bar and
+numbers, then enable **Hide soul shard icons** to hide only the Warlock
+crystals. Changes preview immediately and save with **Confirm**. The hide
+option defaults off and retains its choice while Class resources is off.
+Search also finds it through `Soulfire` or `Warlock`.
 
 **Search settings** above Performance Mode in the sidebar matches existing captions, descriptions and category names,
 using both the active language and English source text. Multiple words must all

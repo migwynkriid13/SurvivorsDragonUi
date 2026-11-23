@@ -624,11 +624,11 @@ updater, SavedVariable or client change is added. Verification was source/diff
 review and pinned formatting only; local tests, standalone validation and
 addon/game execution were not run.
 
-## Nameplate right-button camera turning — updated 2026-11-03
+## Nameplate right-button camera turning — updated 2026-11-23
 
-A right-button press on a visible enemy plate starts native mouse-look only
-when the client also exposes a usable `IsMouseButtonDown("RightButton")` read.
-Clients without that read keep native nameplate input. Left-click targeting,
+A right-button press on a visible enemy plate or its native health-bar child
+starts native mouse-look. An available `IsMouseButtonDown("RightButton")` read
+remains an extra guard; it is no longer required. Left-click targeting,
 existing handlers, mouse flags, hit rectangles, click registration, V and the
 enemy category filters retain their existing behavior. Both Performance Mode states and all SCT
 modes/styles share this input behavior.
@@ -644,15 +644,22 @@ the cursor staying hidden when neither hook stops the look. The reference
 [input dispatcher](https://github.com/samwhosung/benilla/blob/e2aeaecffcfcaea27f762f61901ec4046587b843/crates/benilla-app/src/ui_script/input.rs#L351-L397)
 has a path that bypasses both Lua mouse-up hooks when the release has no
 cursor point. The installed executable has the mouse-look symbols but no
-`IsMouseButtonDown` symbol, so the addon uses native plate input there unless
-the client supplies that getter separately.
+`IsMouseButtonDown` symbol. Requiring it disabled the addon camera fix there.
+The native camera coordinator independently clears its scripted look channel
+on physical right release, even when Lua receives no mouse-up. Without the
+getter, the addon uses the actual down event and observes `IsMouselooking`
+only during its own hold. A native-ended channel retires ownership without
+another stop or a synthetic click. Both root and native health-bar receivers
+are hooked, since mouse scripts do not bubble from children. The retail skin's
+own visual children remain mouse-transparent.
 
-The existing controller checks the physical button only during an addon-owned
-hold. If the release was missed or the read fails, it stops that hold without
-sending a click. Plate death, hiding and reuse do not end a held gesture.
+The existing controller checks the physical button, or the native look channel
+when that getter is unavailable, only during an addon-owned hold. Plate death,
+hiding and reuse do not end a held gesture.
 WorldFrame hiding, world leave, logout and reload still clear owned holds.
 Pre-existing and later external mouse-look keep their ownership. CI-only mocks
-cover the missed release, long hold and native fallback. Packaged input delivery
+cover missed release, long holds, absent-button-getter behavior and native child
+receivers. Packaged input delivery
 was not tested in game.
 
 ## First-allocation nameplate flash — 2026-10-15

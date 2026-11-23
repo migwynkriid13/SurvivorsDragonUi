@@ -155,6 +155,60 @@ for _, setting in pairs(keys) do DFRL.display.Get(setting) end
 ''')
         self.assertEqual(result["unusedSettings"], [])
 
+    def test_shared_catalog_fields_reach_local_reader_helpers(self):
+        display = DISPLAY.replace("enabled = true", "enabled = true, unread = false").replace(
+            'enabled = Read(source, "enabled")', 'enabled = Read(source, "enabled"), unread = Read(source, "unread")'
+        )
+        catalog = '''
+DFRL.catalog = { { key = "enabled", title = "unread" } }
+DFRL.otherCatalog = { { key = "unread" } }
+'''
+        source = '''
+local function ReadOption(selection) return DFRL.display.Get(selection) end
+for _, group in ipairs(DFRL.catalog) do ReadOption(group.key) end
+'''
+        result = self.scan(source, display=display + catalog)
+        self.assertEqual(result["failures"], [])
+        self.assertEqual(result["unusedSettings"], ["unread"])
+        self.assertTrue(result["settingReaders"]["enabled"])
+        self.assertTrue(any(item.get("candidates") == ["enabled"] for item in result["dynamic"]))
+        setter = source.replace("display.Get", "display.Set")
+        self.assertEqual(self.scan(setter, display=display + catalog)["unusedSettings"], ["enabled", "unread"])
+        missing = catalog.replace('key = "enabled"', 'other = "enabled"')
+        # A similarly named local field must not stand in for the catalog field.
+        decoy = 'local unrelated = { key = "enabled" }\n'
+        self.assertEqual(self.scan(decoy + source, display=display + missing)["unusedSettings"], ["enabled", "unread"])
+
+    def test_ambiguous_catalogs_and_helpers_do_not_supply_reader_candidates(self):
+        catalog = '\nDFRL.catalog = { { key = "enabled" } }\n'
+        source = '''
+local function ReadOption(selection) return DFRL.display.Get(selection) end
+for _, group in ipairs(DFRL.catalog) do ReadOption(group.key) end
+'''
+        self.assertEqual(self.scan(source, display=DISPLAY + catalog + 'DFRL.catalog = nil')["unusedSettings"], ["enabled"])
+        for shadow in (
+            'ReadOption = nativeReader\n',
+            'local ReadOption = nativeReader\n',
+            'local function Other(ReadOption) return ReadOption end\n',
+        ):
+            with self.subTest(shadow=shadow):
+                ambiguous = source.replace('for _, group', shadow + 'for _, group')
+                self.assertEqual(self.scan(ambiguous, display=DISPLAY + catalog)["unusedSettings"], ["enabled"])
+
+    def test_reader_helper_uses_the_actual_parameter_and_ignores_reassigned_input(self):
+        catalog = '\nDFRL.catalog = { { key = "enabled" } }\n'
+        for body in (
+            '''local function ReadOption(unused, selection) return DFRL.display.Get(selection) end
+for _, group in ipairs(DFRL.catalog) do ReadOption(group.key, "elsewhere") end''',
+            '''local function ReadOption(selection)
+selection = "elsewhere"
+return DFRL.display.Get(selection)
+end
+for _, group in ipairs(DFRL.catalog) do ReadOption(group.key) end''',
+        ):
+            with self.subTest(body=body):
+                self.assertEqual(self.scan(body, display=DISPLAY + catalog)["unusedSettings"], ["enabled"])
+
     def test_dynamic_alias_cycles_keep_candidates_for_each_reader(self):
         display = DISPLAY.replace("enabled = true", "enabled = true, extra = false").replace(
             'enabled = Read(source, "enabled")', 'enabled = Read(source, "enabled"), extra = Read(source, "extra")'

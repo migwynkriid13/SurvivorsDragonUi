@@ -35,6 +35,17 @@ without requiring chat diagnostics. No Performance Mode behavior changes.
 
 ## Presentation and incoming text
 
+While custom chat owns the panes, hidden or unselected native Combat Log
+window 2 stops receiving its combat events. This includes native panes masked
+with alpha while their frame remains shown. Native message groups, channels and
+regular notices stay configured; the window resumes its still-requested events
+if selected or shown, when default chat is previewed, or during world cleanup.
+There is no polling worker or combat-message filter added to that window.
+Previously retained history stays available, but combat lines arriving while
+the log is suspended are not added to its native history. Opted-in Copy capture
+has its own subscriptions and remains independent. Default-chat startup skips
+the suspension module along with the other custom chat owners.
+
 The following custom presentation applies while **Use default chat** is off.
 
 Chat moves and resizes only through the shared `/sdui` or `/sdui lock` handles.
@@ -44,6 +55,24 @@ engine-owned drag surface that could move the pane before its next anchor
 refresh snapped it back. The shared chat container retains its normal editor
 movement, dimension controls, Confirm, Cancel, profiles and discard behavior.
 Native mouse input, hyperlinks, wheel scrolling and text input remain active.
+
+The shared native input uses a two-unit caret instead of the
+[native renderer's four-unit block](https://github.com/samwhosung/benilla/blob/main/crates/benilla-app/src/ui_script/extract/text.rs).
+Its half scale is compensated with doubled local dimensions, anchor
+offsets, padding, header/text font size and shadow offsets, keeping the visible
+text at twelve units and the input at its existing bounds. The 24-unit local
+font stays below the native 32-unit font cap. Global font, outline and shadow
+previews retain that compensation. Native typing, selection, history, commands,
+focus and blink remain in the original EditBox.
+
+This reuses the input, header and existing visible-input refresh in both
+Performance Mode states. It adds no frame, region, artwork, setting, event or
+updater; unchanged scale/geometry/font/shadow writes are skipped and hidden
+input styling waits for Show. The default-chat startup path remains native.
+CI-only chat/font cases cover visible bounds, channel-header changes, native
+resets, hidden/Show recovery, font/style previews and unchanged writes. They
+were authored without local tests or game execution; packaged-client rendering
+and input remain unverified.
 
 Movement ownership is set during attachment and compared against actual native
 state at the existing presentation refresh points: native chat-window events,

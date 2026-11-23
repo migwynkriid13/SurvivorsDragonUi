@@ -429,7 +429,114 @@ DFRL:NewMod("RunTimers", 5, function()
         return texture
     end
 
-    local function Pill(name, fillName, clipped)
+    -- A separate Layout owner retains detached geometry while the captions are
+    -- attached. Only presentation moves; native clock and countdown readers stay shared.
+    local function CreateRunText()
+        local view = { active = false }
+        local detached = CreateFrame("Frame", "SurvivorsDragonUiRunTimerText", UIParent)
+        detached:SetWidth(BAR_WIDTH + 16)
+        detached:SetHeight(22)
+        detached:SetFrameStrata("HIGH")
+        detached:EnableMouse(false)
+        detached:Hide()
+        local root = CreateFrame("Frame", nil, detached)
+        root:EnableMouse(false)
+        root:SetAllPoints(detached)
+        view.root, view.detached = root, detached
+        function view:Visible() return root:IsVisible() end
+        function view:CanDraw()
+            if self.separate then
+                return self.active and not DFRL.layout.IsHidden("runTimerText") and UIParent:IsVisible()
+            end
+            return self.owner and self.owner:IsVisible()
+        end
+        function view:SyncVisibility()
+            local shown = self.separate and self.active and self.hasCaptions
+            if shown then
+                if not detached:IsShown() then detached:Show() end
+            elseif detached:IsShown() then
+                detached:Hide()
+            end
+        end
+        function view:SetActive(active)
+            if self.active == active then return end
+            self.active = active
+            self:SyncVisibility()
+        end
+        function view:Anchor(frame)
+            if not self.owner then return end
+            local ratio = self.owner:GetEffectiveScale() / frame:GetEffectiveScale()
+            if not IsNumber(ratio) or ratio <= 0 then return end
+            frame:ClearAllPoints()
+            frame:SetPoint(
+                self.below and "TOP" or "BOTTOM",
+                self.owner,
+                self.below and "BOTTOM" or "TOP",
+                0,
+                (self.below and -2 or 2) * ratio
+            )
+        end
+        function view:SyncAttachment()
+            if not self.owner then return end
+            local separate = DFRL.display.Get("detachRunText")
+            if self.separate == separate then return end
+            self.separate = separate
+            local seat = separate and detached or self.overlay
+            root:SetParent(seat)
+            root:ClearAllPoints()
+            root:SetAllPoints(seat)
+            root:SetFrameLevel(seat:GetFrameLevel() + 1)
+            if self.onShow then
+                self.onShow()
+            elseif self.onBounds then
+                self.onBounds()
+            end
+            self:SyncVisibility()
+        end
+        function view:Context(hasCaptions, width, height, below)
+            self.hasCaptions = hasCaptions
+            local changed = self.below ~= below
+            self.below = below
+            width, height = math.max(BAR_WIDTH + 16, width), math.max(1, height)
+            if not T.NearlyEqual(detached:GetWidth(), width) then
+                detached:SetWidth(width)
+                changed = true
+            end
+            if not T.NearlyEqual(detached:GetHeight(), height) then
+                detached:SetHeight(height)
+                changed = true
+            end
+            if changed and self.registered then DFRL.layout.Place("runTimerText") end
+            self:SyncVisibility()
+        end
+        function view:Bind(owner, overlay)
+            self.owner, self.overlay = owner, overlay
+            self:SyncAttachment()
+            DFRL.display.Listen(function() self:SyncAttachment() end)
+        end
+        function view:RegisterLayout()
+            self.registered = true
+            DFRL.layout.Register("runTimerText", detached, function(frame) self:Anchor(frame) end, {
+                refreshDefault = true,
+                handleAvailable = function()
+                    return DFRL.display.Get("detachRunText") and DFRL.display.Get("customRunTimer")
+                end,
+                onResize = function()
+                    if self.onShow then
+                        self.onShow()
+                    elseif self.onBounds then
+                        self.onBounds()
+                    end
+                end,
+            })
+            HookScript(root, "OnShow", function()
+                if self.onShow then self.onShow() end
+            end)
+        end
+        return view
+    end
+
+    local function Pill(name, fillName, clipped, captionParent)
         local frame = CreateFrame("Frame", name, UIParent)
         frame:SetWidth(BAR_WIDTH + 16)
         frame:SetHeight(31)
@@ -466,7 +573,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local center = Texture(overlay, "BorderCenter", "OVERLAY", BAR_WIDTH - 54, 31, 1, 31 / 32)
         center:SetPoint("LEFT", left, "RIGHT", 0, 0)
         center:SetPoint("RIGHT", right, "LEFT", 0, 0)
-        local text = overlay:CreateFontString(nil, "OVERLAY")
+        local text = (captionParent or overlay):CreateFontString(nil, "OVERLAY")
         T.SetFont(text, 14, "OUTLINE")
         text:SetPoint("BOTTOM", frame, "TOP", 0, 2)
         text:SetTextColor(1, 1, 1)
@@ -1439,12 +1546,14 @@ DFRL:NewMod("RunTimers", 5, function()
         return SetAnimatedAppearance, HideAnimatedFlow, UpdateAnimatedFlow
     end
 
-    local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue")
+    local timerText = CreateRunText()
+    local run, runBar, runText, overlay = Pill("DFRL_RunTimerPill", "FillBlue", nil, timerText.root)
+    timerText:Bind(run, overlay)
     HookScript(run, "OnSizeChanged", function() run.widthDirty = true end)
     run.affixes = CreateRunAffixes(run)
     run.heroicLevel = NewHeroicNumeral(runBar, overlay, run.affixes)
     run.hyperReflection = NewHyperReflection(runBar, overlay)
-    local bossText = overlay:CreateFontString(nil, "OVERLAY")
+    local bossText = timerText.root:CreateFontString(nil, "OVERLAY")
     T.SetFont(bossText, 14, "OUTLINE")
     bossText:SetTextColor(1, 1, 1)
     bossText:SetJustifyH("RIGHT")
@@ -1655,6 +1764,10 @@ DFRL:NewMod("RunTimers", 5, function()
                 local enabled
                 if key == "roundPlayerPortrait" or key == "playerPortrait3D" then
                     enabled = not DFRL.display.Get("hidePortraits")
+                elseif key == "hideSoulShards" then
+                    enabled = DFRL.display.Get("classResources")
+                elseif key == "runTextBelow" then
+                    enabled = not DFRL.display.Get("detachRunText")
                 elseif key == "attachJewelry" then
                     enabled = DFRL.display.Get("equippedJewelry") and DFRL.display.Get("customActionBar")
                 elseif key == "jewelryCustomOrder" then
@@ -1841,11 +1954,19 @@ DFRL:NewMod("RunTimers", 5, function()
         if captionHeight <= 0 then
             captionHeight = (runClock.visible or bossClock.visible) and currentFont.size or run.affixes.height
         end
-        local frameWidth = run:GetWidth()
+        local below = DFRL.display.Get("runTextBelow") == true
+        local separate = timerText and timerText.separate == true
+        local both = runClock.visible and bossClock.visible and true or false
+        local captionsOnTop = not below and not separate
+        if timerText then
+            local naturalWidth = both and width + bossWidth + 16 or math.max(width, bossWidth) + 8
+            timerText:Context(runClock.visible or bossClock.visible, naturalWidth, captionHeight + 4, below)
+        end
+        local frameWidth = separate and timerText.detached:GetWidth() or run:GetWidth()
         local overflow = math.max(0, (math.max(width, bossWidth) + 8 - frameWidth) / 2)
         local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
         local inset = runClock.visible and bossClock.visible and 5 * pixel or 0
-        local affixWidth = run.affixes:HeaderWidth()
+        local affixWidth = captionsOnTop and run.affixes:HeaderWidth() or 0
         local left, right = 0, 0
         if runClock.visible and bossClock.visible then
             if affixWidth > 0 then
@@ -1858,39 +1979,65 @@ DFRL:NewMod("RunTimers", 5, function()
                 overflow = math.max(0, overflow - inset)
             end
         end
-        local top = (runClock.visible or bossClock.visible) and currentFont.size + 4 or 0
-        local leftOverflow, rightOverflow = overflow, overflow
+        local top = captionsOnTop and (runClock.visible or bossClock.visible) and captionHeight + 4 or 0
+        local bottom = below and not separate and (runClock.visible or bossClock.visible) and captionHeight + 4 or 0
+        local leftOverflow, rightOverflow = separate and 0 or overflow, separate and 0 or overflow
         if run.affixes.attached and run.affixes.width > 0 then
-            top = math.max(top, 2 + (captionHeight + run.affixes.height) / 2)
-            if runClock.visible and bossClock.visible then
-                leftOverflow = math.max(leftOverflow, (run.affixes.width - frameWidth) / 2)
-                rightOverflow = math.max(rightOverflow, (run.affixes.width - frameWidth) / 2)
+            local besideHeight = captionsOnTop and captionHeight or run.affixes.height
+            top = math.max(top, 2 + (besideHeight + run.affixes.height) / 2)
+            if both then
+                leftOverflow = math.max(leftOverflow, (run.affixes.width - run:GetWidth()) / 2)
+                rightOverflow = math.max(rightOverflow, (run.affixes.width - run:GetWidth()) / 2)
             else
-                leftOverflow =
-                    math.max(leftOverflow, run.affixes.width + 8 - (frameWidth - math.max(width, bossWidth)) / 2)
+                leftOverflow = math.max(
+                    leftOverflow,
+                    run.affixes.width + 8 - (run:GetWidth() - (captionsOnTop and math.max(width, bossWidth) or 0)) / 2
+                )
             end
         end
-        run.affixes:Context(runClock.visible, bossClock.visible, math.max(width, bossWidth), captionHeight)
+        run.affixes:Context(
+            runClock.visible,
+            bossClock.visible,
+            captionsOnTop and math.max(width, bossWidth) or 0,
+            captionsOnTop and captionHeight or run.affixes.height
+        )
         if run.heroicLevel then run.heroicLevel:Resize(runBar.layoutWidth or BAR_WIDTH) end
         local bounds = runClock.bounds or {}
         runClock.bounds = bounds
-        local both = runClock.visible and bossClock.visible and true or false
         if
             bounds.ready
+            and bounds.below == below
+            and bounds.separate == separate
             and bounds.both == both
             and bounds.left == left
             and bounds.right == right
             and bounds.top == top
+            and bounds.bottom == bottom
             and bounds.leftOverflow == leftOverflow
             and bounds.rightOverflow == rightOverflow
         then
             return
         end
         bounds.ready, bounds.both, bounds.left, bounds.right, bounds.top = true, both, left, right, top
+        bounds.below, bounds.separate, bounds.bottom = below, separate, bottom
         bounds.leftOverflow, bounds.rightOverflow = leftOverflow, rightOverflow
         runText:ClearAllPoints()
         bossText:ClearAllPoints()
-        if both then
+        if separate then
+            if both then
+                runText:SetPoint("LEFT", timerText.root, "LEFT", left, 0)
+                bossText:SetPoint("RIGHT", timerText.root, "RIGHT", right, 0)
+            else
+                runText:SetPoint("CENTER", timerText.root, "CENTER", 0, 0)
+                bossText:SetPoint("CENTER", timerText.root, "CENTER", 0, 0)
+            end
+        elseif below and both then
+            runText:SetPoint("TOPLEFT", run, "BOTTOMLEFT", left, -2)
+            bossText:SetPoint("TOPRIGHT", run, "BOTTOMRIGHT", right, -2)
+        elseif below then
+            runText:SetPoint("TOP", run, "BOTTOM", 0, -2)
+            bossText:SetPoint("TOP", run, "BOTTOM", 0, -2)
+        elseif both then
             runText:SetPoint("BOTTOMLEFT", run, "TOPLEFT", left, 2)
             bossText:SetPoint("BOTTOMRIGHT", run, "TOPRIGHT", right, 2)
         else
@@ -1899,9 +2046,17 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         runMoveRegion:ClearAllPoints()
         runMoveRegion:SetPoint("TOPLEFT", run, "TOPLEFT", -leftOverflow, top)
-        runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", rightOverflow, 0)
+        runMoveRegion:SetPoint("BOTTOMRIGHT", run, "BOTTOMRIGHT", rightOverflow, -bottom)
     end
     run.affixes.onBounds = UpdateRunFontBounds
+    timerText.onBounds = UpdateRunFontBounds
+    local timerTextBelow = DFRL.display.Get("runTextBelow")
+    DFRL.display.Listen(function()
+        local below = DFRL.display.Get("runTextBelow")
+        if timerTextBelow == below then return end
+        timerTextBelow = below
+        UpdateRunFontBounds()
+    end)
 
     local function SetClockLabelText(clock, text, visible)
         local observed = clock.source:GetText()
@@ -1924,6 +2079,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function RefreshTimerCaptions()
+        if timerText and not timerText:CanDraw() then return end
         local mode = runClock.mode or "Regular"
         local currentEnabled, textEnabled
         if mode == "Regular" then
@@ -1971,6 +2127,12 @@ DFRL:NewMod("RunTimers", 5, function()
         local changed = SetClockLabelText(runClock, cache.text, cache.text ~= "")
         if SetClockLabelText(bossClock, cache.countdown, cache.countdown ~= "") then changed = true end
         if changed then UpdateRunFontBounds() end
+    end
+    timerText.onShow = function()
+        RefreshTimerCaptions()
+        RefreshClockLabel(runClock)
+        RefreshClockLabel(bossClock)
+        UpdateRunFontBounds()
     end
 
     local function RefreshFontControls()
@@ -2221,13 +2383,23 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Turn off to show player health and blue shield numbers separately.",
                         terms = { "shield", "ABSORB" },
                     },
-                    { "classHealth", "Class-colored health", "Use vanilla class colors for player and party health." },
+                    {
+                        "classHealth",
+                        "Class-colored health",
+                        "Use class colors for player, party and friendly target health.",
+                    },
                     {
                         "healthLossAnimation",
                         "Health loss animation",
                         "Show recently lost health fading out on unit frames.",
                     },
                     { "classResources", "Class resources", "Show power in player and party frames." },
+                    {
+                        "hideSoulShards",
+                        "Hide soul shard icons",
+                        "Hide Warlock crystals. Keep the power bar and numbers.",
+                        terms = { "Soulfire", "Warlock" },
+                    },
                     {
                         "hidePortraits",
                         "Hide portraits",
@@ -2262,6 +2434,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 options = {
                     { "petRows", "Rows", "Arrange pet groups in one to six rows.", step = 1 },
                     { "petSpacing", "Spacing", "Gap between pet groups.", step = 1 },
+                    { "petGrowUp", "Grow upward", "Stack pet and totem rows upward from the bottom of the frame." },
                     { "hidePetNames", "Hide names", "Hide pet names beside the portraits." },
                     { "hidePetCounts", "Hide counts", "Hide the x2, x3 summon count." },
                     { "hidePetTimers", "Hide timers", "Hide the remaining summon duration." },
@@ -2421,9 +2594,44 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
             {
+                key = "stats",
+                label = "Stats",
+                master = "statsWindow",
+                options = {
+                    {
+                        "statsWindow",
+                        "Show stats",
+                        "Show your run stats during a run. Move or resize it in Layout.",
+                        wide = true,
+                    },
+                    { "statsShowTitle", "Show title" },
+                    { "statsShowHeadings", "Show section headings" },
+                    { "statsFontSize", "Font size", step = 1 },
+                    { "statsRowHeight", "Row spacing", step = 1 },
+                },
+            },
+            {
                 key = "guardians",
                 label = "Guardian tracker",
                 options = {
+                    {
+                        "guardianTitleFontSize",
+                        "Title font size",
+                        "Change the Guardians title size.",
+                        step = 1,
+                    },
+                    {
+                        "guardianNameFontSize",
+                        "Name font size",
+                        "Change guardian name size.",
+                        step = 1,
+                    },
+                    {
+                        "guardianStatusFontSize",
+                        "Status font size",
+                        "Change guardian status, timer and health text size.",
+                        step = 1,
+                    },
                     { "guardianShowHealthBars", "Show health bars", "Off shows Combat in red.", wide = true },
                     { "guardianShowCurrentHealth", "Show current health", "Show current health on health bars." },
                     { "guardianShowMaximumHealth", "Show maximum health", "Show maximum health on health bars." },
@@ -2438,6 +2646,11 @@ DFRL:NewMod("RunTimers", 5, function()
                         "Use K, M, B and T instead of full health numbers.",
                     },
                     { "guardianShowDead", "Show dead", "Show defeated guardians and their respawn timers." },
+                    {
+                        "guardianTimerOnly",
+                        "Timer only",
+                        "Show 2:07 instead of Respawns in 2:07, leaving more room for names.",
+                    },
                 },
             },
             {
@@ -2688,6 +2901,15 @@ DFRL:NewMod("RunTimers", 5, function()
                 },
             },
         }
+        local statsSections = { "stats" }
+        for _, group in ipairs(DFRL.statsCatalog) do
+            local options = { { group.key, group.title, wide = true } }
+            for _, stat in ipairs(group.stats) do
+                table.insert(options, { "statsShow" .. stat[1], stat[2] })
+            end
+            table.insert(categories, { key = group.list, label = group.title, master = group.key, options = options })
+            table.insert(statsSections, group.list)
+        end
         local groups = {
             { key = "layout", label = "Layout", sections = { "layout" } },
             { key = "units", label = "Unit frames", sections = { "units", "pets", "auras" } },
@@ -2706,6 +2928,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 label = "Interface",
                 sections = { "chat", "loot", "rarityOdds", "tooltip", "banners" },
             },
+            { key = "stats", label = "Stats", sections = statsSections },
             { key = "profiles", label = "Profiles", sections = { "profiles" } },
         }
         local byKey, sections = {}, {}
@@ -2806,6 +3029,18 @@ DFRL:NewMod("RunTimers", 5, function()
                 { key = "timerOutline", label = "Outline", offset = 164 },
                 { key = "timerShadow", label = "Black shadow", offset = 192 },
                 { key = "attachAffixes", label = "Attach affixes to run timer", offset = 192 },
+                {
+                    key = "runTextBelow",
+                    label = "Text below the bar",
+                    description = "Flip attached timer captions below the bar. Off puts them above.",
+                    offset = 400,
+                },
+                {
+                    key = "detachRunText",
+                    label = "Detach timer text",
+                    description = "Move both timer captions together using their own Layout handle.",
+                    offset = 460,
+                },
             },
         }
         local captions = {}
@@ -2959,7 +3194,7 @@ DFRL:NewMod("RunTimers", 5, function()
             top = sidebarTop,
             height = footerTop - sidebarTop - 8,
             sidebarWidth = sidebarWidth,
-            categoryPitch = 46,
+            categoryPitch = 42,
             search = true,
             searchEntries = { performanceCaption },
             onEscape = function() DFRL.layout.CancelEdit() end,
@@ -3774,6 +4009,13 @@ DFRL:NewMod("RunTimers", 5, function()
                     end
                 end
             end
+            for _, key in ipairs({ "runTextBelow", "detachRunText" }) do
+                local entry = captions[key]
+                local control = DisplayToggle(timer, key, entry.label, entry.description, -entry.offset, contentWidth)
+                control:SetHeight(52)
+                control:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -entry.offset)
+            end
+            if timerPage:GetHeight() < 516 then timerPage:SetHeight(516) end
         end
 
         fontEditor:SetScript("OnHide", function()
@@ -3874,6 +4116,7 @@ DFRL:NewMod("RunTimers", 5, function()
     })
 
     run.affixes:RegisterLayout()
+    timerText:RegisterLayout()
 
     -- Encounters share a movable group, independent of the run clock.
     -- Its bounds include the first name and every stacked health pill.
@@ -4754,6 +4997,7 @@ DFRL:NewMod("RunTimers", 5, function()
     end
 
     local function ReleaseClock(keepSamples)
+        timerText:SetActive(false)
         if not keepSamples then
             render.clockNextAt, render.clockSeconds, render.clockRunSequence = nil, nil, nil
             render.clockScheduleAt, render.clockMaximum, render.clockSchedule, render.clockPhase = nil, nil, nil, nil
@@ -5819,10 +6063,21 @@ DFRL:NewMod("RunTimers", 5, function()
             render.clockNextAt, render.clockSeconds = now + wait, seconds
         end
         if IsNumber(seconds) and maximum then
+            timerText:SetActive(true)
             local starting = not render.runShown
             if starting then
                 render.runShown = true
                 run:Show()
+            end
+            if
+                timerText.separate
+                and not DFRL.layout.IsHidden("runTimerText")
+                and UIParent:IsVisible()
+                and not run:IsVisible()
+            then
+                if timeDue or runPublished or starting or refreshRows then
+                    UpdateClockCaptions(seconds, maximum, not zoneRunPending, refreshRows or starting)
+                end
             end
             if run:IsVisible() then
                 if starting or showing or run.widthDirty then

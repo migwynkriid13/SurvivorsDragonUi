@@ -194,6 +194,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
     local function ActiveMode() return settingsDraft and settingsDraft.mode or sctMode end
     local customEnabled, changingSettings = false, false
+    local SyncCombatSubscriptions
     local damageIcons = DFRL.display.Get("damageIcons")
     local nameplatesNamesOnly = DFRL.display.Get("nameplatesNamesOnly")
     local nameplateFontSize = DFRL.display.Get("nameplateFontSize")
@@ -234,8 +235,16 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         and type(_G.MouselookStart) == "function"
         and type(_G.MouselookStop) == "function"
         and type(_G.IsMouselooking) == "function"
-        and type(_G.IsMouseButtonDown) == "function"
-    function cameraDrag.RightButtonHeld()
+    local cameraButtonRead = type(_G.IsMouseButtonDown) == "function"
+    function cameraDrag.Looking()
+        local ok, value = pcall(_G.IsMouselooking)
+        if not ok then return end
+        return value ~= nil and value ~= false and value ~= 0
+    end
+    function cameraDrag.Held()
+        -- This client ends its native look channel on physical right release,
+        -- even when cursor capture bypasses both Lua mouse-up handlers.
+        if not cameraButtonRead then return cameraDrag.Looking() == true end
         local ok, held = pcall(_G.IsMouseButtonDown, "RightButton")
         return ok and (held == true or held == 1)
     end
@@ -248,16 +257,15 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             return
         end
         cameraDrag.owned, cameraDrag.stopPending = false, nil
-        local looking = _G.IsMouselooking()
-        if looking and looking ~= 0 then pcall(_G.MouselookStop) end
+        if cameraDrag.Looking() ~= false then pcall(_G.MouselookStop) end
     end
     function cameraDrag.Start()
         if not cameraDragSupported or not inWorld or cameraDrag.starting then return end
-        -- Some clients can swallow the physical mouse-up after camera entry.
-        -- Without an independent button read, leave this press to the client.
-        if not cameraDrag.RightButtonHeld() then return end
-        local looking = _G.IsMouselooking()
-        if looking and looking ~= 0 then return end
+        -- OnMouseDown supplies the press on older clients without a physical
+        -- button getter. Where available, retain the independent button guard.
+        if cameraButtonRead and not cameraDrag.Held() then return end
+        local looking = cameraDrag.Looking()
+        if looking == nil or looking then return end
         -- A native release can end look without visiting either Lua up hook.
         -- A fresh press must replace that stale ownership instead of sticking.
         cameraDrag.stopPending = nil
@@ -963,20 +971,26 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         -- covers every visual child without touching the SCT data sources.
         if plateStyle then plateStyle.Attach(plate, data) end
         if cameraDragSupported then
-            HookScript(plate, "OnMouseDown", function()
-                if
-                    arg1 == "RightButton"
-                    and plate:IsShown()
-                    and (not plate.IsVisible or plate:IsVisible())
-                    and not data.presentationMasked
-                    and IsEnemyPlate(data)
-                then
-                    cameraDrag.Start()
-                end
-            end)
-            HookScript(plate, "OnMouseUp", function()
-                if arg1 == "RightButton" then cameraDrag.Stop() end
-            end)
+            local function BindCameraInput(owner)
+                HookScript(owner, "OnMouseDown", function()
+                    if
+                        arg1 == "RightButton"
+                        and plate:IsShown()
+                        and (not plate.IsVisible or plate:IsVisible())
+                        and not data.presentationMasked
+                        and IsEnemyPlate(data)
+                    then
+                        cameraDrag.Start()
+                    end
+                end)
+                HookScript(owner, "OnMouseUp", function()
+                    if arg1 == "RightButton" then cameraDrag.Stop() end
+                end)
+            end
+            BindCameraInput(plate)
+            -- Skinned native health bars can be the mouse receiver. Mouse
+            -- scripts do not bubble from that child to its plate root.
+            if bar ~= plate then BindCameraInput(bar) end
         end
         HookScript(plate, "OnHide", function()
             shownPlates[plate] = nil
@@ -2216,6 +2230,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             textStyle = style
             msbtStyle = style == "msbt"
             nativeText.Configure(inWorld and customEnabled and not msbtStyle)
+            if SyncCombatSubscriptions then SyncCombatSubscriptions() end
             -- Do not move old hits between unrelated coordinate systems, or
             -- replay a queued enemy hit in the fixed screen stream.
             ResetDisplay()
@@ -2854,6 +2869,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         _G.SurvivorsDragonUiSctMode = sctMode
         customEnabled = enabled
         nativeText.Configure(inWorld and enabled and not msbtStyle)
+        if SyncCombatSubscriptions then SyncCombatSubscriptions() end
         ResetDisplay()
         SyncScrollRoot()
         ApplyPlateTracking(true)
@@ -2902,9 +2918,24 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     end
 
     local frame = CreateFrame("Frame", "DFRL_NameplateCombatText")
-    for eventName in pairs(T.NameplateCombatEventHandlers) do
-        frame:RegisterEvent(eventName)
+    local combatSubscriptions, combatSubscriptionMode = {}, nil
+    SyncCombatSubscriptions = function()
+        local mode = inWorld and customEnabled and (nativeText.Selected() and "periodic" or "legacy") or "off"
+        if combatSubscriptionMode == mode then return end
+        combatSubscriptionMode = mode
+        for eventName in pairs(T.NameplateCombatEventHandlers) do
+            local wanted = mode == "legacy"
+                or (mode == "periodic" and string.find(eventName, "^CHAT_MSG_SPELL_PERIODIC_") ~= nil)
+            if wanted and not combatSubscriptions[eventName] then
+                frame:RegisterEvent(eventName)
+                combatSubscriptions[eventName] = true
+            elseif not wanted and combatSubscriptions[eventName] then
+                frame:UnregisterEvent(eventName)
+                combatSubscriptions[eventName] = nil
+            end
+        end
     end
+    SyncCombatSubscriptions()
     frame:RegisterEvent("PLAYER_ENTERING_WORLD")
     frame:RegisterEvent("PLAYER_LEAVING_WORLD")
     frame:RegisterEvent("PLAYER_LOGOUT")
@@ -2916,7 +2947,9 @@ DFRL:NewMod("NameplateCombatText", 6, function()
     frame:RegisterEvent("CHAT_MSG_ADDON")
     frame:RegisterEvent("CVAR_UPDATE")
     frame:SetScript("OnEvent", function()
-        local eventTime = T.NameplateCombatEventHandlers[event] and GetTime() or nil
+        local combatEvent = T.NameplateCombatEventHandlers[event]
+        if combatEvent and not combatSubscriptions[event] then return end
+        local eventTime = combatEvent and GetTime() or nil
         if event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
             DirtySpellTextures()
@@ -2931,6 +2964,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             sct.FinishEdit(false)
             inWorld = false
             nativeText.Configure(false)
+            SyncCombatSubscriptions()
             SyncScrollRoot()
             plateFilter.Clear(plateFilter.sequence)
             plateFilter.time, plateFilter.zone, plateFilter.targetName = nil, nil, nil
@@ -3003,7 +3037,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
         UpdateTexts(animationNow, 0, now)
     end)
     frame:SetScript("OnUpdate", function()
-        if cameraDrag.owned and not cameraDrag.starting and not cameraDrag.RightButtonHeld() then cameraDrag.Stop() end
+        if cameraDrag.owned and not cameraDrag.starting and not cameraDrag.Held() then cameraDrag.Stop() end
         if not inWorld then
             -- A failed unregister can finish through this existing controller
             -- without reading combat data or running a retired world handler.
@@ -3017,6 +3051,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             ResetDisplay()
             ApplyPlateTracking(true)
         end
+        SyncCombatSubscriptions()
         plateFilter.Update(arg1)
         ScanPlates(false)
         -- Native plate allocation follows this update. The first accepted hit
@@ -3055,6 +3090,7 @@ DFRL:NewMod("NameplateCombatText", 6, function()
             sct.FinishEdit(false)
             inWorld = false
             nativeText.Configure(false)
+            SyncCombatSubscriptions()
             ResetDisplay()
             for _, data in pairs(plates) do
                 RestorePresentation(data, true)

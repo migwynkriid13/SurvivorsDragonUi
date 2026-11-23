@@ -225,21 +225,160 @@ DFRL:NewMod("Minimap Buttons", 3, function()
             HideTooltip()
         end
     end)
+    -- The native graphics preference stays game-owned; only an explicit click writes it.
+    local fx = CreateFrame("Button", "SurvivorsDragonUiSpellFxButton", Minimap)
+    fx:SetWidth(26)
+    fx:SetHeight(26)
+    fx:SetFrameLevel(Minimap:GetFrameLevel() + 20)
+    fx:RegisterForClicks("LeftButtonUp")
+    fx:RegisterForDrag("LeftButton")
+    local fxBackgroundPath = DFRL:GetInfoOrCons("tex") .. "minimap\\LauncherBackgroundClean.blp"
+    local fxIconPath = "Interface\\Icons\\Spell_Fire_Fireball02"
+    local fxBackgroundReady, fxIconReady
+    local fxBorder = fx:CreateTexture(nil, "BACKGROUND")
+    fxBorder:SetTexCoord(0, 29 / 32, 3 / 32, 29 / 32)
+    fxBorder:SetWidth(29)
+    fxBorder:SetHeight(26)
+    fxBorder:SetPoint("CENTER", fx, "CENTER", 0, 0)
+    local fxIcon = fx:CreateTexture(nil, "ARTWORK")
+    fxIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    fxIcon:SetWidth(18)
+    fxIcon:SetHeight(18)
+    fxIcon:SetPoint("CENTER", fx, "CENTER", 0, 0)
+    local fxOff, fxDragging, fxSuppressUntil = nil, false, 0
+    local function PrepareFx()
+        if not fxBackgroundReady then
+            local loaded = fxBorder:SetTexture(fxBackgroundPath)
+            fxBackgroundReady = T.TextureAssigned(loaded, fxBorder:GetTexture(), fxBackgroundPath)
+        end
+        if not fxIconReady then
+            local loaded = fxIcon:SetTexture(fxIconPath)
+            fxIconReady = T.TextureAssigned(loaded, fxIcon:GetTexture(), fxIconPath)
+        end
+        return fxBackgroundReady and fxIconReady
+    end
+    local function ReadFx()
+        if type(GetCVar) ~= "function" or type(SetCVar) ~= "function" then return end
+        local ok, value = pcall(GetCVar, "noSpellEffects")
+        if not ok then return end
+        if value == "0" or value == 0 then return false end
+        if value == "1" or value == 1 then return true end
+    end
+    local function HideFxTooltip()
+        if GameTooltip and GameTooltip:IsOwned(fx) then GameTooltip:Hide() end
+    end
+    local function FxTooltip()
+        if not Visible() or fxDragging or DFRL.layout.IsEditing() or not GameTooltip then return end
+        local off = ReadFx()
+        if off == nil then return end
+        GameTooltip:SetOwner(fx, "ANCHOR_LEFT")
+        GameTooltip:SetText(DFRL.locale.Text("Spell effects") .. ": " .. DFRL.locale.Text(off and "Off" or "On"))
+        GameTooltip:AddLine(DFRL.locale.Text("Click to toggle spell effects."), 1, 0.82, 0)
+        GameTooltip:AddLine(DFRL.locale.Text("Drag to move."), 0.7, 0.7, 0.7)
+        GameTooltip:Show()
+    end
+    local function PaintFx()
+        if not Visible() then return end
+        local off = ReadFx()
+        if off == nil or not PrepareFx() then
+            if fx:IsShown() then fx:Hide() end
+            return
+        end
+        if fxOff ~= off then
+            fxOff = off
+            if fxIcon.SetDesaturated then pcall(fxIcon.SetDesaturated, fxIcon, off and 1 or nil) end
+            local tint = off and 0.45 or 1
+            fxIcon:SetVertexColor(tint, tint, tint)
+        end
+        if not fx:IsShown() then fx:Show() end
+    end
+    local StopFxDrag
+    local function FxDrag()
+        if not fxDragging then return end
+        if not Visible() or DFRL.layout.IsEditing() then
+            StopFxDrag(false)
+            return
+        end
+        local centerX, centerY = Minimap:GetCenter()
+        local scale = Minimap:GetEffectiveScale()
+        local cursorX, cursorY = GetCursorPosition()
+        if not Number(centerX) or not Number(centerY) or not Number(scale) or scale <= 0 then return end
+        if not Number(cursorX) or not Number(cursorY) then return end
+        local x, y = cursorX / scale - centerX, cursorY / scale - centerY
+        if x ~= 0 or y ~= 0 then fx:SetPoint("CENTER", Minimap, "CENTER", x, y) end
+    end
+    StopFxDrag = function(sample)
+        if not fxDragging then return end
+        if sample then FxDrag() end
+        fxDragging = false
+        fx:SetScript("OnUpdate", nil)
+        fxSuppressUntil = GetTime() + 0.15
+    end
+    fx:SetScript("OnDragStart", function()
+        if not Visible() or DFRL.layout.IsEditing() then return end
+        fxDragging = true
+        HideFxTooltip()
+        fx:SetScript("OnUpdate", FxDrag)
+    end)
+    fx:SetScript("OnDragStop", function() StopFxDrag(true) end)
+    fx:SetScript("OnClick", function()
+        if not Visible() or DFRL.layout.IsEditing() or fxDragging or GetTime() < fxSuppressUntil then return end
+        local off = ReadFx()
+        if off == nil then return end
+        pcall(SetCVar, "noSpellEffects", off and "0" or "1")
+        PaintFx()
+        if GameTooltip and GameTooltip:IsOwned(fx) then FxTooltip() end
+    end)
+    fx:SetScript("OnEnter", FxTooltip)
+    fx:SetScript("OnLeave", HideFxTooltip)
+    fx:SetScript("OnShow", PaintFx)
+    fx:SetScript("OnHide", function()
+        StopFxDrag(false)
+        HideFxTooltip()
+    end)
+    Register(fx)
+    fx:SetPoint("CENTER", Minimap, "CENTER", 0, -1)
+    HookScript(Minimap, "OnShow", PaintFx)
+    HookScript(Minimap, "OnHide", function()
+        StopFxDrag(false)
+        HideFxTooltip()
+    end)
+    DFRL.layout.ListenVisibility("minimap", function()
+        if Visible() then
+            PaintFx()
+        else
+            StopFxDrag(false)
+            HideFxTooltip()
+        end
+    end)
+    DFRL.locale.Listen(function()
+        if Visible() and GameTooltip and GameTooltip:IsOwned(fx) then FxTooltip() end
+    end)
+    PaintFx()
+
     local controller = CreateFrame("Frame")
     controller:RegisterEvent("ADDON_LOADED")
     controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
     controller:RegisterEvent("PLAYER_LOGOUT")
+    controller:RegisterEvent("CVAR_UPDATE")
     controller:SetScript("OnEvent", function()
         if event == "PLAYER_LEAVING_WORLD" or event == "PLAYER_LOGOUT" then
             inWorld = false
             StopDrag()
             HideTooltip()
+            StopFxDrag(false)
+            HideFxTooltip()
+            if fx:IsShown() then fx:Hide() end
         elseif event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            PaintFx()
             DiscoverButtons()
         elseif event == "ADDON_LOADED" then
             DiscoverButtons()
+        elseif event == "CVAR_UPDATE" and type(arg1) == "string" and string.lower(arg1) == "nospelleffects" then
+            PaintFx()
+            if Visible() and GameTooltip and GameTooltip:IsOwned(fx) then FxTooltip() end
         end
     end)
     DiscoverButtons()

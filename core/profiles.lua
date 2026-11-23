@@ -95,6 +95,122 @@ DFRL:NewMod("Profiles", 1, function()
         return true, "Profile deleted. Confirm to keep the change."
     end
 
+    -- Share strings: "SDUI1:" then the profile as plain tokens, so nothing pasted is ever run as code.
+    -- s<text>; and n<number>; with every non-alphanumeric byte as %XX, t/f, and { key value ... }.
+    local SHARE_PREFIX, MAX_DEPTH, MAX_ENTRIES, MAX_SHARE_BYTES = "SDUI1:", 16, 20000, 131072
+    local function EscapeByte(c) return string.format("%%%02X", string.byte(c)) end
+    local function UnescapeByte(hex) return string.char(tonumber(hex, 16)) end
+    local function Append(out, text, budget)
+        budget.bytes = budget.bytes + string.len(text)
+        if budget.bytes > MAX_SHARE_BYTES then return false end
+        table.insert(out, text)
+        return true
+    end
+    local function Encode(value, out, depth, budget)
+        local kind = type(value)
+        if kind == "boolean" then
+            return Append(out, value and "t" or "f", budget)
+        elseif kind == "number" then
+            -- Lua 5.0 has no math.huge: NaN fails value == value, and infinity survives value - value only as NaN.
+            if value - value ~= 0 then return false end
+            return Append(out, "n" .. string.format("%.17g", value) .. ";", budget)
+        elseif kind == "string" then
+            if string.len(value) > MAX_SHARE_BYTES then return false end
+            return Append(out, "s" .. string.gsub(value, "[^A-Za-z0-9]", EscapeByte) .. ";", budget)
+        elseif kind == "table" and depth < MAX_DEPTH then
+            if not Append(out, "{", budget) then return false end
+            local keys = {}
+            for key in pairs(value) do
+                local keyKind = type(key)
+                if keyKind ~= "string" and keyKind ~= "number" then return false end
+                budget.left = budget.left - 1
+                if budget.left < 0 then return false end
+                table.insert(keys, key)
+            end
+            table.sort(keys, function(a, b)
+                if type(a) == type(b) then return a < b end
+                return type(a) == "number"
+            end)
+            for _, key in ipairs(keys) do
+                if not Encode(key, out, depth + 1, budget) or not Encode(value[key], out, depth + 1, budget) then
+                    return false
+                end
+            end
+            return Append(out, "}", budget)
+        else
+            return false
+        end
+    end
+    -- Returns ok, value, next position; a malformed string fails rather than guessing.
+    local function Decode(text, pos, depth, budget)
+        local c = string.sub(text, pos, pos)
+        if c == "t" then return true, true, pos + 1 end
+        if c == "f" then return true, false, pos + 1 end
+        if c == "s" or c == "n" then
+            local stop = string.find(text, ";", pos + 1, true)
+            if not stop then return false end
+            local body = string.sub(text, pos + 1, stop - 1)
+            if c == "n" then
+                if string.len(body) > 64 then return false end
+                local number = tonumber(body)
+                if not number or number - number ~= 0 then return false end
+                return true, number, stop + 1
+            end
+            if string.find(body, "[^A-Za-z0-9%%]") then return false end
+            local cursor = 1
+            while cursor <= string.len(body) do
+                if string.sub(body, cursor, cursor) == "%" then
+                    if not string.find(string.sub(body, cursor + 1, cursor + 2), "^%x%x$") then return false end
+                    cursor = cursor + 3
+                else
+                    cursor = cursor + 1
+                end
+            end
+            return true, (string.gsub(body, "%%(%x%x)", UnescapeByte)), stop + 1
+        end
+        if c ~= "{" or depth >= MAX_DEPTH then return false end
+        local result = {}
+        pos = pos + 1
+        while true do
+            if string.sub(text, pos, pos) == "}" then return true, result, pos + 1 end
+            budget.left = budget.left - 1
+            if budget.left < 0 then return false end
+            local okKey, key, afterKey = Decode(text, pos, depth + 1, budget)
+            if not okKey or (type(key) ~= "string" and type(key) ~= "number") then return false end
+            local okValue, entry, afterValue = Decode(text, afterKey, depth + 1, budget)
+            if not okValue or result[key] ~= nil then return false end
+            result[key], pos = entry, afterValue
+        end
+    end
+    function profiles.Export(name)
+        local profile = Copy((draft or Saved())[name])
+        if not profile then return false, "Select a profile first." end
+        local out = {}
+        if not Encode(profile, out, 0, { left = MAX_ENTRIES, bytes = string.len(SHARE_PREFIX) }) then
+            return false, "This profile can't be exported."
+        end
+        return true, SHARE_PREFIX .. table.concat(out)
+    end
+    function profiles.Import(text, name)
+        if not draft then return false, "Open the editor first." end
+        name = Name(name)
+        if not name then return false, "Enter a valid profile name." end
+        if draft[name] then return false, "That name already exists." end
+        if type(text) ~= "string" or string.len(text) > MAX_SHARE_BYTES then
+            return false, "That profile string is damaged or incomplete."
+        end
+        text = string.gsub(text, "%s", "")
+        if string.sub(text, 1, string.len(SHARE_PREFIX)) ~= SHARE_PREFIX then
+            return false, "Paste a SurvivorsDragonUi profile string (it starts with SDUI1:)."
+        end
+        local ok, decoded, stop = Decode(text, string.len(SHARE_PREFIX) + 1, 0, { left = MAX_ENTRIES })
+        local profile = ok and stop == string.len(text) + 1 and Copy(decoded)
+        if not profile then return false, "That profile string is damaged or incomplete." end
+        draft[name] = profile
+        Notify()
+        return true, "Profile imported. Load it to use it, and Confirm to keep it.", name
+    end
+
     local captions = {
         summary = {
             label = "Save and load named setups.",
@@ -104,14 +220,29 @@ DFRL:NewMod("Profiles", 1, function()
         name = { label = "Profile name", offset = 34 },
         saved = { label = "Saved profiles", offset = 90 },
         save = { label = "Save profile and close", offset = 52 },
+        share = { label = "Share a profile", offset = 392 },
+    }
+    local shareActions = {
+        { label = "Export profile", offset = 444 },
+        { label = "Import profile", offset = 444 },
     }
     local actions = {
         { label = "Load profile", offset = 300 },
         { label = "Overwrite and close", offset = 300 },
         { label = "Delete profile", offset = 300 },
     }
-    profiles.search =
-        { captions.summary, captions.name, captions.saved, captions.save, actions[1], actions[2], actions[3] }
+    profiles.search = {
+        captions.summary,
+        captions.name,
+        captions.saved,
+        captions.save,
+        actions[1],
+        actions[2],
+        actions[3],
+        captions.share,
+        shareActions[1],
+        shareActions[2],
+    }
     function profiles.CreateControls(parent, width)
         local function Label(text, y, size, height)
             local label = parent:CreateFontString(nil, "OVERLAY")
@@ -250,12 +381,48 @@ DFRL:NewMod("Profiles", 1, function()
             end)
             table.insert(buttons, button)
         end
+        -- Share: export puts the selected profile's string in the box to copy; import reads the box.
+        Label(captions.share.label, -captions.share.offset, 10)
+        local shareBox = T.CreateEditorInput(parent, width, 26)
+        shareBox:SetMaxLetters(MAX_SHARE_BYTES)
+        shareBox:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -410)
+        shareBox:SetScript("OnEscapePressed", function() shareBox:ClearFocus() end)
+        shareBox:SetScript("OnEditFocusGained", function() shareBox:HighlightText() end)
+        local shareWidth = (width - 8) / 2
+        local export = T.CreateEditorButton(parent, shareActions[1].label, shareWidth, 28)
+        export:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -shareActions[1].offset)
+        export:SetScript("OnClick", function()
+            if not selected then
+                status:SetText("Select a profile first.")
+                return
+            end
+            local ok, result = profiles.Export(selected)
+            if not ok then
+                status:SetText(result)
+                return
+            end
+            shareBox:SetText(result)
+            shareBox:SetFocus()
+            shareBox:HighlightText()
+            status:SetText("Profile string selected below. Press Ctrl+C to copy it.")
+        end)
+        local import = T.CreateEditorButton(parent, shareActions[2].label, shareWidth, 28)
+        import:SetPoint("TOPLEFT", parent, "TOPLEFT", shareWidth + 8, -shareActions[2].offset)
+        import:SetScript("OnClick", function()
+            Result(profiles.Import(shareBox:GetText(), input:GetText()))
+            shareBox:ClearFocus()
+        end)
+        if (parent:GetHeight() or 0) < 480 then parent:SetHeight(480) end
         parent:SetScript("OnShow", function()
             status:SetText(captions.summary.description)
             Refresh(true)
             if selected then T.SetTextIfChanged(input, selected) end
         end)
-        parent:SetScript("OnHide", function() input:ClearFocus() end)
+        parent:SetScript("OnHide", function()
+            input:ClearFocus()
+            shareBox:ClearFocus()
+            if shareBox:GetText() ~= "" then shareBox:SetText("") end
+        end)
         table.insert(listeners, Refresh)
         DFRL.locale.Listen(Refresh)
         Refresh()

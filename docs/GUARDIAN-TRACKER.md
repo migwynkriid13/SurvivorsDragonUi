@@ -1,5 +1,25 @@
 # Guardian tracker
 
+In `/sdui` → **Encounters** → **Guardian tracker**, **Title font size**,
+**Name font size** and **Status font size** adjust those texts independently
+from **8 to 20**, in steps of one. Status size also controls health numbers.
+Each defaults to **12**. Existing saves with one Guardian font size retain it
+for names and status. Changes preview live; **Confirm** saves them and **Cancel**
+restores the previous choices. Profiles retain them, and full resets restore 12.
+
+**Timer only** shows `2:07` instead of `Respawns in 2:07`. It defaults off.
+Each name uses the space left by that row's actual status or health pill, so
+short captions leave more room for names. Long names can still truncate in a
+narrow panel; reduce their font size or widen the panel with its Layout handles.
+
+The three normalized font settings and `guardianTimerOnly` use the existing
+display transaction. Status/health columns and per-row captions are measured
+at their chosen size. Successful fonts and text measurements are cached;
+size, font, outline, language and scale changes invalidate the relevant caches.
+Hidden rows defer presentation, and failed font assignments retry through the
+existing visible reader. Header and row geometry, artwork and native values
+stay intact.
+
 The tracker uses selected design **04**: the published quest-tracker header above
 an open list. The header contains its medallion and gold **Guardians** title, with no
 alive count or minus/plus button. The title uses the space previously reserved

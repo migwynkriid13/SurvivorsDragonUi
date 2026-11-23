@@ -138,9 +138,10 @@ local function Player(performance)
     return context, controller, bar, label, labels, overlay
 end
 
-Test("player class tint follows the run while native selection and party classes stay separate", function()
+Test("latest hero class tint survives ready phases and retires only on world leave", function()
     local context, _, bar = Player()
     local env, phase = context.env, "playing"
+    env.UnitExists = function(unit) return unit == "player" or unit == "party1" end
     env.AZS_GetPhase = function() return phase end
     env.UnitClass = function(unit)
         if unit == "player" then return "Warrior", "WARRIOR" end
@@ -159,17 +160,25 @@ Test("player class tint follows the run while native selection and party classes
     AssertColor("mage")
     phase, env.AZS_RUN_UPDATED = "ready", 3
     update(true)
-    AssertColor("warrior")
+    AssertColor("mage")
     phase, env.AZS_RUN_UPDATED = "playing", 4
     update(true)
-    AssertColor("warrior")
+    AssertColor("mage")
     env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "shaman" }, 5
     update(true)
     AssertColor("shaman")
     assert(env.T.GetUnitClassColor("party1") == env.T.GetClassColor("priest"))
+    env.UnitIsUnit = function(unit, other) return unit == "party1" and other == "player" and 1 or false end
+    assert(env.T.GetUnitClassColor("party1") == env.T.GetClassColor("shaman"), "self party alias used stale UnitClass")
+    env.AZS_ZONE.class = "rogue"
+    update(true)
+    AssertColor("rogue")
     env.T.RetireRunPlayer()
     update(true)
     AssertColor("warrior")
+    env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "priest" }, 6
+    update(true)
+    AssertColor("priest")
 end)
 
 Test("silver shields retain a dark bounded edge over mage and default health colours", function()

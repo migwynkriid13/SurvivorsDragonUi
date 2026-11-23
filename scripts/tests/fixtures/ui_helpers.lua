@@ -42,7 +42,7 @@ function methods:Hide()
 end
 function methods:SetText(value)
     Write(self, "SetText")
-    if self.context.failText == value and value ~= "" then
+    if self.context.failText ~= nil and self.context.failText == value and value ~= "" then
         self.context.failText = nil
         error("injected native text failure")
     end

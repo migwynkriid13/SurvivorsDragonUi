@@ -52,17 +52,24 @@ function copiesDisplayDefaults(node) {
   );
 }
 
-function model(source) {
+function model(source, sharedTables) {
   const tree = parse(source);
   const nodes = [];
-  walk(tree, (node) => nodes.push(node));
+  const parents = new Map();
+  walk(tree, (node, parent) => {
+    nodes.push(node);
+    parents.set(node, parent);
+  });
   const bindings = new Map();
+  const bindingCounts = new Map();
   const tables = new Map();
+  const exports = new Map();
   const fieldValues = new Map();
   const aliases = new Map();
   const declared = new Set();
   function bind(name, value) {
     declared.add(name);
+    bindingCounts.set(name, (bindingCounts.get(name) || 0) + 1);
     if (!bindings.has(name)) bindings.set(name, []);
     if (value) bindings.get(name).push(value);
     if (value?.type === 'TableConstructorExpression') tables.set(name, value);
@@ -81,6 +88,10 @@ function model(source) {
           if (alias?.startsWith('DFRL.')) aliases.set(variable.name, alias);
         }
         const target = member(variable);
+        if (target?.startsWith('DFRL.')) {
+          if (!exports.has(target)) exports.set(target, []);
+          exports.get(target).push(node.init[index]);
+        }
         if (target?.startsWith('DFRL.') && node.init[index]?.type === 'Identifier') {
           aliases.set(node.init[index].name, target);
         }
@@ -89,7 +100,7 @@ function model(source) {
     if (node.type === 'FunctionDeclaration') {
       if (node.identifier?.type === 'Identifier') bind(node.identifier.name, node);
       for (const parameter of node.parameters) {
-        if (parameter.name) declared.add(parameter.name);
+        if (parameter.name) bind(parameter.name);
       }
     }
     if (node.type === 'ForGenericStatement') {
@@ -115,6 +126,49 @@ function model(source) {
     if (node?.type === 'Identifier') return tableValues(tables.get(node.name));
     if (node?.type !== 'TableConstructorExpression') return [];
     return node.fields.flatMap((field) => strings(field.value));
+  }
+  // A shared catalog contributes only literal fields from its own records.
+  // Similar field names elsewhere cannot turn an unread setting into a reader.
+  function sharedFields(node) {
+    if (node.base.type !== 'Identifier') return;
+    const collections = (bindings.get(node.base.name) || []).filter(
+      (value) => value.type === 'CollectionValues',
+    );
+    const catalogs = collections.map((value) => sharedTables.get(path(value.base))).filter(Boolean);
+    if (catalogs.length === 0) return;
+    return catalogs.flatMap((catalog) =>
+      catalog.fields.flatMap((row) =>
+        row.type === 'TableValue' && row.value.type === 'TableConstructorExpression'
+          ? row.value.fields
+              .filter((field) => key(field) === node.identifier.name)
+              .map((field) => text(field.value))
+              .filter((value) => value !== undefined)
+          : [],
+      ),
+    );
+  }
+  // Follow a uniquely declared local helper's parameter to its concrete calls.
+  // Shadowed/reassigned helpers or parameters stay unresolved for review.
+  function readerArguments(call) {
+    const argument = call.arguments[0];
+    if (argument?.type !== 'Identifier') return [argument];
+    let owner = parents.get(call);
+    while (owner && owner.type !== 'FunctionDeclaration') owner = parents.get(owner);
+    const index = owner?.parameters.findIndex((parameter) => parameter.name === argument.name);
+    const name = owner?.identifier?.name;
+    if (!owner?.isLocal || index < 0 || !name || bindingCounts.get(name) !== 1) return [argument];
+    let reassigned = false;
+    walk(owner.body, (node) => {
+      const variables = node.variables || node.parameters || (node.variable ? [node.variable] : []);
+      if (variables.some((variable) => variable.name === argument.name)) reassigned = true;
+    });
+    if (reassigned) return [argument];
+    return [
+      argument,
+      ...nodes
+        .filter((node) => node.type === 'CallExpression' && node.base.name === name)
+        .map((node) => node.arguments[index]),
+    ];
   }
   const resolving = new Set();
   const stringCache = new WeakMap();
@@ -152,24 +206,47 @@ function model(source) {
     }
     if (node.type === 'IndexExpression') return tableValues(node.base);
     if (node.type === 'MemberExpression') {
+      const shared = sharedFields(node);
+      if (shared !== undefined) return shared;
       return (fieldValues.get(node.identifier.name) || []).flatMap(strings);
     }
     return [];
   }
-  return { nodes, tables, bindings, declared, path, strings, upvalueLimits: upvalueLimits(tree) };
+  return {
+    nodes,
+    tables,
+    exports,
+    bindings,
+    declared,
+    path,
+    strings,
+    readerArguments,
+    upvalueLimits: upvalueLimits(tree),
+  };
 }
 
 function analyze(sources, captions = []) {
+  const sharedTables = new Map();
   const models = Object.fromEntries(
     Object.entries(sources).map(([file, source]) => {
       try {
-        return [file, model(source)];
+        return [file, model(source, sharedTables)];
       } catch (error) {
         error.message = `${file}: ${error.message}`;
         throw error;
       }
     }),
   );
+  const exports = new Map();
+  for (const data of Object.values(models)) {
+    for (const [name, values] of data.exports) {
+      exports.set(name, [...(exports.get(name) || []), ...values]);
+    }
+  }
+  for (const [name, values] of exports) {
+    if (values.length === 1 && values[0]?.type === 'TableConstructorExpression')
+      sharedTables.set(name, values[0]);
+  }
   const failures = [];
   const dynamic = [];
   const functions = new Set();
@@ -306,7 +383,7 @@ function analyze(sources, captions = []) {
         failures.push(`${location}: unknown shared API ${api}`);
       if (api === 'DFRL.display.Get' || api === 'DFRL.display.Set') {
         const argument = node.arguments[0];
-        const names = [...new Set(data.strings(argument))];
+        const names = [...new Set(data.readerArguments(node).flatMap(data.strings))];
         const literal = text(argument);
         if (literal !== undefined && !settings.has(literal))
           failures.push(`${location}: unknown setting ${literal}`);

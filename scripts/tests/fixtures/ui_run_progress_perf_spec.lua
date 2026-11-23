@@ -10,6 +10,7 @@ local function Clock()
     env.AZS_ZONE = { zone = "Elwynn" }
     env.AZS_RUN, env.runSequence = { t = 0, endl = 0, nb = 30 }, 0
     env.BAR_WIDTH = 280
+    env.timerText = { separate = false, SetActive = function(self, active) self.active = active end }
     env.run = env.CreateFrame("Frame", nil, env.UIParent)
     env.run:SetWidth(296)
     env.run.paintedWidth = 280
@@ -118,6 +119,22 @@ local function Clock()
     end
     return context, env
 end
+
+do
+    local context, env = Clock()
+    context.hidden = true
+    env.timerText.separate = true
+    env.DFRL.layout.IsHidden = function(key) return key ~= "runTimerText" end
+    context:Sample(12.4)
+    assert(env.timerText.active and #context.captions == 1, "detached captions did not start behind a hidden bar")
+    assert(context.captions[1].seconds == 12.4, "detached captions replaced the native clock sample")
+    assert(
+        not context.writes.value and not context.writes.range and #context.flows == 0,
+        "text-only refresh painted the hidden bar"
+    )
+    assert(context.reads.time == 1 and context.reads.length == 1, "detached text added native clock reads")
+end
+print("PASS detached timer captions start independently while reusing the hidden bar's shared native reader")
 
 do
     local context, env = Clock()

@@ -36,6 +36,10 @@ local function CompactContext()
             Write("SetTexCoord")
             self.uv = { ... }
         end
+        function object:SetGradientAlpha(...)
+            Write("SetGradientAlpha")
+            self.gradient = { ... }
+        end
         function object:SetStatusBarTexture(path)
             Write("SetStatusBarTexture")
             self.fill = self:CreateTexture(nil, "ARTWORK")
@@ -236,7 +240,7 @@ root:Hide()
 assert(not loss:IsShown() and animator:GetScript("OnUpdate") == nil, "hidden compact frame kept an active trail")
 print("PASS compact target name containment, seamless fill, pooled borders, hidden recovery and Performance Mode")
 
-local function PartyContext()
+local function PartyContext(marked)
     local party = CompactContext()
     local native = party.env
     party.units = {}
@@ -250,6 +254,19 @@ local function PartyContext()
         return entry and entry[field]
     end
     native.UnitExists = function(unit) return State(unit, "exists") end
+    native.GetRaidTargetIndex = function(unit) return State(unit, "mark") end
+    native.UnitPopupButtons = {}
+    for index = 1, 8 do
+        local left = math.mod(index - 1, 4) / 4
+        local top = math.floor((index - 1) / 4) / 4
+        native.UnitPopupButtons["RAID_TARGET_" .. index] = {
+            icon = "Interface\\TargetingFrame\\UI-RaidTargetingIcons",
+            tCoordLeft = left,
+            tCoordRight = left + 0.25,
+            tCoordTop = top,
+            tCoordBottom = top + 0.25,
+        }
+    end
     native.UnitIsDead = function(unit) return State(unit, "dead") end
     native.UnitIsGhost = function(unit) return State(unit, "ghost") end
     native.UnitIsConnected = function(unit) return State(unit, "connected") end
@@ -277,6 +294,7 @@ local function PartyContext()
         health.SetValue = function() error("party captions wrote native health") end
         mana.SetValue = function() error("party captions wrote native resources") end
         party.units[unit] = {
+            mark = marked and marked[unit],
             exists = true,
             connected = true,
             dead = 0,
@@ -461,3 +479,205 @@ assert(burst.controller:GetScript("OnUpdate") == nil, "hidden compact frames sch
 assert(not next(burst.reads), "hidden compact frames read native state")
 burst:SetLayoutHidden(false)
 print("PASS compact frames coalesce unit events and bar callbacks per record, idle and cancelled on world leave")
+
+for _, performance in ipairs({ false, true }) do
+    local marked = PartyContext({ party1 = 1, party2 = 8 })
+    local env = marked.env
+    marked.settings.performanceMode = performance
+    local function Icon(index) return env["SurvivorsDragonUiPartyRaidTargetIcon" .. index] end
+    local first, second = Icon(1), Icon(2)
+    assert(first and first:IsVisible() and second and second:IsVisible(), "initial native party marks were absent")
+    assert(not Icon(3) and not Icon(4), "unmarked party rows allocated marker artwork")
+    assert(first:GetWidth() == 16 and first:GetHeight() == 16, "party markers changed their static size")
+    local point = first.points[1]
+    assert(point[1] == "CENTER" and point[3] == "LEFT" and point[4] == 24 and point[5] == 24)
+    assert(first:GetParent():GetParent() == marked.units.party1.frame, "marker escaped its native party row")
+    local allocated = #marked.objects
+    for index = 1, 8 do
+        marked.units.party1.mark = index
+        Deliver(marked, "RAID_TARGET_UPDATE")
+        local art = env.UnitPopupButtons["RAID_TARGET_" .. index]
+        assert(first:IsVisible() and first:GetTexture() == art.icon, "native marker image was lost")
+        assert(
+            first.uv[1] == art.tCoordLeft
+                and first.uv[2] == art.tCoordRight
+                and first.uv[3] == art.tCoordTop
+                and first.uv[4] == art.tCoordBottom,
+            "party mark did not use native icon coordinates"
+        )
+    end
+    marked:ResetCounts()
+    Deliver(marked, "RAID_TARGET_UPDATE")
+    marked:NoPresentationWrites()
+    assert(marked.reads["party1:mark"] == 1 and not marked.reads["party1:current"], "mark event refreshed health")
+    assert(marked.controller:GetScript("OnUpdate") == nil, "party marks installed an idle updater")
+    assert(#marked.objects == allocated, "changing symbols allocated another marker")
+
+    marked.units.party1.mark = 0
+    Deliver(marked, "RAID_TARGET_UPDATE")
+    assert(not first:IsShown() and second:IsVisible(), "clearing one mark changed another party member")
+    marked.units.party2.mark = nil
+    Deliver(marked, "PARTY_MEMBERS_CHANGED")
+    assert(not second:IsShown(), "roster reuse retained the previous member's symbol")
+    marked.units.party3.mark = 4
+    Deliver(marked, "RAID_ROSTER_UPDATE")
+    local third = Icon(3)
+    assert(third and third:IsVisible() and #marked.objects == allocated + 1, "new mark did not prepare one texture")
+    marked:SetLayoutHidden(true)
+    assert(not third:IsShown(), "Layout hiding retained a shown marker")
+    marked:ResetCounts()
+    marked.units.party3.mark = 2
+    Deliver(marked, "RAID_TARGET_UPDATE")
+    marked:NoPresentationWrites()
+    assert(not next(marked.reads), "hidden party marks read native unit state")
+    marked:SetLayoutHidden(false)
+    assert(third:IsVisible() and Icon(3) == third, "Show did not recover the current symbol from its pool")
+    assert(third.uv[1] == env.UnitPopupButtons.RAID_TARGET_2.tCoordLeft, "Show replayed the old symbol")
+
+    for _, value in ipairs({ 0, -1, 9, 1.5, math.huge, 0 / 0 }) do
+        marked.units.party3.mark = value
+        Deliver(marked, "RAID_TARGET_UPDATE")
+        assert(not third:IsShown(), "invalid native marker index remained visible")
+    end
+    marked.units.party3.mark = 2
+    local art = env.UnitPopupButtons.RAID_TARGET_2
+    local originalLeft, originalIcon = art.tCoordLeft, art.icon
+    art.tCoordLeft = nil
+    Deliver(marked, "RAID_TARGET_UPDATE")
+    assert(not third:IsShown(), "missing native crop data displayed an invented symbol")
+    art.tCoordLeft, art.icon = originalLeft, "Interface\\TargetingFrame\\TestRaidAtlas"
+    marked.failTexture = art.icon
+    Deliver(marked, "RAID_TARGET_UPDATE")
+    assert(not third:IsShown(), "failed icon binding retained a stale marker")
+    marked.failTexture = nil
+    Deliver(marked, "RAID_TARGET_UPDATE")
+    assert(third:IsVisible() and third:GetTexture() == art.icon, "failed marker artwork did not retry")
+    art.icon = originalIcon
+    local getter = env.GetRaidTargetIndex
+    env.GetRaidTargetIndex = nil
+    Deliver(marked, "RAID_TARGET_UPDATE")
+    assert(not third:IsShown(), "missing native marker API retained a symbol")
+    env.GetRaidTargetIndex = getter
+    Deliver(marked, "RAID_TARGET_UPDATE")
+    assert(third:IsVisible(), "native marker API recovery did not restore the current symbol")
+
+    for _, eventName in ipairs({ "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT" }) do
+        marked:Event(marked.controller, eventName)
+        assert(not third:IsShown(), "world cleanup retained the party symbol")
+        marked:ResetCounts()
+        Deliver(marked, "RAID_TARGET_UPDATE")
+        marked:NoPresentationWrites()
+        assert(not next(marked.reads), "out-of-world marker event read native state")
+        Deliver(marked, "PLAYER_ENTERING_WORLD")
+        assert(third:IsVisible(), "world reentry lost the current native marker")
+    end
+    assert(#marked.objects == allocated + 1, "marker lifecycle replaced the existing texture pool")
+end
+print("PASS party raid icons use exact native marks, event-only updates, hidden/world cleanup and reusable textures")
+
+for _, performance in ipairs({ false, true }) do
+    local colored = CompactContext()
+    local native = colored.env
+    colored.settings.performanceMode, colored.settings.classHealth = performance, true
+    colored.settings.hidePortraits = false
+    colored.settings.showHealthValue, colored.settings.showHealthPercentage = true, false
+    colored.alias, colored.player, colored.reaction = "player", true, 5
+    native.UnitExists = function(unit) return unit == "player" or unit == "party2" or unit == "targettarget" end
+    native.UnitIsUnit = function(unit, other)
+        return unit == other or (unit == "targettarget" and other == colored.alias)
+    end
+    native.UnitClass = function(unit)
+        if unit == "player" or colored.alias == "player" then return "Warrior", "WARRIOR" end
+        return "Priest", "PRIEST"
+    end
+    native.UnitIsPlayer = function() return colored.player end
+    native.UnitIsDead, native.UnitIsGhost = function() return false end, function() return false end
+    native.UnitIsTapped = function() return colored.tapped end
+    native.UnitIsTappedByPlayer = function() return false end
+    native.UnitReaction = function() return colored.reaction end
+    native.UnitName = function() return "Current hero" end
+    native.UnitHealth, native.UnitHealthMax = function() return 1000 end, function() return 1000 end
+    native.AZS_ZONE, native.AZS_ZONE_UPDATED = { class = "mage" }, 1
+    native.DFRL.locale.Preview = function(text, count) return string.sub(text, 1, count), string.len(text) > count end
+    native.TargetofTarget_Update = function()
+        if colored.nativeReset then native.TargetofTargetFrame.name:SetTextColor(1, 0.82, 0) end
+    end
+    local compact = native.CreateFrame("Frame", "TargetofTargetFrame", native.UIParent)
+    compact:SetWidth(93)
+    compact:SetHeight(45)
+    compact.name = compact:CreateFontString(nil, "OVERLAY")
+    local health = native.CreateFrame("StatusBar", "TargetofTargetHealthBar", compact)
+    colored:Load("core/widgets.lua")
+    colored:Load("modules/unit/mini.lua", "Mini")
+    Coalescer(colored)
+    local allocated = #colored.objects
+    local green, gold = { 0, 1, 0 }, { 1, 0.82, 0 }
+    local function Colors(name, fill)
+        local r, g, b = compact.name:GetTextColor()
+        assert(r == name[1] and g == name[2] and b == name[3], "target-of-target name has the wrong class color")
+        assert(
+            health.color[1] == fill[1] and health.color[2] == fill[2] and health.color[3] == fill[3],
+            "target-of-target health has the wrong class/reaction color"
+        )
+    end
+    local mage, rogue, warlock =
+        native.T.GetClassColor("mage"), native.T.GetClassColor("rogue"), native.T.GetClassColor("warlock")
+    Colors(mage, mage)
+    colored:ResetCounts()
+    native.TargetofTarget_Update()
+    colored:NoPresentationWrites()
+
+    native.AZS_ZONE.class = "rogue"
+    colored:Event(colored.controller, "CHAT_MSG_ADDON", "AZSZONE")
+    Colors(mage, mage)
+    Tick(colored)
+    Colors(rogue, rogue)
+    colored:SetSetting("classHealth", false)
+    Colors(rogue, green)
+    colored:ResetCounts()
+    colored:SetSetting("classHealth", false)
+    colored:NoPresentationWrites()
+    assert(not next(colored.reads), "unchanged class-health choice read native target state")
+    native.AZS_ZONE.class = "warlock"
+    Deliver(colored, "CHAT_MSG_ADDON", "AZSZONE")
+    Colors(warlock, green)
+    colored:SetSetting("classHealth", true)
+    Colors(warlock, warlock)
+
+    colored.alias = "party2"
+    Deliver(colored, "UNIT_TARGET", "target")
+    local priest = native.T.GetClassColor("priest")
+    Colors(priest, priest)
+    colored.alias, colored.player, colored.reaction = nil, false, 2
+    Deliver(colored, "UNIT_TARGET", "target")
+    Colors(gold, { 1, 0, 0 })
+    colored.reaction = 4
+    native.TargetofTarget_Update()
+    Colors(gold, { 1, 1, 0 })
+    colored.reaction = 5
+    native.TargetofTarget_Update()
+    Colors(gold, green)
+    colored.tapped = true
+    native.TargetofTarget_Update()
+    Colors(gold, { 0.5, 0.5, 0.5 })
+
+    colored.alias, colored.player, colored.tapped = "player", true, false
+    native.AZS_ZONE.class = "unknown"
+    Deliver(colored, "UNIT_TARGET", "target")
+    Colors(gold, green)
+    compact:Hide()
+    colored:ResetCounts()
+    colored:SetSetting("classHealth", false)
+    native.AZS_ZONE.class = "mage"
+    Deliver(colored, "CHAT_MSG_ADDON", "AZSZONE")
+    colored:NoPresentationWrites()
+    compact:Show()
+    Colors(mage, green)
+    colored:SetSetting("classHealth", true)
+    Colors(mage, mage)
+    colored.nativeReset = true
+    native.TargetofTarget_Update()
+    Colors(mage, mage)
+    assert(#colored.objects == allocated, "class color changes allocated compact-frame artwork")
+end
+print("PASS target-of-target class colors, deferred hero updates, friendly settings, enemy colors and hidden recovery")

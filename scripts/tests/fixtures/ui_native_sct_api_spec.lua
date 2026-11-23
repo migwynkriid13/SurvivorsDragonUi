@@ -945,4 +945,26 @@ Test("incomplete capability sets retain the existing legacy nameplate path", fun
     assert(context.backing and HandlerCount(context) == 0, "missing frameHandler capability selected native mode")
 end)
 
+Test("native SCT subscribes only to periodic metadata lines and switches transports immediately", function()
+    local context = Scene("diablo", false, function(c, env)
+        env.T.NameplateCombatEventHandlers.CHAT_MSG_SPELL_SELF_DAMAGE = true
+        env.T.NameplateCombatEventHandlers.CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE = true
+        env.T.ParseNameplateCombatEvent = function()
+            c.combatParses = (c.combatParses or 0) + 1
+            return { kind = "aura" }
+        end
+    end)
+    local controller = context.controller
+    assert(controller.events.CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE, "native SCT lost periodic aura metadata")
+    assert(not controller.events.CHAT_MSG_SPELL_SELF_DAMAGE and not controller.events.TEST_COMBAT)
+    context:Event(controller, "CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE", "native aura notice")
+    assert(context.combatParses == 1, "periodic metadata did not reach the existing parser")
+    context:SetSetting("sctStyle", "msbt")
+    assert(controller.events.CHAT_MSG_SPELL_SELF_DAMAGE and controller.events.TEST_COMBAT, "legacy switch lost intake")
+    context:SetSetting("sctStyle", "diablo")
+    assert(not controller.events.CHAT_MSG_SPELL_SELF_DAMAGE and not controller.events.TEST_COMBAT)
+    context:Event(controller, "PLAYER_LEAVING_WORLD")
+    assert(not controller.events.CHAT_MSG_SPELL_PERIODIC_SELF_DAMAGE, "world leave retained combat-line intake")
+end)
+
 print("PASS " .. passed .. " native world SCT contracts")

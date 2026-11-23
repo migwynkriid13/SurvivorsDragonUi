@@ -848,6 +848,9 @@ end)
 -- Production target color, border and refresh scheduling over the real health owner.
 local function TargetView(context, labels)
     local env, bar = context.env, context.env.TargetFrameHealthBar
+    -- Native TargetFrame.name is a FontString, separate from the frame's name.
+    function env.TargetFrame:GetName() return "TargetFrame" end
+    env.TargetFrame.name = env.TargetFrame:CreateFontString(nil, "OVERLAY")
     env.tex = env.DFRL:GetInfoOrCons("tex") .. "unitframes\\"
     env.UnitIsUnit = function() return false end
     env.UnitClassification = function()

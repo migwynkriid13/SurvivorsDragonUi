@@ -136,19 +136,24 @@ DFRL:NewMod("PetFrames", 4, function()
         row.id, row.active = nil, false
     end
     local function Bounds(count)
-        local rowCount = math.min(DFRL.display.Get("petRows"), math.max(1, count))
+        local maximumRows = DFRL.display.Get("petRows")
+        local rowCount = math.min(maximumRows, math.max(1, count))
+        local growUp = DFRL.display.Get("petGrowUp")
         local columns = math.max(1, math.ceil(count / rowCount))
         local cellWidth = CELL_WIDTH
         if DFRL.display.Get("hidePetNames") then cellWidth = DFRL.display.Get("hidePetTimers") and 49 or 98 end
         local spacing = DFRL.display.Get("petSpacing")
         local width = columns * cellWidth + (columns - 1) * spacing
-        local height = rowCount * CELL_HEIGHT + (rowCount - 1) * spacing
+        -- Reserve the configured rows in upward mode so native Layout's saved
+        -- top-left position also keeps the base fixed as the roster changes.
+        local heightRows = growUp and maximumRows or rowCount
+        local height = heightRows * CELL_HEIGHT + (heightRows - 1) * spacing
         if not T.NearlyEqual(root:GetWidth(), width) or not T.NearlyEqual(root:GetHeight(), height) then
             root:SetWidth(width)
             root:SetHeight(height)
             DFRL.layout.Place("petFrames")
         end
-        return rowCount, cellWidth, spacing, width, height
+        return rowCount, cellWidth, spacing, width, height, growUp
     end
     local function HideView()
         if not displayed then return end
@@ -208,15 +213,16 @@ DFRL:NewMod("PetFrames", 4, function()
         end
         return row.countText
     end
-    local function Paint(row, entry, scale, column, line, cellWidth, spacing)
+    local function Paint(row, entry, scale, column, line, cellWidth, spacing, growUp)
         row.id = entry.id
-        local x, y = column * (cellWidth + spacing), -line * (CELL_HEIGHT + spacing)
+        local point = growUp and "BOTTOMLEFT" or "TOPLEFT"
+        local x, y = column * (cellWidth + spacing), line * (CELL_HEIGHT + spacing) * (growUp and 1 or -1)
         local resized = row.width ~= cellWidth
-        if row.x ~= x or row.y ~= y or resized then
+        if row.point ~= point or row.x ~= x or row.y ~= y or resized then
             row.frame:SetWidth(cellWidth)
             row.frame:ClearAllPoints()
-            row.frame:SetPoint("TOPLEFT", root, "TOPLEFT", x, y)
-            row.x, row.y, row.width = x, y, cellWidth
+            row.frame:SetPoint(point, root, point, x, y)
+            row.point, row.x, row.y, row.width = point, x, y, cellWidth
         end
         local showName = not DFRL.display.Get("hidePetNames")
         local showTimer = not DFRL.display.Get("hidePetTimers") and entry.temporary > 0
@@ -442,7 +448,7 @@ DFRL:NewMod("PetFrames", 4, function()
         end
         local rowCount, cellWidth, spacing = geometry.rows, geometry.cellWidth, geometry.spacing
         if layoutChanged then
-            rowCount, cellWidth, spacing, geometry.width, geometry.height = Bounds(entryCount)
+            rowCount, cellWidth, spacing, geometry.width, geometry.height, geometry.growUp = Bounds(entryCount)
             geometry.rows, geometry.cellWidth, geometry.spacing = rowCount, cellWidth, spacing
             -- Placing changed bounds may also apply confirmed/draft scale.
             scale = root:GetEffectiveScale()
@@ -467,7 +473,9 @@ DFRL:NewMod("PetFrames", 4, function()
                 or row.paintCount ~= entry.count
                 or row.paintTemporary ~= entry.temporary
             then
-                if not Paint(row or Row(index), entry, scale, column, line, cellWidth, spacing) then retry = true end
+                if not Paint(row or Row(index), entry, scale, column, line, cellWidth, spacing, geometry.growUp) then
+                    retry = true
+                end
             else
                 Text(row.status, TimerText(row, entry.remaining, row.showTimer))
             end

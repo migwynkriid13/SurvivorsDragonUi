@@ -1,3 +1,71 @@
+-- The Stats window's groups and stats: { id, label, shown by default }. Shared by the
+-- display defaults, the settings page and the window, so each stat has one switch everywhere.
+DFRL.statsCatalog = {
+    {
+        key = "statsOffense",
+        list = "statsOffenseList",
+        title = "Offense",
+        stats = {
+            { "Damage", "Damage", true },
+            { "Haste", "Haste", true },
+            { "Crit", "Crit Chance", true },
+            { "CritDamage", "Crit Dmg", true },
+            { "Melee", "Melee", false },
+            { "PetDamage", "Pet Damage", false },
+            { "BuffPower", "Buff Power", false },
+        },
+    },
+    {
+        key = "statsSurvival",
+        list = "statsSurvivalList",
+        title = "Survival",
+        stats = {
+            { "Health", "Health", true },
+            { "Armor", "Armor", true },
+            { "Regen", "Regen", true },
+            { "Lifesteal", "Lifesteal", true },
+            { "KillHeal", "Kill Heal", true },
+            { "Thorns", "Thorns", false },
+            { "Shielded", "Shielded", false },
+            { "Lives", "Lives", false },
+        },
+    },
+    {
+        key = "statsAreaDots",
+        list = "statsAreaDotsList",
+        title = "Area and DoTs",
+        stats = {
+            { "Area", "Area", true },
+            { "Echo", "Echo", true },
+            { "Targets", "Targets", false },
+            { "DotStacks", "DoT Stacks", false },
+            { "DotHaste", "DoT Haste", false },
+            { "VsAfflicted", "Vs Afflicted", false },
+        },
+    },
+    {
+        key = "statsVersus",
+        list = "statsVersusList",
+        title = "Versus",
+        stats = {
+            { "VsElites", "Vs Elites", true },
+            { "Execute", "Execute", true },
+            { "VsControlled", "Vs Controlled", true },
+        },
+    },
+    {
+        key = "statsRun",
+        list = "statsRunList",
+        title = "Run",
+        stats = {
+            { "Speed", "Speed", true },
+            { "Experience", "Experience", true },
+            { "Luck", "Luck", true },
+            { "Pickup", "Pickup", false },
+        },
+    },
+}
+
 -- Display choices preview in the layout editor and save only with Confirm.
 DFRL:NewMod("Display", 0, function()
     local display, listeners, draft = {}, {}, nil
@@ -22,6 +90,10 @@ DFRL:NewMod("Display", 0, function()
         meterProcColor = "4094FF",
         bossRows = 0,
         guardianRows = 0,
+        guardianTitleFontSize = 12,
+        guardianNameFontSize = 12,
+        guardianStatusFontSize = 12,
+        guardianTimerOnly = false,
         guardianShowDead = true,
         guardianShowHealthBars = true,
         guardianShowCurrentHealth = true,
@@ -38,6 +110,8 @@ DFRL:NewMod("Display", 0, function()
         meterShowTotalDps = true,
         customBanners = true,
         customRunTimer = true,
+        runTextBelow = false,
+        detachRunText = false,
         attachAffixes = true,
         customBossBars = true,
         bossCombineBars = false,
@@ -48,8 +122,19 @@ DFRL:NewMod("Display", 0, function()
         lootMode = "sdui",
         lootShowMarks = true,
         rarityOdds = false,
+        statsWindow = false,
+        statsOffense = true,
+        statsSurvival = true,
+        statsAreaDots = true,
+        statsVersus = false,
+        statsRun = true,
+        statsShowTitle = true,
+        statsShowHeadings = true,
+        statsFontSize = 13,
+        statsRowHeight = 17,
         petRows = 6,
         petSpacing = 4,
+        petGrowUp = false,
         hidePetNames = false,
         hidePetCounts = false,
         hidePetTimers = true,
@@ -113,6 +198,7 @@ DFRL:NewMod("Display", 0, function()
         enhancedTooltips = true,
         tooltipAtCursor = false,
         classResources = false,
+        hideSoulShards = false,
         classHealth = false,
         healthLossAnimation = true,
         customActionBar = true,
@@ -161,6 +247,11 @@ DFRL:NewMod("Display", 0, function()
         showTallyCache = true,
         highlightAffordableCache = true,
     }
+    for _, group in ipairs(DFRL.statsCatalog) do
+        for _, stat in ipairs(group.stats) do
+            defaults["statsShow" .. stat[1]] = stat[3]
+        end
+    end
     DFRL.display = display
     -- Shared by normalization, the font owner and the Layout selector.
     display.fonts = {
@@ -187,6 +278,8 @@ DFRL:NewMod("Display", 0, function()
 
     local worldIconDistanceRange = { minimum = 5, maximum = 200, integer = true }
     local ranges = {
+        statsFontSize = { minimum = 8, maximum = 18, integer = true },
+        statsRowHeight = { minimum = 12, maximum = 26, integer = true },
         meterRows = { minimum = 1, maximum = 10, integer = true },
         bossRows = { minimum = 0, maximum = 40, integer = true },
         meterFontSize = { minimum = 8, maximum = 18, integer = true },
@@ -197,6 +290,9 @@ DFRL:NewMod("Display", 0, function()
         meterRefreshRate = { minimum = 0.25, maximum = 2 },
         layoutGridSpacing = { minimum = 8, maximum = 128, integer = true },
         guardianRows = { minimum = 0, maximum = 40, integer = true },
+        guardianTitleFontSize = { minimum = 8, maximum = 20, integer = true },
+        guardianNameFontSize = { minimum = 8, maximum = 20, integer = true },
+        guardianStatusFontSize = { minimum = 8, maximum = 20, integer = true },
         sctScale = { minimum = 0.25, maximum = 2 },
         sctDistanceReference = { minimum = 1, maximum = 100, integer = true },
         sctDistanceMinimum = { minimum = 25, maximum = 100, integer = true },
@@ -344,6 +440,13 @@ DFRL:NewMod("Display", 0, function()
             if key == "meterNameFontSize" and not number and type(source) == "table" then
                 -- Older saves/profiles used one size for every meter label.
                 number = NormalizeNumber("meterFontSize", source.meterFontSize)
+            end
+            if
+                (key == "guardianNameFontSize" or key == "guardianStatusFontSize")
+                and not number
+                and type(source) == "table"
+            then
+                number = NormalizeNumber(key, source.guardianFontSize)
             end
             return number or defaults[key]
         end

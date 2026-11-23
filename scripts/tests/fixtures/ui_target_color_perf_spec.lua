@@ -68,3 +68,32 @@ assert(not next(context.reads) and not next(context.writes), "hidden target refr
 bar:SetStatusBarColor(0, 1, 0)
 assert(not next(context.reads) and not next(context.writes), "hidden native setter call performed color work")
 print("PASS target refresh preserves friendly/party ownership and native resets while skipping unchanged colors")
+
+env.TargetFrame:Show()
+env.TargetFrame.name = env.TargetFrame:CreateFontString(nil, "OVERLAY")
+env.TargetFrame.name:SetTextColor(1, 0.82, 0)
+env.UnitClass = function(unit)
+    if unit == "player" then return "Warrior", "WARRIOR" end
+    return "Priest", "PRIEST"
+end
+env.AZS_ZONE, env.AZS_ZONE_UPDATED = { class = "mage" }, 1
+context.settings.classHealth, context.player = true, true
+refresh(false)
+local mage = env.T.GetClassColor("mage")
+assert(bar.color[1] == mage[1] and bar.color[3] == mage[3], "self target used the selection-screen class")
+assert(select(1, env.TargetFrame.name:GetTextColor()) == mage[1], "self target name retained gold")
+context:ResetCounts()
+refresh(false)
+assert(not context.writes.color and not context.writes.SetTextColor, "unchanged hero target kept recoloring")
+context.player, context.partyAlias = false, "party2"
+refresh(false)
+assert(bar.color[1] == 1 and bar.color[2] == 1 and bar.color[3] == 1, "party target lost its native class color")
+context.partyAlias = nil
+refresh(false)
+local r, g, b = env.TargetFrame.name:GetTextColor()
+assert(bar.color[1] == 1 and bar.color[2] == 0 and r == 1 and g == 0.82 and b == 0, "enemy target lost red/gold")
+context.settings.classHealth, context.player = false, true
+refresh(false)
+assert(bar.color[1] == 0 and bar.color[2] == 1, "class-health off lost its green fill")
+assert(select(1, env.TargetFrame.name:GetTextColor()) == mage[1], "class-health off removed hero name color")
+print("PASS self and party target class colors, current hero identity, name colors and class-health preference")

@@ -1,8 +1,102 @@
 # Rendering and update costs
 
+Target-of-target class colors reuse the existing compact-frame reader and shared
+hero/party identity helpers. Native updates, settings and deferred hero publications
+refresh the name and health fill; unchanged colors skip presentation writes and
+hidden frames defer the work until Show. No frame, region, event, updater, asset
+or saved preference is added. Both Performance Mode states use the same path.
+
+Pet-frame growth direction is cached with the existing dirty geometry. Upward
+mode reverses row anchors and reserves the configured row height, keeping a
+stable bottom base as counts change. Timer-only passes do not reread direction
+or repeat layout. Row pools, native feeds, timer cadence, icon caching and hidden
+work gates are unchanged, with no new object, subscription or updater.
+
+## Optional Stats HUD
+
+Stats accepts the documented playing, paused and choosing phases, so level-up
+and jewelry choices keep its current native values visible. This reuses the
+existing publication reader, pooled regions and changed-only updates; it adds
+no event, updater, frame, artwork or saved state. Settled upgrades have no idle
+OnUpdate, and display/Layout hiding still detaches the reader.
+Choosing registers only the existing mouse-transparent Stats root with
+`AZS_SetOnTopOfScreens`, retaining MEDIUM strata. The optional matching getter
+confirms changed registrations; successful state is cached, so settled
+publications perform neither screen-API reads/writes nor strata writes.
+Phase exit and hiding release the registration. Failed visible registration
+uses the existing half-second retry; hidden/disabled states add no polling.
+No native choice frame or dimmer, extra frame or drawing region is changed.
+
+Stats defaults off, with two lightweight frames and no prepared texture or
+FontString regions. Enabled visible publications and settings changes coalesce
+onto a deferred read; a settled reader detaches its OnUpdate. Disabled,
+Layout-hidden and out-of-world Stats unsubscribe from addon messages and do no
+native stat/phase reads, formatting, fitting or painting. Required world cleanup
+remains registered. Failed visible font/art/metric preparation retries at half
+a second without allocating another pool.
+
+The default fourteen-row, four-section view uses 45 allocated regions: two
+header textures, one icon, eight separator textures, a title, four headings,
+28 row FontStrings and one hidden measuring FontString. Forty-four can be visible.
+The full 28-row/five-section pool contains at most 76 regions, 75 visible.
+Disabled or filtered rows are retained hidden for reuse. No body fill,
+enclosing border, counter strip, glow or animation is drawn. The default stat
+font size is 13. Separators reuse the header's exact fading gold rule at 0.8
+alpha. Two existing header half-sheets form each three-physical-pixel strip;
+this adds one pooled texture region per section over the former solid bar.
+Successful bindings and strip geometry remain cached. Both Performance Mode
+states use the same static artwork. The selected character/equipment icon adds
+one 64×64 lossless BLP file and reuses the existing icon region, successful-binding
+cache and visible-art retry. No frame, event, updater or extra region is added
+for the icon change.
+
+Scalar changes format only changed values. Stable native publications do not
+reanchor/rebind rows, remeasure text or change visibility. Model, language,
+font, width and scale changes invalidate the relevant layout/fit caches;
+failed assignments remain retryable. These are source-level operation and
+region counts, not measured draw calls, allocation traces or FPS. See
+[Stats HUD](STATS-WINDOW.md) for sources and CI-only coverage limits.
+
 The performance work removes repeated presentation writes while retaining native
 data, pause-aware timing, saved preferences and artwork. It adds no gameplay clock
 or native client dependency. Display choices use the existing saved display table.
+
+## Community integration: combat intake and settings sharing
+
+Timer-caption placement reuses the existing shared reader and formatted glyphs.
+Two passive frames separate the retained detached Layout owner from the caption
+seat; attachment changes reparent that seat, without a polling worker or another
+native clock read. Hidden text defers caption composition; Show and explicit
+placement/font changes refresh cached data and measurements. The hidden bar can
+continue its existing lifecycle while detached text presents the shared sample.
+
+Guardian title/name/status fonts and timer-only labels reuse the tracker reader
+and row pool. Successful font bindings and each row's current natural status
+width are cached; changed text or font revision triggers measurement. Names use
+the measured status span or health pill. Hidden tracker paths retain their
+existing presentation gates. These are source-level cost descriptions, without
+local runtime measurements.
+
+Hidden native Combat Log window 2 now withdraws its configured combat-event
+subscriptions while custom chat masks or deselects it. Selection, frame/window
+events and shared visibility callbacks resume or pause those subscriptions;
+there is one event controller and no idle updater. Regular notices and opt-in
+Copy capture remain independent. Suspended combat lines do not enter that
+window's retained native history.
+
+SCT Off/Game settings withdraw every combat-line subscription. The native world
+feed retains only periodic metadata events, avoiding direct-line parsing for
+hits already delivered by the client. Legacy/MSBT retain their full parser.
+Existing mode/style/world/handoff paths reconcile changes; animation and native
+preferences are unchanged. These are source-level reductions, not measured FPS
+or packaged-client timing claims.
+
+The minimap spell-effects button adds one static button and two reused-artwork
+textures, with an updater only during a held drag. CVar writes require a click;
+hidden minimaps defer preference reads and artwork preparation. Profile sharing
+runs only on explicit import/export, with a 128 KiB input/output limit, depth 16
+and 20,000 table pairs. Current-hero colors reuse existing deferred visible
+refreshes and cache the publication, stamp and class.
 
 ## Stepped rotation, plate sampling and deferred refreshes (2026-11-04)
 
@@ -1158,6 +1252,38 @@ gates and both Performance Mode states show the same instant result. CI-only
 mocks cover attribution, reuse and shared preview/save/discard/profile/reset;
 no local tests, game execution, drawing or FPS measurements were performed.
 
+## Party raid target icons
+
+Each of the four native party rows prepares one 16-square OVERLAY texture only
+when it first has a valid native raid mark. Unmarked rows allocate none; the
+four-texture maximum adds no frame, bundled image, setting or saved state.
+Markers stay inside the existing border/edit region and inherit movement and
+scale. The native icon/crop metadata supplies the image and UVs without adding
+an atlas or extra decorative pass.
+
+The existing Mini event owner handles native marker and roster notifications;
+health changes do no marker reads. Unchanged image, crop and visibility skip
+writes, hidden/world-retired rows skip reads, and clearing hides a prepared
+symbol once. Show/world entry samples the current unit rather than replaying
+an old slot's marker. Failed native bindings retry on a later native refresh.
+Both Performance Mode states share this static path, with no idle updater.
+CI-only mocks cover all eight symbols and lifecycle/cost bounds; source counts
+do not prove native rendering or FPS.
+
+## Soul shard icon visibility
+
+The default-off **Hide soul shard icons** option reuses the class-resource
+reader and display listener in both Performance Mode states. It prevents
+socket binding and clears the shown row once; settled hidden shards perform
+no texture or visibility writes. Primary-power sampling and numbers retain
+their existing path. The same ten point textures (five empty, five full) stay
+allocated for reuse, with none visible while hidden; no gameplay frame,
+region, asset, event or updater is added. The lazy settings checkbox adds one
+button, five texture regions (box, mark, hover and two divider pieces) and two
+FontStrings through existing editor artwork. Only its visited, visible page
+draws them; the mark and hover follow their existing conditional visibility.
+Source counts and CI-only cases do not establish live FPS or appearance.
+
 ## Mandatory rule for all drawing and assets
 
 Drawing performance is a project requirement for every frame and artwork change,
@@ -1876,11 +2002,17 @@ cover the reported joins; compensating label/name anchors keep the original
 text column fixed. The background follows the same rectangle. Portraitless mode
 removes the portrait span and compensates the existing closed border.
 
-The clean party health-only crop set replaces the compact view's four strips
-with fifteen, adding eleven allocated/visible texture regions in portrait mode.
-They share the existing pet sheet, meet edge to edge and retain half-texel-safe
-one-row tips, without overlapping shaded border alpha. The pool is built once
-and reused; portraitless mode actually hides all fifteen strips and shows its
+The compact view uses fifteen strips, eleven more than its original four-strip
+border. Its fixed-width rails combine the party crop set's separate straight
+spans and outer caps, freeing two regions for the portrait-side silver joins.
+These two one-row samples span only seven source pixels of dark baked-in rail
+stubs. Each samples the adjoining rail's silver pixel from the same pet sheet,
+with a horizontal alpha gradient from transparent at the ring to opaque at the
+straight rail, preserving the original shaded join beneath it. The two gradient
+assignments happen only at construction, with no asset, region, animation or
+recurring write added. Party retains its existing width-aware pieces. The other
+strips meet edge to edge and retain half-texel-safe one-row tips. The pool is built
+once and reused; portraitless mode actually hides all fifteen strips and shows its
 unchanged eight-piece closed border. No frame, FontString, asset, event, updater,
 setting or SavedVariable is added. The unused shaded compact fill BLP is removed,
 while its original TGA and native pet artwork are preserved.
@@ -2840,17 +2972,17 @@ result is claimed; the packaged renderer's exact revision remains unverified.
 
 ### Nameplate camera input
 
-Each discovered native plate adds one mouse-down and one mouse-up wrapper,
+Each discovered native plate and its health child add mouse-down/up wrappers,
 preserving previous handlers. One shared WorldFrame mouse-up/hide pair and two
 native mouse-look post-hooks manage session-only ownership, entry and deferred
-cleanup flags. Only eligible enemy right presses with a verified physical
-right-button hold read camera state and call the native camera verb.
+cleanup flags. Eligible enemy right presses read camera state and call the native
+camera verb, retaining an independent physical-button guard where available.
 The synchronous synthetic plate release during camera entry is ignored, while
 cleanup requested during entry runs immediately afterward. During an owned
-hold, the existing controller reads the physical button once per update and
-stops the hold if the release was missed or the read fails. Idle and external
-mouse-look perform no button reads. Clients without the getter install no
-camera input hooks. Retirement/reuse does no camera work, and both Performance
+hold, the existing controller reads the physical button once per update, or
+observes the native look channel on clients without that getter. Native-ended
+channels retire ownership; physical-read failures stop owned holds. Idle and
+external mouse-look perform neither read. Retirement/reuse does no camera work, and both Performance
 Mode states use the same path. There is no new frame, region, asset, event,
 updater, CVar or saved data. CI-only cases cover missed releases, native input
 fallback and ownership; they were not run locally.

@@ -1190,12 +1190,12 @@ local function CameraPlates(performance, missing)
         local camera = { starts = 0, stops = 0, queries = 0, looking = false, worldUps = {}, reloads = 0 }
         current.camera = camera
         camera.rightDown, camera.buttonReads = false, 0
-        local function NativeInput(plate)
+        local function NativeInput(plate, target)
             plate.nativeDown, plate.nativeUp = {}, {}
             plate:SetScript("OnMouseDown", function()
                 local button = env.arg1
                 plate.nativeDown[button] = (plate.nativeDown[button] or 0) + 1
-                if button == "LeftButton" then current.nativeTarget = plate end
+                if button == "LeftButton" then current.nativeTarget = target or plate end
             end)
             plate:SetScript("OnMouseUp", function()
                 local button = env.arg1
@@ -1204,11 +1204,13 @@ local function CameraPlates(performance, missing)
         end
         for _, plate in ipairs({ current.guardian, current.boss, current.ordinary }) do
             NativeInput(plate)
+            NativeInput(plate.nativeBar, plate)
         end
         local make = current.MakePlate
         function current:MakePlate(...)
             local plate = make(self, ...)
             NativeInput(plate)
+            NativeInput(plate.nativeBar, plate)
             return plate
         end
         env.WorldFrame:SetScript("OnMouseUp", function()
@@ -1485,7 +1487,7 @@ print(
     "PASS camera entry flushes synchronous cleanup, recovers from unobserved native release and stops partial native errors"
 )
 
-for _, missing in ipairs({ "MouselookStart", "MouselookStop", "IsMouselooking", "IsMouseButtonDown" }) do
+for _, missing in ipairs({ "MouselookStart", "MouselookStop", "IsMouselooking" }) do
     local current = CameraPlates(false, missing)
     current:Tick(0)
     local plate, camera = current.ordinary, current.camera
@@ -1506,6 +1508,42 @@ for _, missing in ipairs({ "MouselookStart", "MouselookStop", "IsMouselooking", 
     current:Event(current.controller, "PLAYER_LEAVING_WORLD")
 end
 print("PASS missing native camera APIs preserve original plate input without partial camera control")
+
+for _, performance in ipairs({ false, true }) do
+    local current = CameraPlates(performance, "IsMouseButtonDown")
+    current:Tick(0)
+    local plate, camera = current.ordinary, current.camera
+    current:Press(plate, "RightButton")
+    assert(
+        camera.looking and camera.starts == 1 and camera.stops == 0,
+        "camera fix required the missing modern button getter"
+    )
+    current:Tick(0.05)
+    assert(camera.looking and camera.buttonReads == 0, "native-channel fallback stopped a held drag")
+    -- This native client clears its look channel on physical release even if
+    -- neither Lua mouse-up is delivered. The addon must retire its ownership.
+    camera.looking = false
+    current:Release("RightButton", true)
+    current:Tick(0.05)
+    local queries = camera.queries
+    current:Tick(0.05)
+    assert(camera.queries == queries and camera.stops == 0, "released native camera retained addon polling")
+    local bar = plate.nativeBar
+    current:Press(bar, "RightButton")
+    assert(
+        camera.looking and camera.starts == 2 and bar.nativeUp.RightButton == 1,
+        "skinned health child swallowed camera input"
+    )
+    current:Release("RightButton")
+    assert(not camera.looking and camera.stops == 1, "health-child camera drag did not release through WorldFrame")
+    current:Press(bar, "LeftButton")
+    current:Release("LeftButton")
+    assert(current.nativeTarget == plate and camera.starts == 2, "health-child camera hook replaced native targeting")
+    current:Event(current.controller, "PLAYER_LEAVING_WORLD")
+end
+print(
+    "PASS camera dragging over plate roots and health children without a modern button getter, with native release and targeting"
+)
 
 do
     local current = Plates()

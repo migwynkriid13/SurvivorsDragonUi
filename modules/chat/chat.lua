@@ -15,6 +15,9 @@ DFRL:NewMod("Chat", 1, function()
         local LEFT, BOTTOM, BAR_GAP = 20, 40, 12
         local STRATA = "LOW"
         local FOOTER_HEIGHT = 32
+        -- The native caret is four local units wide. Half scale with doubled
+        -- text and geometry keeps the input unchanged apart from a thinner caret.
+        local INPUT_SCALE = 0.5
         local HOLD, FADE, SLIDE = 14, 0.6, 0.35
         local states, selected = {}, nil
         local activeStates = {}
@@ -49,6 +52,7 @@ DFRL:NewMod("Chat", 1, function()
         root:SetAlpha(1)
         root:Show()
         chat.frame = root
+        chat.IsFrameActive = function(native) return root:IsVisible() and selected and selected.native == native end
         -- Include the native input and passive indicator below the message pane.
         local moveRegion = CreateFrame("Frame", nil, root)
         moveRegion:SetPoint("TOPLEFT", root, "TOPLEFT", -1, 0)
@@ -309,36 +313,39 @@ DFRL:NewMod("Chat", 1, function()
 
         PositionInput = function()
             if not input or not root:IsVisible() or not input:IsVisible() then return end
-            if not HasAnchor(input, "TOPLEFT", root, "BOTTOMLEFT", -1, -1) then
+            if not T.NearlyEqual(input:GetScale(), INPUT_SCALE) then input:SetScale(INPUT_SCALE) end
+            if not HasAnchor(input, "TOPLEFT", root, "BOTTOMLEFT", -1 / INPUT_SCALE, -1 / INPUT_SCALE) then
                 input:ClearAllPoints()
-                input:SetPoint("TOPLEFT", root, "BOTTOMLEFT", -1, -1)
+                input:SetPoint("TOPLEFT", root, "BOTTOMLEFT", -1 / INPUT_SCALE, -1 / INPUT_SCALE)
             end
-            if not T.NearlyEqual(input:GetWidth(), rootWidth) then input:SetWidth(rootWidth) end
-            if not T.NearlyEqual(input:GetHeight(), 28) then input:SetHeight(28) end
-            T.SetChatFont(input)
+            if not T.NearlyEqual(input:GetWidth(), rootWidth / INPUT_SCALE) then
+                input:SetWidth(rootWidth / INPUT_SCALE)
+            end
+            if not T.NearlyEqual(input:GetHeight(), 28 / INPUT_SCALE) then input:SetHeight(28 / INPUT_SCALE) end
+            T.SetChatFont(input, INPUT_SCALE)
             T.SetChatShadow(input)
             if input:GetAlpha() ~= 1 then input:SetAlpha(1) end
             local inputName = input:GetName()
             local header = inputName and _G[inputName .. "Header"]
             if header then
-                T.SetChatFont(header)
-                if not HasAnchor(header, "LEFT", input, "LEFT", 8, 0) then
+                T.SetChatFont(header, INPUT_SCALE)
+                if not HasAnchor(header, "LEFT", input, "LEFT", 8 / INPUT_SCALE, 0) then
                     header:ClearAllPoints()
-                    header:SetPoint("LEFT", input, "LEFT", 8, 0)
+                    header:SetPoint("LEFT", input, "LEFT", 8 / INPUT_SCALE, 0)
                 end
             end
-            local left = (header and header:GetStringWidth() or 0) + 12
+            local left = (header and header:GetStringWidth() or 0) + 12 / INPUT_SCALE
             local currentLeft, right, top, bottom
             if input.GetTextInsets then
                 currentLeft, right, top, bottom = input:GetTextInsets()
             end
             if
                 not T.NearlyEqual(currentLeft, left)
-                or not T.NearlyEqual(right, 8)
-                or not T.NearlyEqual(top, 6)
-                or not T.NearlyEqual(bottom, 6)
+                or not T.NearlyEqual(right, 8 / INPUT_SCALE)
+                or not T.NearlyEqual(top, 6 / INPUT_SCALE)
+                or not T.NearlyEqual(bottom, 6 / INPUT_SCALE)
             then
-                input:SetTextInsets(left, 8, 6, 6)
+                input:SetTextInsets(left, 8 / INPUT_SCALE, 6 / INPUT_SCALE, 6 / INPUT_SCALE)
             end
         end
 
@@ -561,6 +568,7 @@ DFRL:NewMod("Chat", 1, function()
             PositionInput()
             RefreshFrames()
             UpdateIndicator()
+            if chat.RefreshHiddenCombatLog then chat.RefreshHiddenCombatLog() end
         end
 
         if input then
@@ -690,6 +698,7 @@ DFRL:NewMod("Chat", 1, function()
                 state.slideStart, state.revealStart = nil, nil
                 activeStates[state] = state.pendingLevel and true or nil
             end
+            if chat.RefreshHiddenCombatLog then chat.RefreshHiddenCombatLog() end
         end)
         HookScript(root, "OnShow", function()
             ReadDimensions()
@@ -701,6 +710,7 @@ DFRL:NewMod("Chat", 1, function()
                 FadeSettings(state, state == selected and not AtBottom(state))
             end
             UpdateIndicator()
+            if chat.RefreshHiddenCombatLog then chat.RefreshHiddenCombatLog() end
         end)
         DFRL.layout.Register("chat", root, AnchorDefault, {
             region = moveRegion,

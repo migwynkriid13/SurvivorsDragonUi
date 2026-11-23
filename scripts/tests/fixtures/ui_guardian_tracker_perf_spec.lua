@@ -7,6 +7,10 @@ local function Tracker()
     local env = context.env
     env.DFRL.display.GuardianIcon = function() return env.DFRL:GetInfoOrCons("tex") .. "waypoint\\GuardianFloating.blp" end
     context.settings.guardianRows = 0
+    context.settings.guardianTitleFontSize = 12
+    context.settings.guardianNameFontSize = 12
+    context.settings.guardianStatusFontSize = 12
+    context.settings.guardianTimerOnly = false
     context.settings.guardianShowDead = true
     context.settings.guardianShowHealthBars = true
     context.settings.guardianShowCurrentHealth, context.settings.guardianShowMaximumHealth = true, true
@@ -61,7 +65,11 @@ local function Tracker()
             self.scale = value
         end
         function object:GetEffectiveScale() return self.scale or 1 end
-        function object:GetStringWidth() return string.len(self:GetText()) * 7 end
+        function object:GetStringWidth()
+            context.reads.textMeasures = (context.reads.textMeasures or 0) + 1
+            local _, size = self:GetFont()
+            return string.len(self:GetText()) * 7 * (size or 12) / 12
+        end
         function object:EnableMouseWheel() end
         if object.kind == "StatusBar" then
             function object:SetMinMaxValues(low, high)
@@ -112,6 +120,7 @@ local function Tracker()
         end
     end
     assert(title, "title case guardian caption was not drawn")
+    context.title = title
     local r, g, b = title:GetTextColor()
     assert(r == 1 and g == 0.82 and b == 0, "guardian header lost the meter's gold")
     local row = context:Row()
@@ -334,6 +343,11 @@ print("PASS guardian status captions retain native rounded boundaries and skip u
 do
     local context, row = Tracker()
     context.env.DFRL.locale.code = "fr"
+    local setText = row.status.SetText
+    function row.status:SetText(value)
+        context.writes.statusText = (context.writes.statusText or 0) + 1
+        return setText(self, value)
+    end
     context:NotifyLocale()
     assert(row.status:GetText() == "Retour dans 1:02", "language change retained the previous guardian caption")
     context:Tick()
@@ -351,10 +365,13 @@ do
     context:ResetCounts()
     context:Tick()
     assert(
-        row.status:GetText() == "Retour dans 1:00" and context.writes.SetText == 1,
+        row.status:GetText() == "Retour dans 1:00" and context.writes.statusText == 1,
         "failed native text did not retry"
     )
     assert(not context.reads.captionFormats, "a failed native setter discarded successful formatting")
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
 end
 print("PASS guardian caption caches preserve language changes, actual native repairs and failed setter retries")
 
@@ -546,3 +563,146 @@ do
     assert(row.lairText == nil, "retired row retained its fallback caption cache")
 end
 print("PASS guardian fallback names cache by lair and language while actual text repairs and retirement remain intact")
+
+do
+    local context = H.New()
+    context:Load("core/display.lua", "Display")
+    local display = context.env.DFRL.display
+    for _, key in ipairs({ "guardianTitleFontSize", "guardianNameFontSize", "guardianStatusFontSize" }) do
+        assert(display.Get(key) == 12, "guardian text lost its default size")
+        for _, value in ipairs({ "8", 0 / 0, math.huge }) do
+            assert(display.Copy({ [key] = value })[key] == 12, "invalid font size was accepted")
+        end
+        assert(display.Copy({ [key] = 2 })[key] == 8, "guardian minimum was not clamped")
+        assert(display.Copy({ [key] = 30 })[key] == 20, "guardian maximum was not clamped")
+        assert(display.Copy({ [key] = 9.6 })[key] == 10, "guardian font size was not rounded")
+    end
+    local legacy = display.Copy({ guardianFontSize = 9 })
+    assert(
+        legacy.guardianNameFontSize == 9 and legacy.guardianStatusFontSize == 9 and legacy.guardianTitleFontSize == 12
+    )
+    assert(not legacy.guardianFontSize, "normalization retained the retired combined size")
+    display.BeginEdit()
+    display.Set("guardianStatusFontSize", 8)
+    assert(
+        display.Get("guardianStatusFontSize") == 8 and not context.env.SurvivorsDragonUiDisplay,
+        "preview saved early"
+    )
+    display.FinishEdit(false)
+    assert(display.Get("guardianStatusFontSize") == 12, "Cancel retained the font preview")
+    display.BeginEdit()
+    display.Set("guardianStatusFontSize", 10)
+    display.FinishEdit(true)
+    assert(context.env.SurvivorsDragonUiDisplay.guardianStatusFontSize == 10, "Confirm lost the font size")
+    display.BeginEdit()
+    display.Load({ guardianFontSize = 9 })
+    assert(
+        display.Get("guardianStatusFontSize") == 9 and context.env.SurvivorsDragonUiDisplay.guardianStatusFontSize == 10,
+        "profile preview overwrote the saved font size"
+    )
+    display.FinishEdit(false)
+    assert(display.Get("guardianStatusFontSize") == 10, "profile discard lost the confirmed font size")
+    display.Reset()
+    assert(display.Get("guardianStatusFontSize") == 12, "reset did not restore the guardian font size")
+end
+print("PASS guardian font normalization, preview, Confirm, Cancel, profile load and reset")
+
+for _, performance in ipairs({ false, true }) do
+    local context, row = Tracker()
+    context.settings.performanceMode = performance
+    local frame = context.env.DFRL_GuardianTracker
+    local width, height, scale = frame:GetWidth(), frame:GetHeight(), frame:GetEffectiveScale()
+    local titleSize = select(2, context.title:GetFont())
+    local nameWidth, allocated = row.name:GetWidth(), #context.objects
+    context:SetSetting("guardianNameFontSize", 8)
+    context:SetSetting("guardianStatusFontSize", 8)
+    context:Tick()
+    for _, label in ipairs({ row.name, row.status, row.health }) do
+        assert(select(2, label:GetFont()) == 8, "guardian row retained a fixed font size")
+    end
+    assert(row.name:GetWidth() > nameWidth, "smaller text did not release measured status-column space")
+    assert(select(2, context.title:GetFont()) == titleSize, "row font size changed the guardian heading")
+    assert(
+        frame:GetWidth() == width and frame:GetHeight() == height and frame:GetEffectiveScale() == scale,
+        "font preview changed saved tracker geometry"
+    )
+    assert(#context.objects == allocated, "font preview allocated another view")
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+    assert(not context.reads.textMeasures, "settled font choice repeated text measurement")
+
+    context.entry.key, context.entry.id, context.entry.state, context.entry.status = "1:7", 7, "awake", "fighting"
+    context.entry.hp, context.entry.maximum, context.entry.healthFraction, context.fighting = 50, 100, 0.5, 1
+    context:SetSetting("guardianShowHealthPercentage", true)
+    context:Tick()
+    assert(row.health:GetText() == "50 / 100 (50%)" and row.bar.value == 0.5, "font size changed native health")
+    local smallStatus = row.statusWidth
+    context:SetSetting("guardianStatusFontSize", 18)
+    context:Tick()
+    assert(row.statusWidth > smallStatus, "larger text reused the old column measurements")
+    assert(select(2, row.health:GetFont()) == 18 and row.bar.value == 0.5, "health font size changed its fill")
+    context:ResetCounts()
+    context:SetSetting("uiCustomFont", "GuardianFixture.ttf")
+    context:Tick()
+    assert(context.reads.textMeasures and row.bar.value == 0.5, "custom font changes retained stale column metrics")
+    context:SetHidden(true)
+    context:ResetCounts()
+    context:SetSetting("guardianNameFontSize", 10)
+    context:SetSetting("guardianStatusFontSize", 10)
+    context:Tick()
+    context:NoPresentationWrites()
+    assert(not context.reads.snapshot and not context.reads.textMeasures, "hidden font preview retained view work")
+    context:SetHidden(false)
+    assert(select(2, row.name:GetFont()) == 10 and #context.objects == allocated, "Show lost the pending font size")
+
+    local setFont, fail = row.name.SetFont, true
+    function row.name:SetFont(face, size, flags)
+        if fail and size == 9 then
+            fail = false
+            return false
+        end
+        return setFont(self, face, size, flags)
+    end
+    context:SetSetting("guardianNameFontSize", 9)
+    context:Tick()
+    assert(select(2, row.name:GetFont()) == 10, "injected font failure did not retain its usable font")
+    context:Tick()
+    assert(select(2, row.name:GetFont()) == 9, "failed guardian font assignment did not retry")
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+end
+print(
+    "PASS guardian font resizing, measured columns, hidden recovery, native health and failed-font retry in both modes"
+)
+
+for _, performance in ipairs({ false, true }) do
+    local context, row = Tracker()
+    context.settings.performanceMode = performance
+    local allocated, width = #context.objects, row.name:GetWidth()
+    context:SetSetting("guardianTitleFontSize", 17)
+    context:SetSetting("guardianNameFontSize", 10)
+    context:SetSetting("guardianStatusFontSize", 14)
+    context:SetSetting("guardianTimerOnly", true)
+    context:Tick()
+    assert(select(2, context.title:GetFont()) == 17 and select(2, row.name:GetFont()) == 10)
+    assert(select(2, row.status:GetFont()) == 14 and select(2, row.health:GetFont()) == 14)
+    assert(row.status:GetText() == "1:02" and row.name:GetWidth() > width, "timer-only did not release name space")
+    context:ResetCounts()
+    context:Tick()
+    context:NoPresentationWrites()
+    assert(not context.reads.textMeasures and not context.reads.captionFormats, "unchanged short status was remeasured")
+    context:SetSetting("guardianTimerOnly", false)
+    context:Tick()
+    assert(row.status:GetText() == "Respawns in 1:02", "full-caption recovery retained a short timer")
+    local longWidth = row.name:GetWidth()
+    context.entry.status, context.entry.state = "asleep", "asleep"
+    context:Tick()
+    assert(
+        row.status:GetText() == "Alive" and row.name:GetWidth() > longWidth,
+        "short row status retained the long reservation"
+    )
+    assert(#context.objects == allocated, "separate font controls or adaptive names allocated another view")
+end
+print("PASS independent Guardian heading/name/status fonts, timer-only captions and cached per-row name widths")

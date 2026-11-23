@@ -104,7 +104,8 @@ for _, performance in ipairs({ false, true }) do
         return object
     end
     native.NUM_CHAT_WINDOWS = 2
-    native.T.SetChatFont = function(frame)
+    native.T.SetChatFont = function(frame, scale)
+        frame.chatFontScale = scale or 1
         local key = frame == native.ChatFrame1 and "selectedFont"
             or frame == native.ChatFrame2 and "inactiveFont"
             or frame == native.ChatFrameEditBox and "inputFont"
@@ -135,8 +136,22 @@ for _, performance in ipairs({ false, true }) do
     NewPane(1)
     NewPane(2)
     local input = native.CreateFrame("EditBox", "ChatFrameEditBox", native.UIParent)
+    function input:GetScale() return self.scale or 1 end
+    function input:SetScale(value)
+        current.writes.SetScale = (current.writes.SetScale or 0) + 1
+        self.scale = value
+    end
     function input:GetTextInsets() return unpack(self.insets or {}) end
     function input:SetTextInsets(...) self.insets = { ... } end
+    local header = input:CreateFontString("ChatFrameEditBoxHeader")
+    header.measuredWidth = 40
+    function header:GetStringWidth() return self.measuredWidth end
+    local nativeHeaderCalls = 0
+    native.ChatEdit_UpdateHeader = function(editBox)
+        assert(editBox == input)
+        nativeHeaderCalls = nativeHeaderCalls + 1
+        editBox:SetTextInsets(1, 2, 3, 4)
+    end
     input:Hide()
     current:Load("modules/chat/chat.lua", "Chat")
     local root, pane, other = native.SurvivorsDragonUiChat, native.ChatFrame1, native.ChatFrame2
@@ -227,13 +242,45 @@ for _, performance in ipairs({ false, true }) do
     )
     input:Show()
     assert(
-        input:GetWidth() == root:GetWidth() and current.reads.inputFont == 1,
+        input:GetWidth() * input:GetScale() == root:GetWidth() and current.reads.inputFont == 1,
         "input Show did not repair immediately"
     )
+    local function AssertInputGeometry()
+        local scale = input:GetScale()
+        local _, _, _, x, y = input:GetPoint()
+        local _, _, _, headerX = header:GetPoint()
+        local left, right, top, bottom = input:GetTextInsets()
+        assert(scale == 0.5 and 4 * scale == 2, "native chat caret did not halve its visual width")
+        assert(input:GetWidth() * scale == root:GetWidth() and input:GetHeight() * scale == 28)
+        assert(x * scale == -1 and y * scale == -1 and headerX * scale == 8, "input anchors changed visually")
+        assert(left * scale == header.measuredWidth * scale + 12, "channel header overlaps native input")
+        assert(right * scale == 8 and top * scale == 6 and bottom * scale == 6, "input padding changed visually")
+        assert(input.chatFontScale == scale and header.chatFontScale == scale, "input/header glyphs lost compensation")
+    end
+    AssertInputGeometry()
+    header.measuredWidth = 180
+    native.ChatEdit_UpdateHeader(input)
+    assert(nativeHeaderCalls == 1, "chat header skin replaced the native header handler")
+    AssertInputGeometry()
+    current:ResetCounts()
+    Tick(1.1)
+    assert(
+        not current.writes.SetScale and not current.writes.SetWidth and not current.writes.SetHeight,
+        "settled input kept writing compensated geometry"
+    )
+    input.scale, input.width, input.height = 1, 3, 4
+    Tick(1.1)
+    AssertInputGeometry()
+    input:Hide()
+    input.scale = 1
+    Tick(1.1)
+    assert(input.scale == 1, "hidden input performed cursor styling")
+    input:Show()
+    AssertInputGeometry()
     input.width = 3
     root:Hide()
     root:Show()
-    assert(input:GetWidth() == root:GetWidth(), "root Show retained stale visible input geometry")
+    AssertInputGeometry()
 
     local discovered = {}
     native._G = setmetatable({}, {
