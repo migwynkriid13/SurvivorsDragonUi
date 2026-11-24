@@ -2,7 +2,7 @@
 
 The **Class resources** checkbox in `/sdui` → **Unit frames** defaults off. The player frame normally has one uninterrupted health bar. Enabling the option integrates the current native active resource below health inside the original frame opening, with supported secondary class-proc meters attached below the frame when available. Warrior rage appears only inside the player frame. Target and target-of-target frames remain health-only.
 
-Rogue points and Warlock soul shards use the existing socket artwork. Lightwell uses a compact gold fill with current / maximum text. These secondary displays use the official proc values; none are inferred from active power, spell casts or combat messages. The `bloodrage` proc does not create another meter below the frame, avoiding a second rage display.
+Rogue points and Warlock soul shards use the existing socket artwork. Lightwell uses a compact gold fill with current / maximum text. If its usual position overlaps the player buff or debuff areas, it moves to the nearest available space beside or below them. These secondary displays use the official proc values; none are inferred from active power, spell casts or combat messages. The `bloodrage` proc does not create another meter below the frame, avoiding a second rage display.
 
 ## Current native values
 

@@ -33,7 +33,7 @@ DFRL:NewMod("Class resources", 2, function()
 
     local path = DFRL:GetInfoOrCons("tex") .. "resources\\"
     local POINTS = 5
-    local SLOT_WIDTH, ROW_HEIGHT = 24, 32
+    local SLOT_WIDTH, ROW_HEIGHT, METER_HEIGHT = 24, 32, 12
     local styles = {
         WARLOCK = {
             color = { 0.55, 0.25, 1 },
@@ -52,10 +52,11 @@ DFRL:NewMod("Class resources", 2, function()
             height = 20,
         },
     }
+    local lightwell = { color = { 1, 0.82, 0 } }
     local procs = {
         seal_fate = styles.ROGUE,
         soul_fire = styles.WARLOCK,
-        lightwell = { color = { 1, 0.82, 0 } },
+        lightwell = lightwell,
     }
 
     local row = CreateFrame("Frame", "SurvivorsDragonUiClassResources", PlayerFrame)
@@ -84,7 +85,7 @@ DFRL:NewMod("Class resources", 2, function()
 
     local meter = CreateFrame("StatusBar", nil, row)
     meter:SetWidth(row:GetWidth())
-    meter:SetHeight(12)
+    meter:SetHeight(METER_HEIGHT)
     meter:SetPoint("CENTER", row, "CENTER", 0, 0)
     meter:EnableMouse(false)
     meter:SetStatusBarTexture(
@@ -150,6 +151,71 @@ DFRL:NewMod("Class resources", 2, function()
         return style, math.min(state.pv, state.pm), state.pm
     end
 
+    local buffBounds, debuffBounds, screenBounds = {}, {}, {}
+    local meterX, meterY = 0, 0
+    local function FrameBounds(frame, bounds)
+        if not frame or not frame:IsVisible() then return end
+        local left, bottom, right, top = frame:GetLeft(), frame:GetBottom(), frame:GetRight(), frame:GetTop()
+        local scale = frame:GetEffectiveScale()
+        if not left or not bottom or not right or not top or not IsNumber(scale) or scale == 0 then return end
+        bounds.left, bounds.bottom, bounds.right, bounds.top = left * scale, bottom * scale, right * scale, top * scale
+        return bounds
+    end
+    local function Overlaps(bounds, left, bottom, width, height)
+        return bounds
+            and left < bounds.right
+            and left + width > bounds.left
+            and bottom < bounds.top
+            and bottom + height > bounds.bottom
+    end
+    local function LightwellOffset()
+        local buffs = FrameBounds(_G.DFRL_PlayerAuras, buffBounds)
+        local debuffs = FrameBounds(_G.DFRL_PlayerDebuffs, debuffBounds)
+        if not buffs and not debuffs then return 0, 0 end
+        local cx, cy = row:GetCenter()
+        local scale = row:GetEffectiveScale()
+        if not cx or not cy or not IsNumber(scale) or scale == 0 then return 0, 0 end
+        local width, height = row:GetWidth() * scale, METER_HEIGHT * scale
+        local left, bottom = cx * scale - width / 2, cy * scale - height / 2
+        if not Overlaps(buffs, left, bottom, width, height) and not Overlaps(debuffs, left, bottom, width, height) then
+            return 0, 0
+        end
+        local screen = FrameBounds(UIParent, screenBounds)
+        if not screen then return 0, 0 end
+        local gap = 3 * scale
+        local shiftX, shiftY, nearest = 0, 0, nil
+        local function Consider(x, y)
+            if x < screen.left or x + width > screen.right or y < screen.bottom or y + height > screen.top then
+                return
+            end
+            if Overlaps(buffs, x, y, width, height) or Overlaps(debuffs, x, y, width, height) then return end
+            local distance = math.abs(x - left) + math.abs(y - bottom)
+            if not nearest or distance < nearest then
+                shiftX, shiftY, nearest = (x - left) / scale, (y - bottom) / scale, distance
+            end
+        end
+        local function Around(bounds)
+            if not bounds then return end
+            Consider(left, bounds.bottom - height - gap)
+            Consider(bounds.left - width - gap, bottom)
+            Consider(bounds.right + gap, bottom)
+        end
+        -- Keep the meter beside or below the auras, clear of the primary power bar.
+        Around(buffs)
+        Around(debuffs)
+        return shiftX, shiftY
+    end
+    local function PlaceMeter(style)
+        local x, y = 0, 0
+        if style == lightwell then
+            x, y = LightwellOffset()
+        end
+        if T.NearlyEqual(x, meterX) and T.NearlyEqual(y, meterY) then return end
+        meterX, meterY = x, y
+        meter:ClearAllPoints()
+        meter:SetPoint("CENTER", row, "CENTER", x, y)
+    end
+
     local function BindPoint(texture, style, crop)
         local loaded = texture:SetTexture(style.texture)
         texture:SetTexCoord(unpack(crop))
@@ -207,6 +273,8 @@ DFRL:NewMod("Class resources", 2, function()
             if displayedStyle then Clear() end
             return
         end
+        -- Buffs and debuffs can move independently of the native proc value.
+        PlaceMeter(style)
         if
             not bindingPending
             and style == displayedStyle

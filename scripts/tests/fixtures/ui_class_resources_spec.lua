@@ -36,6 +36,11 @@ local function Resources(performance, hidden)
             self.value = value
         end
         function object:GetValue() return self.value end
+        local setPoint = object.SetPoint
+        function object:SetPoint(...)
+            self.point = { ... }
+            setPoint(self, ...)
+        end
         function object:SetStatusBarColor(...)
             Write("SetStatusBarColor")
             self.color = { ... }
@@ -167,6 +172,41 @@ Test("shard hiding preserves Rogue points, Lightwell and numeric fallbacks", fun
         context:Publish("soul_fire", 0, 5)
         assert(not row:IsShown() and context:SocketCount() == 0, "empty shard sockets remained visible")
         context:Primary(80)
+    end
+end)
+
+Test("Lightwell avoids scaled aura rows without moving other class resources", function()
+    local function Box(frame, left, bottom, right, top, scale)
+        function frame:GetLeft() return left end
+        function frame:GetBottom() return bottom end
+        function frame:GetRight() return right end
+        function frame:GetTop() return top end
+        function frame:GetEffectiveScale() return scale end
+    end
+    for _, performance in ipairs({ false, true }) do
+        local c, _, _, row, meter, label, controller = Resources(performance, true)
+        local env = c.env
+        function row:GetCenter() return 130, 100 end
+        function row:GetEffectiveScale() return 1 end
+        Box(env.UIParent, 0, 0, 440, 220, 1)
+        local buffs = env.CreateFrame("Frame", "DFRL_PlayerAuras", env.UIParent)
+        local debuffs = env.CreateFrame("Frame", "DFRL_PlayerDebuffs", env.UIParent)
+        Box(buffs, 50, 43, 110, 57, 2)
+        Box(debuffs, 100, 58, 220, 86, 1)
+        c:Publish("lightwell", 0.67, 1)
+        assert(meter.point[4] == 0 and meter.point[5] == -51, "Lightwell covered the buff or debuff row")
+        assert(label:GetText() == "0.67 / 1" and meter:GetValue() == 0.67, "Lightwell changed the native value")
+        c:ResetCounts()
+        c:Call(controller, "OnUpdate", 0.1)
+        c:NoPresentationWrites()
+        Box(buffs, 125, 43, 185, 57, 2)
+        c:Call(controller, "OnUpdate", 0.1)
+        assert(meter.point[4] == 0 and meter.point[5] == 0, "unchanged Lightwell did not follow an aura move")
+        Box(buffs, 50, 43, 110, 57, 2)
+        c:Call(controller, "OnUpdate", 0.1)
+        c:Publish("soul_fire", 4, 6)
+        assert(meter.point[4] == 0 and meter.point[5] == 0, "Lightwell placement carried over to another proc")
+        c:Primary(80)
     end
 end)
 
