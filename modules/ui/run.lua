@@ -1769,7 +1769,7 @@ DFRL:NewMod("RunTimers", 5, function()
                 local enabled
                 if key == "roundPlayerPortrait" or key == "playerPortrait3D" then
                     enabled = not DFRL.display.Get("hidePortraits")
-                elseif key == "hideSoulShards" then
+                elseif key == "hideClassResourceIcons" then
                     enabled = DFRL.display.Get("classResources")
                 elseif key == "runTextBelow" then
                     enabled = not DFRL.display.Get("detachRunText")
@@ -2408,10 +2408,10 @@ DFRL:NewMod("RunTimers", 5, function()
                     },
                     { "classResources", "Class resources", "Show power in player and party frames." },
                     {
-                        "hideSoulShards",
-                        "Hide soul shard icons",
-                        "Hide Warlock crystals. Keep the power bar and numbers.",
-                        terms = { "Soulfire", "Warlock" },
+                        "hideClassResourceIcons",
+                        "Hide class resource icons",
+                        "Hide Rogue combo points and Warlock soul shards. Keep the power bar and numbers.",
+                        terms = { "Seal Fate", "Rogue", "Soulfire", "Warlock", "Crystals" },
                     },
                     {
                         "hidePortraits",

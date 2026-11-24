@@ -83,10 +83,10 @@ Each category remembers its scroll offset until the UI reloads.
 ## Finding a setting
 
 In **Unit frames**, enable **Class resources** to keep the power bar and
-numbers, then enable **Hide soul shard icons** to hide only the Warlock
-crystals. Changes preview immediately and save with **Confirm**. The hide
-option defaults off and retains its choice while Class resources is off.
-Search also finds it through `Soulfire` or `Warlock`.
+numbers, then enable **Hide class resource icons** to hide Rogue combo points
+and Warlock soul shard icons. Changes preview immediately and save with
+**Confirm**. The option defaults off and retains its choice while Class resources
+is off. Search also finds it through `Seal Fate`, `Rogue`, `Soulfire` or `Warlock`.
 
 **Search settings** above Performance Mode in the sidebar matches existing captions, descriptions and category names,
 using both the active language and English source text. Multiple words must all

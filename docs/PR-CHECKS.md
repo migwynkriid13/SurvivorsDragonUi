@@ -61,13 +61,13 @@ These authored cases have not been executed locally and do not establish
 packaged-client rendering or behavior.
 
 The CI-only `ui_class_resources_spec.lua` fixture loads the production resource
-and display owners with explicit native power/proc boundaries. It covers shard
-preview/Cancel/Confirm, default and profile normalization, resets, changed power
-values, empty sockets, hidden-player recovery, unchanged writes and pool reuse
-in both Performance Mode states. Rogue points, Lightwell and numeric fallbacks
-remain covered independently. The settings-visibility fixture checks that Class
-resources dims the shard option while retaining its choice and defers hidden
-controls until Show. These cases are authored for CI; they were not run locally
+and display owners with explicit native power/proc boundaries. It covers the
+shared Rogue and Warlock socket option, preview/Cancel/Confirm, saved and profile
+migration, resets, changed power values, empty sockets, hidden-player recovery,
+unchanged writes and pool reuse in both Performance Mode states. Lightwell and
+numeric fallbacks remain covered independently. The settings-visibility fixture
+checks that Class resources dims the icon option while retaining its choice
+and defers hidden controls until Show. These cases are authored for CI; they were not run locally
 and do not establish native rendering or game behavior.
 
 Every PR push runs formatting, static Lua analysis, package and asset inventory,

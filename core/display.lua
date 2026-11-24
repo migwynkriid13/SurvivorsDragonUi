@@ -198,7 +198,7 @@ DFRL:NewMod("Display", 0, function()
         enhancedTooltips = true,
         tooltipAtCursor = false,
         classResources = false,
-        hideSoulShards = false,
+        hideClassResourceIcons = false,
         classHealth = false,
         healthLossAnimation = true,
         customActionBar = true,
@@ -413,8 +413,9 @@ DFRL:NewMod("Display", 0, function()
         worldEliteIconMode = true,
         worldGuardianIconMode = true,
     }
-    -- The old boss settings applied to every encounter kind.
-    local legacyEncounterKeys = {
+    local legacyDisplayKeys = {
+        hideClassResourceIcons = "hideSoulShards",
+        -- The old boss settings applied to every encounter kind.
         worldEliteIcons = "worldBossIcons",
         worldEliteIconMode = "worldBossIconMode",
         worldEliteIconDistance = "worldBossIconDistance",
@@ -426,7 +427,7 @@ DFRL:NewMod("Display", 0, function()
         local value
         if type(source) == "table" then
             value = source[key]
-            local legacyKey = legacyEncounterKeys[key]
+            local legacyKey = legacyDisplayKeys[key]
             if value == nil and legacyKey then value = source[legacyKey] end
         end
         if colorKeys[key] then return NormalizeColor(value) or defaults[key] end

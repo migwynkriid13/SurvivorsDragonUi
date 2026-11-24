@@ -134,20 +134,16 @@ DFRL:NewMod("Class resources", 2, function()
         if state == retiredRun and stamp == retiredStamp and runReceived == retiredReceived then return end
         return state
     end
+    local function UsesSockets(style, maximum)
+        return style.texture and maximum <= POINTS and maximum == math.floor(maximum)
+    end
     local function ReadSecondary(state)
         if not state then return end
         -- The native proc identifies the meter and publishes its own range.
         -- Empty, unknown or missing fields never fall back to active power.
         local style = procs[state.proc]
         if not style or not IsNumber(state.pv) or not IsNumber(state.pm) or state.pm <= 0 then return end
-        if
-            style == styles.WARLOCK
-            and state.pm <= POINTS
-            and state.pm == math.floor(state.pm)
-            and DFRL.display.Get("hideSoulShards")
-        then
-            return
-        end
+        if UsesSockets(style, state.pm) and DFRL.display.Get("hideClassResourceIcons") then return end
         return style, math.min(state.pv, state.pm), state.pm
     end
 
@@ -284,7 +280,7 @@ DFRL:NewMod("Class resources", 2, function()
             return
         end
         bindingPending = nil
-        if style.texture and total <= POINTS and total == math.floor(total) then
+        if UsesSockets(style, total) then
             if meter:IsShown() then meter:Hide() end
             T.SetTextIfChanged(meterText, "")
             for i, point in ipairs(points) do

@@ -34,7 +34,7 @@ do
     end
     Begin()
     display.Set("guardianNameFontSize", 9)
-    display.Set("hideSoulShards", true)
+    display.Set("hideClassResourceIcons", true)
     display.Set("uiCustomFont", "Český.ttf")
     assert(profiles.Save("Original", false))
     local ok, shared = profiles.Export("Original")
@@ -49,7 +49,10 @@ do
     assert(not env.SurvivorsDragonUiProfiles.Imported, "import saved its draft early")
     assert(display.Get("guardianNameFontSize") == 17, "import silently activated the profile")
     assert(profiles.Load("Imported"))
-    assert(display.Get("guardianNameFontSize") == 9 and display.Get("hideSoulShards"), "import lost current options")
+    assert(
+        display.Get("guardianNameFontSize") == 9 and display.Get("hideClassResourceIcons"),
+        "import lost current options"
+    )
     assert(display.Get("uiCustomFont") == "Český.ttf", "profile sharing lost UTF-8 bytes")
     assert(c.loadedGeometry.playerFrame.x == geometry.playerFrame.x, "sharing rounded layout coordinates")
     display.FinishEdit(false)
