@@ -6,6 +6,10 @@ panel. The Character, Skills and Honor bottom tabs stay hidden, including after
 native updates try to show them. Mouse wheel, scrollbar and arrow buttons reach the
 complete stats list. This is an addon skin of the native window.
 
+On clients with the on-top API, the open window registers its named frames
+individually over level-up and jewelry cards. Closing the window releases its
+registrations. In-game rendering and input above the cards remain unverified.
+
 The native character name and level/race/class caption share one centered row
 inside the top metal border, with a three-unit word gap. Both use gold DEFAULT
 text. Native name, rank and
