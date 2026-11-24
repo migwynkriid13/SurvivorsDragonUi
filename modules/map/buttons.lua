@@ -293,6 +293,19 @@ DFRL:NewMod("Minimap Buttons", 3, function()
         if not fx:IsShown() then fx:Show() end
     end
     local StopFxDrag
+    local dragX, dragY
+    local function RestoreFxPosition()
+        local position = _G.SurvivorsDragonUiSpellFx
+        local x, y
+        if type(position) == "table" then
+            x, y = position.x, position.y
+        end
+        if not Number(x) or not Number(y) or (x == 0 and y == 0) then
+            x, y = 0, -1
+        end
+        local magnitude = math.max(math.abs(x), math.abs(y))
+        fx:SetPoint("CENTER", Minimap, "CENTER", x / magnitude, y / magnitude)
+    end
     local function FxDrag()
         if not fxDragging then return end
         if not Visible() or DFRL.layout.IsEditing() then
@@ -305,11 +318,17 @@ DFRL:NewMod("Minimap Buttons", 3, function()
         if not Number(centerX) or not Number(centerY) or not Number(scale) or scale <= 0 then return end
         if not Number(cursorX) or not Number(cursorY) then return end
         local x, y = cursorX / scale - centerX, cursorY / scale - centerY
-        if x ~= 0 or y ~= 0 then fx:SetPoint("CENTER", Minimap, "CENTER", x, y) end
+        if Number(x) and Number(y) and (x ~= 0 or y ~= 0) then
+            local magnitude = math.max(math.abs(x), math.abs(y))
+            dragX, dragY = x / magnitude, y / magnitude
+            fx:SetPoint("CENTER", Minimap, "CENTER", dragX, dragY)
+        end
     end
     StopFxDrag = function(sample)
         if not fxDragging then return end
-        if sample then FxDrag() end
+        if sample and Visible() and not DFRL.layout.IsEditing() then FxDrag() end
+        if dragX then _G.SurvivorsDragonUiSpellFx = { x = dragX, y = dragY } end
+        dragX, dragY = nil, nil
         fxDragging = false
         fx:SetScript("OnUpdate", nil)
         fxSuppressUntil = GetTime() + 0.15
@@ -337,7 +356,7 @@ DFRL:NewMod("Minimap Buttons", 3, function()
         HideFxTooltip()
     end)
     Register(fx)
-    fx:SetPoint("CENTER", Minimap, "CENTER", 0, -1)
+    RestoreFxPosition()
     HookScript(Minimap, "OnShow", PaintFx)
     HookScript(Minimap, "OnHide", function()
         StopFxDrag(false)
@@ -372,9 +391,11 @@ DFRL:NewMod("Minimap Buttons", 3, function()
             if fx:IsShown() then fx:Hide() end
         elseif event == "PLAYER_ENTERING_WORLD" then
             inWorld = true
+            RestoreFxPosition()
             PaintFx()
             DiscoverButtons()
         elseif event == "ADDON_LOADED" then
+            if arg1 == "SurvivorsDragonUi" then RestoreFxPosition() end
             DiscoverButtons()
         elseif event == "CVAR_UPDATE" and type(arg1) == "string" and string.lower(arg1) == "nospelleffects" then
             PaintFx()
