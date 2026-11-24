@@ -1531,14 +1531,15 @@ for _, key in ipairs(categoryKeys) do
 end
 assert(#context.objects == allCategoryObjects, "revisiting all eleven categories allocated another sidebar search")
 assert(env.fontSampleClock and not env.fontMenu, "Encounters eagerly prepared the closed font popup")
-local affixes, shadow = env.displayControls.attachAffixes, env.shadowControl
+local affixBelow, affixDetach, shadow =
+    env.displayControls.affixIconsBelow, env.displayControls.detachAffixes, env.shadowControl
 assert(
-    affixes:GetHeight() == 28 and shadow:GetHeight() == 28 and affixes.point[5] == shadow.point[5],
-    "Attach affixes and Black shadow are not aligned in the same row"
+    affixBelow:GetHeight() == 28 and affixDetach.point[5] < affixBelow.point[5] and shadow:GetHeight() == 28,
+    "affix placement controls did not share a section"
 )
 assert(
-    affixes.label.point[1] == "LEFT"
-        and affixes.label.justifyV == "MIDDLE"
+    affixBelow.label.point[1] == "LEFT"
+        and affixBelow.label.justifyV == "MIDDLE"
         and env.displayControls.performanceMode.label.point[1] == "LEFT",
     "timer or Performance Mode caption overrides shared checkbox alignment"
 )
@@ -1975,7 +1976,12 @@ do
     end
     local short = assert(env.displayControls.guardianTimerOnly)
     local below, detached = assert(env.displayControls.runTextBelow), assert(env.displayControls.detachRunText)
+    local iconsBelow, iconsDetached =
+        assert(env.displayControls.affixIconsBelow), assert(env.displayControls.detachAffixes)
     assert(short:IsVisible() and below:IsVisible() and detached:IsVisible(), "new encounter controls are hidden")
+    assert(iconsBelow:IsVisible() and iconsDetached:IsVisible(), "affix placement controls are hidden")
+    context:Call(iconsBelow, "OnClick")
+    assert(display.Get("affixIconsBelow") and not display.Get("runTextBelow"), "affix flip also flipped captions")
     context:Call(short, "OnClick")
     context:Call(below, "OnClick")
     context:Call(detached, "OnClick")
@@ -1985,24 +1991,37 @@ do
         below.editorAvailable == false and below.mouse == false,
         "detached text retained an active above/below control"
     )
-    dialog.navigation.Search("Detach timer text")
-    local found
-    for _, result in ipairs(dialog.navigation.results) do
-        if result.target == "detachRunText" then found = true end
+    assert(
+        iconsBelow.editorAvailable and not display.Get("detachAffixes"),
+        "detaching captions disabled affix placement"
+    )
+    context:Call(iconsDetached, "OnClick")
+    editor.Display()
+    assert(display.Get("detachAffixes") and display.Get("affixIconsBelow"), "detaching cleared the affix side")
+    assert(not iconsBelow.editorAvailable and not iconsBelow.mouse, "detached affixes retained an active flip control")
+    for _, entry in ipairs({
+        { "Detach timer text", "detachRunText" },
+        { "Detach affix icons", "detachAffixes" },
+        { "Affix icons below the bar", "affixIconsBelow" },
+    }) do
+        dialog.navigation.Search(entry[1])
+        local found
+        for _, result in ipairs(dialog.navigation.results) do
+            if result.target == entry[2] then found = true end
+        end
+        assert(found, "placement control missing from settings search: " .. entry[1])
+        dialog.navigation.ClearSearch()
     end
-    assert(found, "detached timer text is missing from settings search")
-    dialog.navigation.ClearSearch()
     display.FinishEdit(false)
     editor.Display()
     assert(
         not display.Get("guardianTimerOnly") and not display.Get("detachRunText") and not display.Get("runTextBelow")
     )
     assert(below.editorAvailable == true, "Cancel did not restore the attached placement control")
+    assert(not display.Get("detachAffixes") and not display.Get("affixIconsBelow") and iconsBelow.editorAvailable)
     dialog:Hide()
 end
-print(
-    "PASS encounter settings expose separate Guardian fonts, timer-only and searchable timer-caption placement with Cancel"
-)
+print("PASS encounter settings expose Guardian fonts and independent searchable timer caption and affix placement")
 
 do
     display.Reset()

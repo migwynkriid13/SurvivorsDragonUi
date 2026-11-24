@@ -112,7 +112,8 @@ DFRL:NewMod("Display", 0, function()
         customRunTimer = true,
         runTextBelow = false,
         detachRunText = false,
-        attachAffixes = true,
+        affixIconsBelow = false,
+        detachAffixes = false,
         customBossBars = true,
         bossCombineBars = false,
         bossBarColorMode = "default",
@@ -429,6 +430,9 @@ DFRL:NewMod("Display", 0, function()
             value = source[key]
             local legacyKey = legacyDisplayKeys[key]
             if value == nil and legacyKey then value = source[legacyKey] end
+            if key == "detachAffixes" and value == nil and type(source.attachAffixes) == "boolean" then
+                value = not source.attachAffixes
+            end
         end
         if colorKeys[key] then return NormalizeColor(value) or defaults[key] end
         if iconStyleKeys[key] then return NormalizeIconStyle(value) or defaults[key] end

@@ -161,7 +161,7 @@ DFRL:NewMod("RunTimers", 5, function()
             end
         end
         function view:SyncAttachment()
-            local attached = DFRL.display.Get("attachAffixes")
+            local attached = not DFRL.display.Get("detachAffixes")
             if self.attached == attached then return end
             if root:IsShown() then root:Hide() end
             self.attached = attached
@@ -1773,6 +1773,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     enabled = DFRL.display.Get("classResources")
                 elseif key == "runTextBelow" then
                     enabled = not DFRL.display.Get("detachRunText")
+                elseif key == "affixIconsBelow" then
+                    enabled = DFRL.display.Get("customRunTimer") and not DFRL.display.Get("detachAffixes")
                 elseif key == "attachJewelry" then
                     enabled = DFRL.display.Get("equippedJewelry") and DFRL.display.Get("customActionBar")
                 elseif key == "jewelryCustomOrder" then
@@ -1963,8 +1965,8 @@ DFRL:NewMod("RunTimers", 5, function()
         local separate = timerText and timerText.separate == true
         local both = runClock.visible and bossClock.visible and true or false
         local captionsOnTop = not below and not separate
-        local affixBelow = below and not separate
-        local shareAffixLane = captionsOnTop or (affixBelow and run.affixes.attached)
+        local affixBelow = run.affixes.attached == true and DFRL.display.Get("affixIconsBelow") == true
+        local shareAffixLane = not separate and below == affixBelow
         if timerText then
             local naturalWidth = both and width + bossWidth + 16 or math.max(width, bossWidth) + 8
             timerText:Context(runClock.visible or bossClock.visible, naturalWidth, captionHeight + 4, below)
@@ -2063,13 +2065,15 @@ DFRL:NewMod("RunTimers", 5, function()
     end
     run.affixes.onBounds = UpdateRunFontBounds
     timerText.onBounds = UpdateRunFontBounds
-    local timerTextBelow = DFRL.display.Get("runTextBelow")
-    DFRL.display.Listen(function()
-        local below = DFRL.display.Get("runTextBelow")
-        if timerTextBelow == below then return end
-        timerTextBelow = below
-        UpdateRunFontBounds()
-    end)
+    do
+        local timerTextBelow, affixIconsBelow = DFRL.display.Get("runTextBelow"), DFRL.display.Get("affixIconsBelow")
+        DFRL.display.Listen(function()
+            local textBelow, iconsBelow = DFRL.display.Get("runTextBelow"), DFRL.display.Get("affixIconsBelow")
+            if timerTextBelow == textBelow and affixIconsBelow == iconsBelow then return end
+            timerTextBelow, affixIconsBelow = textBelow, iconsBelow
+            UpdateRunFontBounds()
+        end)
+    end
 
     local function SetClockLabelText(clock, text, visible)
         local observed = clock.source:GetText()
@@ -3041,7 +3045,6 @@ DFRL:NewMod("RunTimers", 5, function()
                 { key = "timerSize", label = "Size", offset = 126 },
                 { key = "timerOutline", label = "Outline", offset = 164 },
                 { key = "timerShadow", label = "Black shadow", offset = 192 },
-                { key = "attachAffixes", label = "Attach affixes to run timer", offset = 192 },
                 {
                     key = "runTextBelow",
                     label = "Text below the bar",
@@ -3053,6 +3056,13 @@ DFRL:NewMod("RunTimers", 5, function()
                     label = "Detach timer text",
                     description = "Move both timer captions together using their own Layout handle.",
                     offset = 460,
+                },
+                { key = "affixIconsBelow", label = "Affix icons below the bar", offset = 520 },
+                {
+                    key = "detachAffixes",
+                    label = "Detach affix icons",
+                    description = "Move the icons with the Heroic affixes Layout handle.",
+                    offset = 556,
                 },
             },
         }
@@ -3997,16 +4007,6 @@ DFRL:NewMod("RunTimers", 5, function()
             table.insert(timerSettings.controls, shadowControl)
             shadowControl:SetHeight(28)
             shadowControl:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -captions.timerShadow.offset)
-            local attachAffixes = DisplayToggle(
-                timer,
-                "attachAffixes",
-                captions.attachAffixes.label,
-                nil,
-                -captions.attachAffixes.offset,
-                halfWidth
-            )
-            attachAffixes:SetHeight(28)
-            attachAffixes:SetPoint("TOPLEFT", timer, "TOPLEFT", halfWidth + gap, -captions.attachAffixes.offset)
             for index, mode in ipairs(timerModes) do
                 local x = (index - 1) * (halfWidth + gap)
                 local heading = FontEditorLabel(timer, mode.label, x, -184 - timerTop, 12)
@@ -4022,13 +4022,14 @@ DFRL:NewMod("RunTimers", 5, function()
                     end
                 end
             end
-            for _, key in ipairs({ "runTextBelow", "detachRunText" }) do
+            for _, key in ipairs({ "runTextBelow", "detachRunText", "affixIconsBelow", "detachAffixes" }) do
                 local entry = captions[key]
                 local control = DisplayToggle(timer, key, entry.label, entry.description, -entry.offset, contentWidth)
-                control:SetHeight(52)
-                control:SetPoint("TOPLEFT", timer, "TOPLEFT", 0, -entry.offset)
+                control:SetHeight(entry.description and 52 or 28)
+                if control.description then control.description:SetHeight(26) end
             end
-            if timerPage:GetHeight() < 516 then timerPage:SetHeight(516) end
+            local placementHeight = captions.detachAffixes.offset + 56
+            if timerPage:GetHeight() < placementHeight then timerPage:SetHeight(placementHeight) end
         end
 
         fontEditor:SetScript("OnHide", function()
