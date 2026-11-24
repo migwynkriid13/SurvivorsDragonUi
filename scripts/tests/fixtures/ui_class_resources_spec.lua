@@ -166,7 +166,7 @@ Test("hidden shards stay unbound and idle, and hidden-player changes recover on 
     end
 end)
 
-Test("the shared option hides Rogue sockets and keeps Lightwell and numeric fallbacks", function()
+Test("the shared option hides Rogue sockets and Lightwell while keeping other numeric meters", function()
     for _, performance in ipairs({ false, true }) do
         local context, display, _, row, meter, label = Resources(performance, true)
         local saved = context.env.SurvivorsDragonUiDisplay
@@ -181,8 +181,17 @@ Test("the shared option hides Rogue sockets and keeps Lightwell and numeric fall
         )
         display.FinishEdit(false)
         assert(not row:IsShown() and context:SocketCount() == 0, "Cancel retained the combo point preview")
+        context:Publish("lightwell", 0.67, 1)
+        assert(not row:IsShown() and not meter:IsShown(), "the shared option left the Lightwell meter visible")
+        display.BeginEdit()
+        display.Set("hideClassResourceIcons", false)
+        assert(
+            meter:IsVisible() and label:GetText() == "0.67 / 1",
+            "preview did not restore the current Lightwell value"
+        )
+        display.FinishEdit(false)
+        assert(not row:IsShown() and not meter:IsShown(), "Cancel retained the Lightwell meter preview")
         for _, entry in ipairs({
-            { "lightwell", 3, 10, "3 / 10" },
             { "seal_fate", 4, 6, "4 / 6" },
             { "soul_fire", 4, 6, "4 / 6" },
             { "soul_fire", 3, 4.5, "3 / 4.5" },
@@ -206,7 +215,7 @@ Test("Lightwell avoids scaled aura rows without moving other class resources", f
         function frame:GetEffectiveScale() return scale end
     end
     for _, performance in ipairs({ false, true }) do
-        local c, _, _, row, meter, label, controller = Resources(performance, true)
+        local c, _, _, row, meter, label, controller = Resources(performance)
         local env = c.env
         function row:GetCenter() return 130, 100 end
         function row:GetEffectiveScale() return 1 end

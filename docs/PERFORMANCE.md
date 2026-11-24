@@ -1274,9 +1274,10 @@ do not prove native rendering or FPS.
 
 The default-off **Hide class resource icons** option reuses the class-resource
 reader and display listener in both Performance Mode states. It skips binding
-Rogue combo point and Warlock shard sockets and clears the shown row once.
-Settled hidden sockets perform no texture or visibility writes. Primary-power
-sampling and numbers retain their existing path. The same ten point textures (five empty, five full) stay
+Rogue combo point and Warlock shard sockets, skips Lightwell meter placement,
+and clears the shown row once. Settled hidden displays perform no texture,
+meter or visibility writes. Primary-power sampling and numbers retain their
+existing path. The same ten point textures (five empty, five full) stay
 allocated for reuse, with none visible while hidden; no gameplay frame,
 region, asset, event or updater is added. The lazy settings checkbox adds one
 button, five texture regions (box, mark, hover and two divider pieces) and two

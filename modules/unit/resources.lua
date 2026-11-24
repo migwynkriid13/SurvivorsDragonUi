@@ -143,7 +143,9 @@ DFRL:NewMod("Class resources", 2, function()
         -- Empty, unknown or missing fields never fall back to active power.
         local style = procs[state.proc]
         if not style or not IsNumber(state.pv) or not IsNumber(state.pm) or state.pm <= 0 then return end
-        if UsesSockets(style, state.pm) and DFRL.display.Get("hideClassResourceIcons") then return end
+        if (style == lightwell or UsesSockets(style, state.pm)) and DFRL.display.Get("hideClassResourceIcons") then
+            return
+        end
         return style, math.min(state.pv, state.pm), state.pm
     end
 

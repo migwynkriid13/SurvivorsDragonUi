@@ -2410,8 +2410,8 @@ DFRL:NewMod("RunTimers", 5, function()
                     {
                         "hideClassResourceIcons",
                         "Hide class resource icons",
-                        "Hide Rogue combo points and Warlock soul shards. Keep the power bar and numbers.",
-                        terms = { "Seal Fate", "Rogue", "Soulfire", "Warlock", "Crystals" },
+                        "Hide Rogue combo points, Warlock soul shards and the Priest Lightwell meter. Keep the power bar and numbers.",
+                        terms = { "Seal Fate", "Rogue", "Soulfire", "Warlock", "Crystals", "Lightwell", "Priest" },
                     },
                     {
                         "hidePortraits",

@@ -7,9 +7,9 @@ Rogue points and Warlock soul shards use the existing socket artwork. Lightwell 
 ## Current native values
 
 **Hide class resource icons**, beside Class resources, hides filled and empty
-Rogue Seal Fate combo point and Warlock Soulfire shard sockets. The primary-power
-bar and its numbers stay visible. The option defaults off. Lightwell and numeric
-secondary meters keep their own display, and buffs stay in place.
+Rogue Seal Fate combo point and Warlock Soulfire shard sockets. It also hides
+the Priest Lightwell meter. The primary-power bar, its numbers, and other
+numeric secondary meters stay visible. The option defaults off.
 The option dims while Class resources is off and retains its selected value.
 It uses the existing display preview, Confirm, Cancel, profile and discard
 paths; both full resets restore off. Both Performance Mode states use the
@@ -68,9 +68,9 @@ The choice remains the normalized `classResources` boolean in `SurvivorsDragonUi
 `hideClassResourceIcons` is a separate normalized boolean in that same table.
 Older saves and profiles supply the previous `hideSoulShards` choice when the
 new field is absent. Missing or invalid choices use `false`.
-The setting covers `seal_fate` and `soul_fire` ranges that select socket
-artwork, with a whole-number maximum from one to five. Larger or continuous
-numeric fallbacks keep their values and labels.
+The setting covers `lightwell` and the `seal_fate` and `soul_fire` ranges that
+select socket artwork, with a whole-number maximum from one to five. Larger
+or continuous Rogue and Warlock numeric fallbacks keep their values and labels.
 
 ## Layout
 
