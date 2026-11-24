@@ -302,6 +302,37 @@ Test("both captions center the attached row and reserve a gap even with wide lab
     assert(c.env.runMoveRegion.points.TOPLEFT[5] == 25, "no-caption edit bounds clip the taller square row")
 end)
 
+Test("the lower caption lane moves attached affixes and their layout bounds together", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Affixes(performance)
+        c.env.bossClock.visible = true
+        c.runWidth, c.bossWidth = 220, 190
+        c:Publish("bolstering,sanguine,explosive")
+        c:Update(true)
+        local root = c.view.root
+        local upperY = root.point[5]
+        c.settings.runTextBelow = true
+        c.refreshBounds()
+        assert(root.point[1] == "TOP" and root.point[3] == "BOTTOM" and root.point[5] == -upperY)
+        assert(c.env.runMoveRegion.points.BOTTOMRIGHT[5] == -20.5, "lower layout bounds clip the affixes")
+        assert(c.env.runText.point[4] + c.runWidth <= (296 - c.view.width) / 2 - 8)
+        assert(296 + c.env.bossText.point[4] - c.bossWidth >= (296 + c.view.width) / 2 + 8)
+        c.env.bossClock.visible = false
+        c.refreshBounds()
+        assert(root.point[1] == "TOPLEFT" and root.point[3] == "BOTTOMLEFT")
+        assert(c.view:FirstCenter(280), "lower placement lost the first-affix numeral anchor")
+        c.settings.attachAffixes = false
+        c:Update(true)
+        assert(c.view.detached.point[1] == "BOTTOMLEFT", "the detached affix default followed the lower lane")
+        c.settings.attachAffixes = true
+        c:Update(true)
+        assert(root.point[1] == "TOPLEFT", "reattached affixes did not recover the lower lane")
+        c.settings.runTextBelow = false
+        c.refreshBounds()
+        assert(root.point[1] == "BOTTOMLEFT" and root.point[3] == "TOPLEFT")
+    end
+end)
+
 Test("detached geometry survives reattachment and stays visible independently of the run timer", function()
     local c = Affixes()
     c:Publish("bolstering,sanguine")

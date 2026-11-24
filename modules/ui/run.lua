@@ -90,7 +90,7 @@ DFRL:NewMod("RunTimers", 5, function()
         end
         function view:FirstCenter(fillWidth)
             -- With both captions shown, the centered affixes leave the numeral at its fixed percentage.
-            if self.bothCaptions or root.affixPoint ~= "BOTTOMLEFT" then return end
+            if self.bothCaptions or (root.affixPoint ~= "BOTTOMLEFT" and root.affixPoint ~= "TOPLEFT") then return end
             if not self.attached or not self.rows[1] or not self.rows[1].active or not root:IsVisible() then return end
             local frameWidth, x = owner:GetWidth(), root.affixX
             if
@@ -109,9 +109,11 @@ DFRL:NewMod("RunTimers", 5, function()
             local ratio = owner:GetEffectiveScale() / frame:GetEffectiveScale()
             if not IsNumber(ratio) or ratio <= 0 then return end
             local attached = self.attached and frame == root
-            local point, target, x = "BOTTOM", "TOP", 0
+            local below = attached and self.below
+            local point, target = below and "TOP" or "BOTTOM", below and "BOTTOM" or "TOP"
+            local x = 0
             if not self.bothCaptions then
-                point, target = "BOTTOMLEFT", "TOPLEFT"
+                point, target = point .. "LEFT", target .. "LEFT"
                 x = math.min(
                     attached and 18 or 0,
                     (owner:GetWidth() - (self.captionWidth or 0)) / 2 - 8 - frame:GetWidth() / ratio
@@ -119,7 +121,10 @@ DFRL:NewMod("RunTimers", 5, function()
                 x = x * ratio
             end
             local y = 2 * ratio
-            if attached then y = (2 + ((self.captionHeight or rowHeight) - rowHeight) / 2) * ratio end
+            if attached then
+                y = (2 + ((self.captionHeight or rowHeight) - rowHeight) / 2) * ratio
+                if below then y = -y end
+            end
             if
                 force
                 or frame.affixPoint ~= point
@@ -138,17 +143,17 @@ DFRL:NewMod("RunTimers", 5, function()
                 DFRL.layout.Place("heroicAffixes")
             end
         end
-        function view:Context(runVisible, bossVisible, captionWidth, captionHeight)
+        function view:Context(runVisible, bossVisible, captionWidth, captionHeight, below)
             local both = runVisible and bossVisible and true or false
             local width, scale = owner:GetWidth(), owner:GetEffectiveScale()
-            local heightChanged = self.captionHeight ~= captionHeight
-            self.captionHeight = captionHeight
+            local laneChanged = self.captionHeight ~= captionHeight or self.below ~= below
+            self.captionHeight, self.below = captionHeight, below
             if
                 self.bothCaptions ~= both
                 or self.captionWidth ~= captionWidth
                 or self.ownerWidth ~= width
                 or not T.NearlyEqual(self.ownerScale, scale)
-                or (self.attached and heightChanged)
+                or (self.attached and laneChanged)
             then
                 self.bothCaptions, self.captionWidth, self.ownerWidth, self.ownerScale =
                     both, captionWidth, width, scale
@@ -1958,6 +1963,8 @@ DFRL:NewMod("RunTimers", 5, function()
         local separate = timerText and timerText.separate == true
         local both = runClock.visible and bossClock.visible and true or false
         local captionsOnTop = not below and not separate
+        local affixBelow = below and not separate
+        local shareAffixLane = captionsOnTop or (affixBelow and run.affixes.attached)
         if timerText then
             local naturalWidth = both and width + bossWidth + 16 or math.max(width, bossWidth) + 8
             timerText:Context(runClock.visible or bossClock.visible, naturalWidth, captionHeight + 4, below)
@@ -1966,7 +1973,7 @@ DFRL:NewMod("RunTimers", 5, function()
         local overflow = math.max(0, (math.max(width, bossWidth) + 8 - frameWidth) / 2)
         local pixel = math.max(runClock.pixel or 0, bossClock.pixel or 0)
         local inset = runClock.visible and bossClock.visible and 5 * pixel or 0
-        local affixWidth = captionsOnTop and run.affixes:HeaderWidth() or 0
+        local affixWidth = shareAffixLane and run.affixes:HeaderWidth() or 0
         local left, right = 0, 0
         if runClock.visible and bossClock.visible then
             if affixWidth > 0 then
@@ -1983,23 +1990,29 @@ DFRL:NewMod("RunTimers", 5, function()
         local bottom = below and not separate and (runClock.visible or bossClock.visible) and captionHeight + 4 or 0
         local leftOverflow, rightOverflow = separate and 0 or overflow, separate and 0 or overflow
         if run.affixes.attached and run.affixes.width > 0 then
-            local besideHeight = captionsOnTop and captionHeight or run.affixes.height
-            top = math.max(top, 2 + (besideHeight + run.affixes.height) / 2)
+            local besideHeight = shareAffixLane and captionHeight or run.affixes.height
+            local affixHeight = 2 + (besideHeight + run.affixes.height) / 2
+            if affixBelow then
+                bottom = math.max(bottom, affixHeight)
+            else
+                top = math.max(top, affixHeight)
+            end
             if both then
                 leftOverflow = math.max(leftOverflow, (run.affixes.width - run:GetWidth()) / 2)
                 rightOverflow = math.max(rightOverflow, (run.affixes.width - run:GetWidth()) / 2)
             else
                 leftOverflow = math.max(
                     leftOverflow,
-                    run.affixes.width + 8 - (run:GetWidth() - (captionsOnTop and math.max(width, bossWidth) or 0)) / 2
+                    run.affixes.width + 8 - (run:GetWidth() - (shareAffixLane and math.max(width, bossWidth) or 0)) / 2
                 )
             end
         end
         run.affixes:Context(
             runClock.visible,
             bossClock.visible,
-            captionsOnTop and math.max(width, bossWidth) or 0,
-            captionsOnTop and captionHeight or run.affixes.height
+            shareAffixLane and math.max(width, bossWidth) or 0,
+            shareAffixLane and captionHeight or run.affixes.height,
+            affixBelow
         )
         if run.heroicLevel then run.heroicLevel:Resize(runBar.layoutWidth or BAR_WIDTH) end
         local bounds = runClock.bounds or {}

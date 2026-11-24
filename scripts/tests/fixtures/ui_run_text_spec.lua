@@ -59,7 +59,9 @@ for _, performance in ipairs({ false, true }) do
         height = 23,
         attached = true,
         HeaderWidth = function() return 0 end,
-        Context = function(_, first, second, width) c.affixCaptionWidth = width end,
+        Context = function(_, first, second, width, height, below)
+            c.affixCaptionWidth, c.affixBelow = width, below
+        end,
     }
     env.runMoveRegion = env.CreateFrame("Frame", nil, env.run)
     view.onBounds, view.onShow = api.Bounds, api.Bounds
@@ -71,11 +73,12 @@ for _, performance in ipairs({ false, true }) do
     api.Bounds()
     assert(env.runText.point[1] == "TOPLEFT" and env.runText.point[3] == "BOTTOMLEFT")
     assert(env.bossText.point[1] == "TOPRIGHT" and env.runMoveRegion.points.BOTTOMRIGHT[5] < 0)
-    assert(c.affixCaptionWidth == 0, "below-bar captions still reserved the affix lane")
+    assert(c.affixBelow and c.affixCaptionWidth > 0, "affixes did not share the lower caption lane")
     display.Set("detachRunText", true)
     view:SetActive(true)
     api.Bounds()
     assert(view.root:GetParent() == view.detached and view:Visible() and layoutOptions.handleAvailable())
+    assert(not c.affixBelow and c.affixCaptionWidth == 0, "detached captions still moved attached affixes")
     assert(env.runText.point[2] == view.root and env.bossText.point[2] == view.root)
     geometry = { x = 250.5, y = -80.25 }
     env.DFRL.layout.Place("runTimerText")
