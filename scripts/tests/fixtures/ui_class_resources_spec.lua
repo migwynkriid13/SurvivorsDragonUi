@@ -14,7 +14,7 @@ local function Resources(performance, hidden)
     local env = context.env
     env.SurvivorsDragonUiDisplay = {
         classResources = true,
-        hideSoulShards = hidden == true,
+        hideClassResourceIcons = hidden == true,
         performanceMode = performance,
     }
     context:Load("core/display.lua", "Display")
@@ -36,6 +36,11 @@ local function Resources(performance, hidden)
             self.value = value
         end
         function object:GetValue() return self.value end
+        local setPoint = object.SetPoint
+        function object:SetPoint(...)
+            self.point = { ... }
+            setPoint(self, ...)
+        end
         function object:SetStatusBarColor(...)
             Write("SetStatusBarColor")
             self.color = { ... }
@@ -99,26 +104,37 @@ Test("shard preview, Cancel, Confirm, reset and profile normalization retain pri
         assert(context:SocketCount() == 9, "default shard artwork changed")
         context:Primary(80)
         local allocated = table.getn(context.objects)
-        assert(display.Copy({}).hideSoulShards == false, "older profiles did not default to visible shards")
-        assert(display.Copy({ hideSoulShards = "true" }).hideSoulShards == false, "invalid choice was accepted")
-        assert(display.Copy({ hideSoulShards = true }).hideSoulShards, "profile copy lost the hide choice")
+        assert(display.Copy({}).hideClassResourceIcons == false, "older profiles did not default to visible shards")
+        assert(
+            display.Copy({ hideClassResourceIcons = "true" }).hideClassResourceIcons == false,
+            "invalid choice was accepted"
+        )
+        assert(
+            display.Copy({ hideClassResourceIcons = true }).hideClassResourceIcons,
+            "profile copy lost the hide choice"
+        )
+        assert(display.Copy({ hideSoulShards = true }).hideClassResourceIcons, "legacy profile lost its hide choice")
+        assert(
+            not display.Copy({ hideClassResourceIcons = false, hideSoulShards = true }).hideClassResourceIcons,
+            "legacy profile overrode the current choice"
+        )
         display.BeginEdit()
-        display.Set("hideSoulShards", true)
+        display.Set("hideClassResourceIcons", true)
         assert(not row:IsShown() and context:SocketCount() == 0, "preview retained filled or empty shards")
-        assert(not env.SurvivorsDragonUiDisplay.hideSoulShards, "preview saved early")
+        assert(not env.SurvivorsDragonUiDisplay.hideClassResourceIcons, "preview saved early")
         context:Primary(80)
         display.FinishEdit(false)
         assert(context:SocketCount() == 9, "Cancel did not restore shards immediately")
         display.BeginEdit()
-        display.Set("hideSoulShards", true)
+        display.Set("hideClassResourceIcons", true)
         display.FinishEdit(true)
-        assert(env.SurvivorsDragonUiDisplay.hideSoulShards and not row:IsShown(), "Confirm lost shard hiding")
+        assert(env.SurvivorsDragonUiDisplay.hideClassResourceIcons and not row:IsShown(), "Confirm lost shard hiding")
         context.primary = 60
         context:Publish("soul_fire", 3, 5)
         context:Primary(60)
         assert(context:SocketCount() == 0, "a new resource value restored hidden shards")
         display.Reset()
-        assert(not display.Get("hideSoulShards") and not display.Get("classResources"), "reset lost defaults")
+        assert(not display.Get("hideClassResourceIcons") and not display.Get("classResources"), "reset lost defaults")
         display.BeginEdit()
         display.Set("classResources", true)
         assert(context:SocketCount() == 8, "reset did not recover the current three-shard state")
@@ -139,7 +155,7 @@ Test("hidden shards stay unbound and idle, and hidden-player changes recover on 
         player:Hide()
         display.BeginEdit()
         context:ResetCounts()
-        display.Set("hideSoulShards", false)
+        display.Set("hideClassResourceIcons", false)
         context:NoPresentationWrites()
         assert(not row:IsShown(), "hidden player prepared the shard row")
         player:Show()
@@ -150,13 +166,33 @@ Test("hidden shards stay unbound and idle, and hidden-player changes recover on 
     end
 end)
 
-Test("shard hiding preserves Rogue points, Lightwell and numeric fallbacks", function()
+Test("the shared option hides Rogue sockets and Lightwell while keeping other numeric meters", function()
     for _, performance in ipairs({ false, true }) do
-        local context, _, _, row, meter, label = Resources(performance, true)
+        local context, display, _, row, meter, label = Resources(performance, true)
+        local saved = context.env.SurvivorsDragonUiDisplay
+        saved.hideClassResourceIcons, saved.hideSoulShards = nil, true
         context:Publish("seal_fate", 4, 5)
-        assert(context:SocketCount() == 9 and not meter:IsShown(), "shard hiding removed Rogue points")
+        assert(not row:IsShown() and context:SocketCount() == 0, "Rogue sockets were still visible")
+        display.BeginEdit()
+        display.Set("hideClassResourceIcons", false)
+        assert(
+            context:SocketCount() == 9 and not meter:IsShown(),
+            "turning off the option did not restore combo points"
+        )
+        display.FinishEdit(false)
+        assert(not row:IsShown() and context:SocketCount() == 0, "Cancel retained the combo point preview")
+        context:Publish("lightwell", 0.67, 1)
+        assert(not row:IsShown() and not meter:IsShown(), "the shared option left the Lightwell meter visible")
+        display.BeginEdit()
+        display.Set("hideClassResourceIcons", false)
+        assert(
+            meter:IsVisible() and label:GetText() == "0.67 / 1",
+            "preview did not restore the current Lightwell value"
+        )
+        display.FinishEdit(false)
+        assert(not row:IsShown() and not meter:IsShown(), "Cancel retained the Lightwell meter preview")
         for _, entry in ipairs({
-            { "lightwell", 3, 10, "3 / 10" },
+            { "seal_fate", 4, 6, "4 / 6" },
             { "soul_fire", 4, 6, "4 / 6" },
             { "soul_fire", 3, 4.5, "3 / 4.5" },
         }) do
@@ -167,6 +203,41 @@ Test("shard hiding preserves Rogue points, Lightwell and numeric fallbacks", fun
         context:Publish("soul_fire", 0, 5)
         assert(not row:IsShown() and context:SocketCount() == 0, "empty shard sockets remained visible")
         context:Primary(80)
+    end
+end)
+
+Test("Lightwell avoids scaled aura rows without moving other class resources", function()
+    local function Box(frame, left, bottom, right, top, scale)
+        function frame:GetLeft() return left end
+        function frame:GetBottom() return bottom end
+        function frame:GetRight() return right end
+        function frame:GetTop() return top end
+        function frame:GetEffectiveScale() return scale end
+    end
+    for _, performance in ipairs({ false, true }) do
+        local c, _, _, row, meter, label, controller = Resources(performance)
+        local env = c.env
+        function row:GetCenter() return 130, 100 end
+        function row:GetEffectiveScale() return 1 end
+        Box(env.UIParent, 0, 0, 440, 220, 1)
+        local buffs = env.CreateFrame("Frame", "DFRL_PlayerAuras", env.UIParent)
+        local debuffs = env.CreateFrame("Frame", "DFRL_PlayerDebuffs", env.UIParent)
+        Box(buffs, 50, 43, 110, 57, 2)
+        Box(debuffs, 100, 58, 220, 86, 1)
+        c:Publish("lightwell", 0.67, 1)
+        assert(meter.point[4] == 0 and meter.point[5] == -51, "Lightwell covered the buff or debuff row")
+        assert(label:GetText() == "0.67 / 1" and meter:GetValue() == 0.67, "Lightwell changed the native value")
+        c:ResetCounts()
+        c:Call(controller, "OnUpdate", 0.1)
+        c:NoPresentationWrites()
+        Box(buffs, 125, 43, 185, 57, 2)
+        c:Call(controller, "OnUpdate", 0.1)
+        assert(meter.point[4] == 0 and meter.point[5] == 0, "unchanged Lightwell did not follow an aura move")
+        Box(buffs, 50, 43, 110, 57, 2)
+        c:Call(controller, "OnUpdate", 0.1)
+        c:Publish("soul_fire", 4, 6)
+        assert(meter.point[4] == 0 and meter.point[5] == 0, "Lightwell placement carried over to another proc")
+        c:Primary(80)
     end
 end)
 

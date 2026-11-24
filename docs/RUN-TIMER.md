@@ -1,7 +1,7 @@
 # Run timer and boss countdown
 
 In `/sdui` → **Encounters** → **Run timer**, **Text below the bar** flips both
-captions below the bar. Turn it off to keep them above. **Detach timer text**
+timer captions below the bar. Turn it off to keep them above. **Detach timer text**
 gives the run time and boss countdown their own **Run timer text (detached)**
 Layout handle, allowing both to move and scale together anywhere on screen.
 Both options default off and preview immediately; Confirm saves, Cancel
@@ -173,16 +173,22 @@ The native run clock and published boss deadlines continue to drive the timer.
 
 ## Heroic affixes
 
-On the 0.125.0 API, the run timer shows the current run's Heroic affixes above
-the bar. The selected **04 Rally and rupture** pictures use **02 Minimap bevel**:
+On the 0.125.0 API, the run timer shows the current run's Heroic affixes.
+The selected **04 Rally and rupture** pictures use **02 Minimap bevel**:
 square pictures inside the same gold background as the bottom-left minimap
 button. The background retains its original gold, dark inset and clipped corners.
 Hovering an icon shows the game's name and description in the active language.
-**Attach affixes to run timer** keeps the row with the timer by default. With
-one caption, it sits to that caption's left; with both captions, it sits between
-them. Detaching retains the separate Heroic affixes Layout group. Existing
-move, scale and Hide frame controls retain their ownership, and the attached
-timer's Layout outline includes the complete row without changing saved geometry.
+In **Run timer**, **Affix icons below the bar** moves the attached icons
+under the bar independently of the timer captions. Enable both below options
+to place the icons and captions together. On the same side, the row sits to
+the left of a single caption or between two captions. The timer's Layout
+outline includes the attached row.
+
+**Detach affix icons** gives the row its own **Heroic affixes** Layout handle
+for moving, scaling and hiding. The below option dims while detached and
+applies again when reattached. Both switches default off. Changes preview
+immediately, **Confirm** saves them, and profiles retain both choices.
+Existing detached positions carry forward and are reused when you detach again.
 
 The view reads only received `AZS_ZONE.heroic`, `AZS_ZONE.affixes` and
 `AZS_ZONE_UPDATED` after the timer controller's phase check. It preserves the

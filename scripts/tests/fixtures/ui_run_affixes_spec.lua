@@ -11,7 +11,7 @@ end
 local function Affixes(performance)
     local c = H.New()
     local env = c.env
-    c.settings.attachAffixes = true
+    c.settings.detachAffixes = false
     c.settings.performanceMode = performance or false
     c.runWidth, c.bossWidth = 160, 90
     local create = c.Object
@@ -173,10 +173,10 @@ Test("the affix owner supplies the first visible opening center through placemen
         expected = 18 + 12.5 + 25 / 29 - 8
         assert(math.abs(c.view:FirstCenter(560) - expected) < 0.000001, "resize lost the bar's left inset")
         assert(math.abs(c.numeralCenter - expected) < 0.000001, "hiding the boss caption did not restore alignment")
-        c.settings.attachAffixes = false
+        c.settings.detachAffixes = true
         c:Update(true)
         assert(c.view.root:IsVisible() and c.view:FirstCenter(560) == nil and c.numeralCenter == nil)
-        c.settings.attachAffixes = true
+        c.settings.detachAffixes = false
         c:Update(true)
         assert(math.abs(c.view:FirstCenter(560) - expected) < 0.000001, "reattachment lost current alignment")
         c.owner:Hide()
@@ -302,12 +302,50 @@ Test("both captions center the attached row and reserve a gap even with wide lab
     assert(c.env.runMoveRegion.points.TOPLEFT[5] == 25, "no-caption edit bounds clip the taller square row")
 end)
 
+Test("affixes choose their own side and share spacing when beside the captions", function()
+    for _, performance in ipairs({ false, true }) do
+        local c = Affixes(performance)
+        c.env.bossClock.visible = true
+        c.runWidth, c.bossWidth = 220, 190
+        c:Publish("bolstering,sanguine,explosive")
+        c:Update(true)
+        local root = c.view.root
+        local upperY = root.point[5]
+        c.settings.runTextBelow = true
+        c.refreshBounds()
+        assert(root.point[1] == "BOTTOM" and c.env.runText.point[1] == "TOPLEFT", "timer text flipped the icons")
+        c.settings.affixIconsBelow = true
+        c.refreshBounds()
+        assert(root.point[1] == "TOP" and root.point[3] == "BOTTOM" and root.point[5] == -upperY)
+        assert(c.env.runMoveRegion.points.BOTTOMRIGHT[5] == -20.5, "lower layout bounds clip the affixes")
+        assert(c.env.runText.point[4] + c.runWidth <= (296 - c.view.width) / 2 - 8)
+        assert(296 + c.env.bossText.point[4] - c.bossWidth >= (296 + c.view.width) / 2 + 8)
+        c.settings.runTextBelow = false
+        c.refreshBounds()
+        assert(root.point[1] == "TOP" and c.env.runText.point[1] == "BOTTOMLEFT", "icons flipped the timer text")
+        assert(c.env.runMoveRegion.points.BOTTOMRIGHT[5] == -25, "the lower icon-only row lost its edit bounds")
+        c.env.bossClock.visible = false
+        c.refreshBounds()
+        assert(root.point[1] == "TOPLEFT" and root.point[3] == "BOTTOMLEFT")
+        assert(c.view:FirstCenter(280), "lower placement lost the first-affix numeral anchor")
+        c.settings.detachAffixes = true
+        c:Update(true)
+        assert(c.view.detached.point[1] == "BOTTOMLEFT", "the detached affix default followed the lower lane")
+        c.settings.detachAffixes = false
+        c:Update(true)
+        assert(root.point[1] == "TOPLEFT", "reattached affixes did not recover the lower lane")
+        c.settings.affixIconsBelow = false
+        c.refreshBounds()
+        assert(root.point[1] == "BOTTOMLEFT" and root.point[3] == "TOPLEFT")
+    end
+end)
+
 Test("detached geometry survives reattachment and stays visible independently of the run timer", function()
     local c = Affixes()
     c:Publish("bolstering,sanguine")
     c:Update(true)
     local objects = #c.objects
-    c.settings.attachAffixes = false
+    c.settings.detachAffixes = true
     c:Update(true)
     assert(
         c.view.root:GetParent() == c.view.detached and c.view.detached:IsShown(),
@@ -339,36 +377,39 @@ Test("detached geometry survives reattachment and stays visible independently of
     c:SetLayoutHidden(false)
     c:Update(true)
     assert(c.view.root:IsVisible(), "detached Hide frame lost current presentation")
-    c.settings.attachAffixes = true
+    c.settings.detachAffixes = false
     c:Update(true)
     assert(c.view.root:GetParent() == c.owner and not c.view.detached:IsShown() and not c.view.root:IsVisible())
-    c.settings.attachAffixes = false
+    c.settings.detachAffixes = true
     c:Update(true)
     assert(c.view.root:IsVisible() and c.view.detached.point == point and c.view.detached:GetScale() == 1.4)
     assert(#c.objects == objects, "attachment changes allocated another icon pool")
 end)
 
-Test("attachment defaults, preview, Cancel, Confirm and resets use the production display owner", function()
+Test("affix placement defaults, legacy migration and transactions use the production display owner", function()
     local c = H.New()
     c.env.DFRL.tallyStyleDefault = "gothic01"
     c.env.DFRL.tallyStyleById = { gothic01 = {} }
     c:Load("core/display.lua", "Display")
     local display = c.env.DFRL.display
-    assert(display.Get("attachAffixes") == true and display.Copy({ attachAffixes = "invalid" }).attachAffixes == true)
+    assert(not display.Get("detachAffixes") and not display.Get("affixIconsBelow"))
+    assert(display.Copy({ attachAffixes = false }).detachAffixes, "legacy detached profiles were reattached")
+    assert(not display.Copy({ attachAffixes = true }).detachAffixes, "legacy attached profiles were detached")
+    assert(not display.Copy({ attachAffixes = "invalid" }).detachAffixes)
+    assert(not display.Copy({ attachAffixes = false, detachAffixes = false }).detachAffixes)
     display.BeginEdit()
-    display.Set("attachAffixes", false)
-    assert(display.Get("attachAffixes") == false and c.env.SurvivorsDragonUiDisplay == nil)
+    display.Set("detachAffixes", true)
+    display.Set("affixIconsBelow", true)
+    assert(display.Get("detachAffixes") and display.Get("affixIconsBelow") and c.env.SurvivorsDragonUiDisplay == nil)
     display.FinishEdit(false)
-    assert(display.Get("attachAffixes") == true, "Cancel saved the attachment preview")
+    assert(not display.Get("detachAffixes") and not display.Get("affixIconsBelow"), "Cancel saved affix previews")
     display.BeginEdit()
-    display.Set("attachAffixes", false)
+    display.Set("detachAffixes", true)
+    display.Set("affixIconsBelow", true)
     display.FinishEdit(true)
-    assert(
-        c.env.SurvivorsDragonUiDisplay.attachAffixes == false
-            and display.Copy({ attachAffixes = false }).attachAffixes == false
-    )
+    assert(c.env.SurvivorsDragonUiDisplay.detachAffixes and c.env.SurvivorsDragonUiDisplay.affixIconsBelow)
     display.Reset()
-    assert(display.Get("attachAffixes") == true, "reset lost the default attachment")
+    assert(not display.Get("detachAffixes") and not display.Get("affixIconsBelow"), "reset lost affix defaults")
 end)
 
 Test("hidden views allocate and paint nothing and resume the current publication", function()

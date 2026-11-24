@@ -249,25 +249,28 @@ assert(
     "respawn option did not become available"
 )
 local units = Frame(env.fontEditor)
-local shards = Check(units)
-env.displayControls.hideSoulShards = shards
-values.hideSoulShards, values.classResources = true, false
-local enableShardMouse = shards.EnableMouse
-function shards:EnableMouse(value)
+local resourceIcons = Check(units)
+env.displayControls.hideClassResourceIcons = resourceIcons
+values.hideClassResourceIcons, values.classResources = true, false
+local enableIconMouse = resourceIcons.EnableMouse
+function resourceIcons:EnableMouse(value)
     self.inputEnabled = value
-    enableShardMouse(self, value)
+    enableIconMouse(self, value)
 end
 views.Display()
 assert(
-    shards.editorChecked and not shards.inputEnabled and shards:GetAlpha() == 0.45,
-    "disabled Class resources did not retain and dim the shard choice"
+    resourceIcons.editorChecked and not resourceIcons.inputEnabled and resourceIcons:GetAlpha() == 0.45,
+    "disabled Class resources did not retain and dim the icon choice"
 )
 context:ResetCounts()
 views.Display()
 context:NoPresentationWrites()
 values.classResources = true
 views.Display()
-assert(shards.inputEnabled and shards:GetAlpha() == 1 and shards.editorChecked, "resource enable lost the shard choice")
+assert(
+    resourceIcons.inputEnabled and resourceIcons:GetAlpha() == 1 and resourceIcons.editorChecked,
+    "enabling Class resources lost the icon choice"
+)
 units:Hide()
 values.classResources = false
 context:ResetCounts()
@@ -275,5 +278,5 @@ views.Display()
 context:NoPresentationWrites()
 units:Show()
 views.Display()
-assert(not shards.inputEnabled and shards.editorChecked, "shown shard option did not catch up")
+assert(not resourceIcons.inputEnabled and resourceIcons.editorChecked, "shown resource icon option did not catch up")
 print("PASS closed/category-hidden settings, current-value catch-up, unchanged labels and deferred font work")

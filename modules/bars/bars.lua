@@ -714,8 +714,57 @@ DFRL:NewMod("Bars", 1, function()
         end
         _G.this = previousThis
     end
+    local events = CreateFrame("Frame")
+    local tooltipButton, tooltipElapsed
+    local function StopTooltipRecovery()
+        if not tooltipButton then return end
+        tooltipButton = nil
+        events:SetScript("OnUpdate", nil)
+    end
+    local function RecoverTooltip()
+        tooltipElapsed = tooltipElapsed + (arg1 or 0)
+        if tooltipElapsed < 0.15 then return end
+        tooltipElapsed = 0
+        local button = tooltipButton
+        if
+            not active
+            or not inWorld
+            or not button:IsVisible()
+            or DFRL.layout.IsEditing()
+            or GetMouseFocus() ~= button
+        then
+            StopTooltipRecovery()
+            return
+        end
+        if not GameTooltip or GameTooltip:IsVisible() or not HasAction(ActionButton_GetPagedID(button)) then return end
+        local onEnter = button:GetScript("OnEnter")
+        if not onEnter then return end
+        -- The native hover script reads the client's implicit frame global.
+        local previous = _G.this
+        _G.this = button
+        local ok, message = pcall(onEnter)
+        _G.this = previous
+        if not ok then
+            StopTooltipRecovery()
+            geterrorhandler()(message)
+        end
+    end
+    local function WatchTooltip(button)
+        HookScript(button, "OnEnter", function()
+            if not active or not inWorld or type(GetMouseFocus) ~= "function" or DFRL.layout.IsEditing() then return end
+            if tooltipButton == button then return end
+            tooltipButton, tooltipElapsed = button, 0
+            events:SetScript("OnUpdate", RecoverTooltip)
+        end)
+        local function StopForButton()
+            if tooltipButton == button then StopTooltipRecovery() end
+        end
+        HookScript(button, "OnLeave", StopForButton)
+        HookScript(button, "OnHide", StopForButton)
+    end
     local function RestoreNative()
         if not active then return end
+        StopTooltipRecovery()
         customSkin = stateOwner.Capture()
         active = false
         if DFRL.mainBar:IsShown() then DFRL.mainBar:Hide() end
@@ -821,7 +870,10 @@ DFRL:NewMod("Bars", 1, function()
         for index = 1, 12 do
             local button = _G["ActionButton" .. index]
             stateOwner.Track(button)
-            if index <= BUTTON_COUNT then DFRL.actionButtons[index] = button end
+            if index <= BUTTON_COUNT then
+                DFRL.actionButtons[index] = button
+                if button then WatchTooltip(button) end
+            end
         end
         local mainBar = CreateFrame("Frame", "DFRL_MainBar", UIParent)
         mainBar:Hide()
@@ -846,6 +898,7 @@ DFRL:NewMod("Bars", 1, function()
             region = moveRegion,
             onEdit = function(editing)
                 ClearSelection()
+                if editing then StopTooltipRecovery() end
                 if DFRL.SetJewelryEditing then DFRL.SetJewelryEditing(editing) end
             end,
         })
@@ -853,7 +906,6 @@ DFRL:NewMod("Bars", 1, function()
         if DFRL.AttachJewelry then DFRL.AttachJewelry(mainBar) end
         if DFRL.AttachXPBar then DFRL.AttachXPBar(mainBar) end
     end
-    local events = CreateFrame("Frame")
     for _, name in ipairs({ "ACTIONBAR_SLOT_CHANGED", "PLAYER_ENTERING_WORLD", "PLAYER_LEAVING_WORLD", "PLAYER_LOGOUT" }) do
         events:RegisterEvent(name)
     end

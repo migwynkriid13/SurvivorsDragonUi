@@ -34,7 +34,7 @@ do
     end
     Begin()
     display.Set("guardianNameFontSize", 9)
-    display.Set("hideSoulShards", true)
+    display.Set("hideClassResourceIcons", true)
     display.Set("uiCustomFont", "Český.ttf")
     assert(profiles.Save("Original", false))
     local ok, shared = profiles.Export("Original")
@@ -49,7 +49,10 @@ do
     assert(not env.SurvivorsDragonUiProfiles.Imported, "import saved its draft early")
     assert(display.Get("guardianNameFontSize") == 17, "import silently activated the profile")
     assert(profiles.Load("Imported"))
-    assert(display.Get("guardianNameFontSize") == 9 and display.Get("hideSoulShards"), "import lost current options")
+    assert(
+        display.Get("guardianNameFontSize") == 9 and display.Get("hideClassResourceIcons"),
+        "import lost current options"
+    )
     assert(display.Get("uiCustomFont") == "Český.ttf", "profile sharing lost UTF-8 bytes")
     assert(c.loadedGeometry.playerFrame.x == geometry.playerFrame.x, "sharing rounded layout coordinates")
     display.FinishEdit(false)
@@ -162,7 +165,14 @@ do
     env.inWorld = true
     env.Visible = function() return env.inWorld and env.Minimap:IsVisible() and not c.hidden end
     env.Number = function(value) return type(value) == "number" and value - value == 0 end
-    env.Register = function(button) c.squareButton = button end
+    env.Register = function(button)
+        c.squareButton = button
+        local setPoint = button.SetPoint
+        function button:SetPoint(...)
+            self.point = { ... }
+            setPoint(self, ...)
+        end
+    end
     env.DFRL.layout.IsEditing = function() return c.editing end
     c.fx, c.fxReads, c.fxWrites = "0", 0, 0
     env.GetCVar = function(name)
@@ -179,9 +189,9 @@ do
     file:close()
     local first = assert(string.find(source, "    -- The native graphics preference", 1, true))
     local last = assert(string.find(source, "    local controller = CreateFrame", first, true))
-    local chunk = assert(loadstring(string.sub(source, first, last - 1) .. "\nreturn PaintFx"))
+    local chunk = assert(loadstring(string.sub(source, first, last - 1) .. "\nreturn PaintFx, RestoreFxPosition"))
     setfenv(chunk, env)
-    local paint = chunk()
+    local paint, restore = chunk()
     local button = assert(env.SurvivorsDragonUiSpellFxButton)
     assert(c.fxWrites == 0 and c.squareButton == button and button.clicks[1] == "LeftButtonUp")
     c:Call(button, "OnClick")
@@ -207,5 +217,12 @@ do
     assert(not button:GetScript("OnUpdate"), "finished dragging retained an idle worker")
     c:Call(button, "OnClick")
     assert(c.fxWrites == 2, "drag release also toggled spell effects")
+    assert(env.SurvivorsDragonUiSpellFx.x == 1 and env.SurvivorsDragonUiSpellFx.y == -0.25)
+    button:SetPoint("CENTER", env.Minimap, "CENTER", 0, -1)
+    restore()
+    assert(button.point[4] == 1 and button.point[5] == -0.25, "restoring the Fireball position lost its direction")
+    env.SurvivorsDragonUiSpellFx = { x = 0, y = 0 }
+    restore()
+    assert(button.point[4] == 0 and button.point[5] == -1, "invalid saved position did not restore the default")
 end
-print("PASS minimap spell effects use click-only CVar writes, hidden deferral, editor guards and drag cleanup")
+print("PASS minimap spell effects use click-only CVar writes, hidden deferral, drag cleanup and saved position")

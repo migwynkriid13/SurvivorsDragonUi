@@ -1270,13 +1270,14 @@ Both Performance Mode states share this static path, with no idle updater.
 CI-only mocks cover all eight symbols and lifecycle/cost bounds; source counts
 do not prove native rendering or FPS.
 
-## Soul shard icon visibility
+## Class resource icon visibility
 
-The default-off **Hide soul shard icons** option reuses the class-resource
-reader and display listener in both Performance Mode states. It prevents
-socket binding and clears the shown row once; settled hidden shards perform
-no texture or visibility writes. Primary-power sampling and numbers retain
-their existing path. The same ten point textures (five empty, five full) stay
+The default-off **Hide class resource icons** option reuses the class-resource
+reader and display listener in both Performance Mode states. It skips binding
+Rogue combo point and Warlock shard sockets, skips Lightwell meter placement,
+and clears the shown row once. Settled hidden displays perform no texture,
+meter or visibility writes. Primary-power sampling and numbers retain their
+existing path. The same ten point textures (five empty, five full) stay
 allocated for reuse, with none visible while hidden; no gameplay frame,
 region, asset, event or updater is added. The lazy settings checkbox adds one
 button, five texture regions (box, mark, hover and two divider pieces) and two

@@ -212,7 +212,7 @@ DFRL:NewMod("Character window", 6, function()
         middle:SetPoint("BOTTOMRIGHT", b, "TOPRIGHT", 0, 0)
     end
 
-    local modelBorder = CreateFrame("Frame", nil, paper)
+    local modelBorder = CreateFrame("Frame", "SurvivorsDragonUiCharacterModelBorder", paper)
     modelBorder:EnableMouse(false)
     Place(modelBorder, paper, 48, -BODY_TOP - 2, 239, MODEL_HEIGHT + 8)
     Trim(modelBorder)
@@ -364,13 +364,13 @@ DFRL:NewMod("Character window", 6, function()
         RegisterItemButton(CharacterAmmoSlot)
     end
 
-    local panel = CreateFrame("Frame", nil, paper)
+    local panel = CreateFrame("Frame", "SurvivorsDragonUiCharacterStatsPanel", paper)
     Place(panel, paper, LEFT_WIDTH + 4, -BODY_TOP, WIDTH - LEFT_WIDTH - 10, HEIGHT - BODY_TOP - 6)
     panel:EnableMouse(false)
     Trim(panel)
     local scroll = CreateFrame("ScrollFrame", "SurvivorsDragonUiCharacterStatsScroll", panel)
     Place(scroll, panel, 8, -8, CONTENT_WIDTH, HEIGHT - BODY_TOP - 22)
-    local content = CreateFrame("Frame", nil, scroll)
+    local content = CreateFrame("Frame", "SurvivorsDragonUiCharacterStatsContent", scroll)
     content:SetWidth(CONTENT_WIDTH)
     content:SetHeight(1)
     scroll:SetScrollChild(content)
@@ -379,7 +379,7 @@ DFRL:NewMod("Character window", 6, function()
     HideStockArt(attributes)
     Card(attributes)
 
-    local slider = CreateFrame("Slider", nil, panel)
+    local slider = CreateFrame("Slider", "SurvivorsDragonUiCharacterStatsSlider", panel)
     slider:SetOrientation("VERTICAL")
     slider:SetWidth(14)
     slider:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -6, -26)
@@ -427,7 +427,7 @@ DFRL:NewMod("Character window", 6, function()
     slider:SetScript("OnValueChanged", function() SetScroll(slider:GetValue()) end)
     local function Step(amount) slider:SetValue(slider:GetValue() + amount) end
     local function Arrow(direction, point, offset)
-        local button = CreateFrame("Button", nil, panel)
+        local button = CreateFrame("Button", "SurvivorsDragonUiCharacterStatsScroll" .. direction, panel)
         button:SetWidth(20)
         button:SetHeight(20)
         button:SetPoint(point, panel, point, -3, offset)
@@ -845,17 +845,57 @@ DFRL:NewMod("Character window", 6, function()
     hooksecurefunc("PaperDollItemSlotButton_Update", function()
         if this then UpdateQuality(this) end
     end)
+    local raisedFrames = {}
+    local function CollectScreenFrames(frame, pending)
+        local name = frame:GetName()
+        if name and _G[name] == frame and not raisedFrames[name] then
+            local known, raised = true, false
+            if type(AZS_IsOnTopOfScreens) == "function" then
+                known, raised = pcall(AZS_IsOnTopOfScreens, name)
+            end
+            if known and raised ~= true and raised ~= 1 then table.insert(pending, name) end
+        end
+        if frame.GetChildren then
+            for _, child in ipairs({ frame:GetChildren() }) do
+                CollectScreenFrames(child, pending)
+            end
+        end
+    end
+    local function RaiseScreenFrames()
+        if not owner:IsShown() or type(AZS_SetOnTopOfScreens) ~= "function" then return end
+        local pending = {}
+        -- Read existing registrations before raising the parent or any child.
+        CollectScreenFrames(owner, pending)
+        for _, name in ipairs(pending) do
+            local ok, applied = pcall(AZS_SetOnTopOfScreens, name, true)
+            if ok and applied ~= false then raisedFrames[name] = true end
+        end
+    end
+    local function ReleaseScreenFrames()
+        for name in pairs(raisedFrames) do
+            if type(AZS_SetOnTopOfScreens) == "function" then pcall(AZS_SetOnTopOfScreens, name, false) end
+            raisedFrames[name] = nil
+        end
+    end
     HookScript(owner, "OnShow", Apply)
+    HookScript(owner, "OnShow", RaiseScreenFrames)
     HookScript(owner, "OnEvent", UpdateHeader)
     HookScript(owner, "OnHide", CancelStats)
+    HookScript(owner, "OnHide", ReleaseScreenFrames)
     HookScript(paper, "OnEvent", QueueStats)
     HookScript(paper, "OnHide", function()
         CancelStats()
         UpdateHeader()
     end)
+    controller:RegisterEvent("PLAYER_ENTERING_WORLD")
     controller:RegisterEvent("PLAYER_LEAVING_WORLD")
     controller:RegisterEvent("PLAYER_LOGOUT")
     controller:SetScript("OnEvent", function()
+        if event == "PLAYER_ENTERING_WORLD" then
+            RaiseScreenFrames()
+            return
+        end
+        ReleaseScreenFrames()
         CancelStats()
         slider:SetValue(0)
         for button in pairs(qualityBorders) do
@@ -863,4 +903,5 @@ DFRL:NewMod("Character window", 6, function()
         end
     end)
     Apply()
+    RaiseScreenFrames()
 end)
