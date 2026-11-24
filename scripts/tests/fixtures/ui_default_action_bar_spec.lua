@@ -273,6 +273,12 @@ local function Bar(custom, performance)
         button:SetScale(0.9)
         button:SetAlpha(0.8)
         button:RegisterForDrag("LeftButton")
+        button:SetScript("OnEnter", function()
+            if not env.GameTooltip then return end
+            env.GameTooltip.owner = env.this
+            c.tooltipSlot = env.ActionButton_GetPagedID(env.this)
+            env.GameTooltip:Show()
+        end)
         button:SetScript("OnClick", function() c.nativeClick = index end)
         button:SetScript("OnDragStart", function() c.nativeDrag = index end)
         button:SetScript("OnReceiveDrag", function() c.nativeDrop = index end)
@@ -457,6 +463,35 @@ Test("preview switching reuses the custom bar and restores native state on every
         c:SetSetting("customActionBar", false)
         NativeButtons(c, env)
         assert(#c.objects == allocated, "repeated native previews grew the bar pool")
+    end
+end)
+
+Test("hover recovery restores missing tooltips and respects other owners", function()
+    for _, performance in ipairs({ false, true }) do
+        local c, env = Bar(true, performance)
+        local controller = c:Controller("ACTIONBAR_SLOT_CHANGED")
+        local button = env.ActionButton7
+        env.GetMouseFocus = function() return button end
+        env.DFRL.layout.IsEditing = function() return false end
+        local tooltip = env.CreateFrame("GameTooltip", nil, env.UIParent)
+        env.GameTooltip = tooltip
+        tooltip:Hide()
+        assert(not controller:GetScript("OnUpdate"), "tooltip polling started without a hover")
+        c:Call(button, "OnEnter")
+        assert(tooltip:IsShown() and c.tooltipSlot == 12, "native tooltip used the wrong action slot")
+        tooltip:Hide()
+        c:Call(controller, "OnUpdate", 0.14)
+        assert(not tooltip:IsShown(), "recovery ignored its interval")
+        c:Call(controller, "OnUpdate", 0.02)
+        assert(tooltip:IsShown() and tooltip.owner == button and c.tooltipSlot == 12)
+        tooltip.owner = env.MainMenuBar
+        c:Call(controller, "OnUpdate", 0.15)
+        assert(tooltip.owner == env.MainMenuBar, "recovery replaced a visible foreign tooltip")
+        c:Call(button, "OnLeave")
+        assert(not controller:GetScript("OnUpdate"), "leaving the button retained polling")
+        c:Call(button, "OnEnter")
+        c:SetSetting("customActionBar", false)
+        assert(not controller:GetScript("OnUpdate"), "the native bar handoff retained polling")
     end
 end)
 
